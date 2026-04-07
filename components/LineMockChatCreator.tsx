@@ -475,6 +475,19 @@ export default function LineMockChatCreator() {
 
   const openSettings = () => setSettingsOpen(true);
 
+  useEffect(() => {
+    const requestFullscreen = () => {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+    };
+    const handleClick = () => {
+      if (!document.fullscreenElement) requestFullscreen();
+    };
+    document.addEventListener("click", handleClick, { once: true });
+    return () => document.removeEventListener("click", handleClick);
+  }, []);
+
   const clearTypingTimers = () => {
     if (typingIntervalRef.current) { clearInterval(typingIntervalRef.current); typingIntervalRef.current = null; }
     if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); typingTimeoutRef.current = null; }
@@ -657,7 +670,23 @@ export default function LineMockChatCreator() {
 
   const exportPNG = async () => {
     if (!previewRef.current) return;
-    const canvas = await html2canvas(previewRef.current, { backgroundColor: null, scale: 2, useCORS: true });
+    const el = previewRef.current;
+    const rect = el.getBoundingClientRect();
+    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    const canvas = await html2canvas(el, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true,
+      width: rect.width,
+      height: rect.height,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      x: rect.left + scrollX,
+      y: rect.top + scrollY,
+      scrollX: -scrollX,
+      scrollY: -scrollY,
+    });
     const link = document.createElement("a");
     link.download = "chat.png";
     link.href = canvas.toDataURL("image/png");
@@ -732,8 +761,7 @@ export default function LineMockChatCreator() {
       <div className={cn("fixed bottom-0 left-0 right-0 z-40 mx-auto w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", fullScreenMode ? "max-w-none bg-black/75 backdrop-blur-md" : "max-w-md")} style={{ backgroundColor: fullScreenMode ? undefined : theme.toolbarBg }}>
         {showTopActions && showActionButtons && (
           <div className={cn("flex items-center justify-between gap-2", showControls && "mb-1")}>
-            <Button onClick={simulateTyping} disabled={!inputText.trim() || isTyping} className="h-10 flex-1"><Play className="mr-2 h-4 w-4" />タイピング再生</Button>
-            <Button onClick={exportPNG} variant="outline" className={cn("h-10 px-4", fullScreenMode && "bg-white/95")}><Download className="mr-2 h-4 w-4" />書き出し</Button>
+            <Button onClick={exportPNG} variant="outline" className={cn("h-10 flex-1", fullScreenMode && "bg-white/95")}><Download className="mr-2 h-4 w-4" />画像ファイルへ書き出し(.png)</Button>
             {showEditorAccess && <Button variant="outline" className={cn("h-10 px-3", fullScreenMode && "bg-white/95")} onClick={openSettings}><Settings2 className="h-4 w-4" /></Button>}
           </div>
         )}
@@ -896,7 +924,7 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>着信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomRingtoneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customRingtoneName ? `選択中: ${customRingtoneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
                     <div className="space-y-2"><Label>発信→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={callAutoSeconds} onChange={(e) => setCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中から通話中に切り替わるまでの秒数</div></div>
                     <div className="space-y-2"><Label>着信応答→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={incomingCallAutoSeconds} onChange={(e) => setIncomingCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">着信を応答してから通話中に切り替わるまでの秒数</div></div>
-                    <div className="space-y-2"><Label>着信までの秒数</Label><Input type="number" min="0" step="0.1" value={incomingDelaySeconds} onChange={(e) => setIncomingDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">ボタンを押してから指定秒数で着信</div></div>
+                    <div className="space-y-2"><Label>着信までの秒数</Label><Input type="number" min="0" step="0.1" value={incomingDelaySeconds} onChange={(e) => setIncomingDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">着信ボタンを押してから指定秒数で着信</div></div>
                     <div className="space-y-2 pt-1"><Label>着信相手の名前</Label><Input value={incomingCallTitle} onChange={(e) => setIncomingCallTitle(e.target.value)} placeholder="母" /></div>
                     <div className="space-y-2"><Label>着信相手のアイコン文字</Label><Input value={incomingCallAvatarLabel} onChange={(e) => setIncomingCallAvatarLabel(e.target.value.slice(0, 2))} placeholder="母" /></div>
                     <div className="space-y-2"><Label>着信相手のアイコン画像</Label><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setIncomingCallAvatarImage)}>画像を選択</FileButton></div>
