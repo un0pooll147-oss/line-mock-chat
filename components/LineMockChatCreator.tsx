@@ -445,6 +445,12 @@ export default function LineMockChatCreator() {
   const [isTyping, setIsTyping] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
+  const [timedMsgText, setTimedMsgText] = useState("");
+  const [timedMsgDelay, setTimedMsgDelay] = useState(3);
+  const [timedMsgPending, setTimedMsgPending] = useState(false);
+  const [timedMsgCountdown, setTimedMsgCountdown] = useState(0);
+  const timedMsgRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timedMsgIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const theme = useMemo(() => {
     const base = themePresets[themeKey] || themePresets.line;
@@ -586,6 +592,35 @@ export default function LineMockChatCreator() {
     if (!source) return;
     setMessages((prev) => [...prev, buildIncomingMessage(source, incomingSender, incomingMessageTime, incomingMessageDate)]);
     setIncomingText("");
+  };
+
+  const scheduleIncomingMessage = () => {
+    const source = timedMsgText.trim();
+    if (!source || timedMsgPending) return;
+    setTimedMsgPending(true);
+    setTimedMsgCountdown(Number(timedMsgDelay));
+    timedMsgIntervalRef.current = window.setInterval(() => {
+      setTimedMsgCountdown((prev) => {
+        if (prev <= 1) {
+          if (timedMsgIntervalRef.current) clearInterval(timedMsgIntervalRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    timedMsgRef.current = window.setTimeout(() => {
+      setMessages((prev) => [...prev, buildIncomingMessage(source, incomingSender, incomingMessageTime, incomingMessageDate)]);
+      setTimedMsgPending(false);
+      setTimedMsgCountdown(0);
+      setTimedMsgText("");
+    }, Math.max(0, Number(timedMsgDelay)) * 1000);
+  };
+
+  const cancelTimedMessage = () => {
+    if (timedMsgRef.current) clearTimeout(timedMsgRef.current);
+    if (timedMsgIntervalRef.current) clearInterval(timedMsgIntervalRef.current);
+    setTimedMsgPending(false);
+    setTimedMsgCountdown(0);
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
@@ -839,6 +874,20 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2 pt-2"><Label>相手名</Label><Input value={incomingSender} onChange={(e) => setIncomingSender(e.target.value)} /></div>
                     <div className="space-y-2"><Label>相手のメッセージ</Label><Textarea value={incomingText} onChange={(e) => setIncomingText(e.target.value)} className="min-h-24" placeholder="受信メッセージを入力" /></div>
                     <Button onClick={addIncomingMessage} variant="outline" className="w-full">相手メッセージを追加</Button>
+
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 space-y-3 mt-2">
+                      <div className="text-xs font-semibold text-black/60">タイマーメッセージ</div>
+                      <div className="space-y-2"><Label>内容</Label><Textarea value={timedMsgText} onChange={(e) => setTimedMsgText(e.target.value)} className="min-h-20" placeholder="○秒後に届くメッセージ" disabled={timedMsgPending} /></div>
+                      <div className="space-y-2"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={timedMsgDelay} onChange={(e) => setTimedMsgDelay(Number(e.target.value))} disabled={timedMsgPending} /></div>
+                      {timedMsgPending ? (
+                        <div className="space-y-2">
+                          <div className="text-center text-sm font-medium text-black/60">{timedMsgCountdown}秒後に届きます…</div>
+                          <Button onClick={cancelTimedMessage} variant="outline" className="w-full text-red-500">キャンセル</Button>
+                        </div>
+                      ) : (
+                        <Button onClick={scheduleIncomingMessage} disabled={!timedMsgText.trim()} className="w-full">タイマーセット</Button>
+                      )}
+                    </div>
                   </SectionCard>
                 </div>
               )}
