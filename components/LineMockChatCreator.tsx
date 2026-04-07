@@ -101,6 +101,7 @@ const defaultSettings = {
   customHeaderIconColor: "",
   customToolbarColor: "",
   customOuterBgColor: "",
+  unifyChatBackground: true,
   chatTitle: "美咲",
   incomingCallTitle: "母",
   incomingCallAvatarLabel: "母",
@@ -476,6 +477,7 @@ export default function LineMockChatCreator() {
   const [customHeaderIconColor, setCustomHeaderIconColor] = useState(initialUiSettings.customHeaderIconColor || "");
   const [customToolbarColor, setCustomToolbarColor] = useState(initialUiSettings.customToolbarColor || "");
   const [customOuterBgColor, setCustomOuterBgColor] = useState(initialUiSettings.customOuterBgColor || "");
+  const [unifyChatBackground, setUnifyChatBackground] = useState(initialUiSettings.unifyChatBackground ?? true);
   const [showStatusBar, setShowStatusBar] = useState(initialUiSettings.showStatusBar);
   const [fullScreenMode, setFullScreenMode] = useState(initialUiSettings.fullScreenMode);
   const [deviceFrameMode, setDeviceFrameMode] = useState(initialUiSettings.deviceFrameMode);
@@ -519,8 +521,16 @@ export default function LineMockChatCreator() {
 
   const theme = useMemo(() => {
     const base = themePresets[themeKey] || themePresets.line;
-    return { ...base, appBg: customBgColor || base.appBg, headerBg: customHeaderColor || base.headerBg, toolbarBg: customToolbarColor || base.toolbarBg, headerIconColor: customHeaderIconColor || "#ffffff", outerBg: customOuterBgColor || customBgColor || base.appBg };
-  }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor]);
+    const appBg = customBgColor || base.appBg;
+    return {
+      ...base,
+      appBg,
+      headerBg: customHeaderColor || base.headerBg,
+      toolbarBg: customToolbarColor || base.toolbarBg,
+      headerIconColor: customHeaderIconColor || "#ffffff",
+      outerBg: unifyChatBackground ? appBg : (customOuterBgColor || appBg),
+    };
+  }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, unifyChatBackground]);
 
   useEffect(() => {
     const headerColor = customHeaderColor || (themePresets[themeKey] || themePresets.line).headerBg;
@@ -532,6 +542,17 @@ export default function LineMockChatCreator() {
     }
     (meta as HTMLMetaElement).content = headerColor;
   }, [themeKey, customHeaderColor]);
+
+  const unifiedStageStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (unifyChatBackground && wallpaper) {
+      return {
+        backgroundImage: `url(${wallpaper})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    return { backgroundColor: theme.outerBg };
+  }, [unifyChatBackground, wallpaper, theme.outerBg]);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -765,7 +786,7 @@ export default function LineMockChatCreator() {
   };
 
   const buildCurrentSettings = () => ({
-    todayDate, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor,
+    todayDate, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, unifyChatBackground,
     chatTitle, incomingCallTitle, incomingCallAvatarLabel, incomingCallAvatarImage, avatarLabel, avatarImage,
     deviceTime, messageTime, outgoingMessageTime, incomingMessageTime, outgoingMessageDate, incomingMessageDate,
     incomingSender, incomingText, themeKey, showStatusBar, fullScreenMode, deviceFrameMode, showMessageTime,
@@ -780,7 +801,7 @@ export default function LineMockChatCreator() {
   const applySettings = (settings: typeof defaultSettings) => {
     setCustomBgColor(settings.customBgColor || ""); setCustomHeaderColor(settings.customHeaderColor || "");
     setCustomHeaderIconColor(settings.customHeaderIconColor || ""); setCustomToolbarColor(settings.customToolbarColor || "");
-    setCustomOuterBgColor(settings.customOuterBgColor || ""); setChatTitle(settings.chatTitle);
+    setCustomOuterBgColor(settings.customOuterBgColor || ""); setUnifyChatBackground(settings.unifyChatBackground ?? true); setChatTitle(settings.chatTitle);
     setIncomingCallTitle(settings.incomingCallTitle); setIncomingCallAvatarLabel(settings.incomingCallAvatarLabel);
     setIncomingCallAvatarImage(settings.incomingCallAvatarImage); setAvatarLabel(settings.avatarLabel);
     setAvatarImage(settings.avatarImage); setDeviceTime(settings.deviceTime); setMessageTime(settings.messageTime);
@@ -875,9 +896,9 @@ export default function LineMockChatCreator() {
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
   return (
-    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ height: fullScreenMode ? "100dvh" : undefined, minHeight: fullScreenMode ? undefined : "100dvh", width: "100%", maxWidth: "100vw", overflow: fullScreenMode ? "hidden" : undefined, position: "relative", backgroundColor: fullScreenMode ? undefined : theme.outerBg }}>
-      <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "")}>
-        <div className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")} style={{ backgroundColor: deviceFrameMode ? undefined : theme.outerBg }}>
+    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ height: fullScreenMode ? "100dvh" : undefined, minHeight: fullScreenMode ? undefined : "100dvh", width: "100%", maxWidth: "100vw", overflow: fullScreenMode ? "hidden" : undefined, position: "relative", ...(fullScreenMode ? {} : (unifiedStageStyle || {})) }}>
+      <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "") }>
+        <div className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")} style={deviceFrameMode ? undefined : unifiedStageStyle}>
           <PhoneMockup ref={previewRef} onStartCall={startCall} onOpenSettings={openSettings} title={chatTitle} messages={messages} typingText={typingText} isTyping={isTyping} theme={theme} avatarImage={avatarImage} avatarLabel={avatarLabel} deviceTime={deviceTime} showStatusBar={showStatusBar} showMessageTime={showMessageTime} todayDate={todayDate} wallpaper={wallpaper} />
         </div>
       </div>
@@ -947,8 +968,23 @@ export default function LineMockChatCreator() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>背景色</Label><ColorSwatch value={customBgColor || theme.appBg} onChange={(e) => setCustomBgColor(e.target.value)} /></div>
-                      <div className="space-y-2"><Label>余白部分の色</Label><ColorSwatch value={customOuterBgColor || theme.outerBg} onChange={(e) => setCustomOuterBgColor(e.target.value)} /></div>
+                      <div className="space-y-2">
+                        <Label>{unifyChatBackground ? "余白部分の色（背景と統一中）" : "余白部分の色"}</Label>
+                        <ColorSwatch value={unifyChatBackground ? (customBgColor || theme.appBg) : (customOuterBgColor || theme.outerBg)} onChange={(e) => setCustomOuterBgColor(e.target.value)} />
+                      </div>
                     </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                      <div>
+                        <div className="text-sm font-medium">背景と余白を統一する</div>
+                        <div className="text-xs text-black/50">ONにすると背景色と背景画像が余白部分まで同じ見た目になります</div>
+                      </div>
+                      <Switch checked={unifyChatBackground} onCheckedChange={setUnifyChatBackground} />
+                    </div>
+                    {!unifyChatBackground && (
+                      <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
+                        余白部分だけ別色にしたいときは、この設定をOFFにしてください。
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>ヘッダー色</Label><ColorSwatch value={customHeaderColor || theme.headerBg} onChange={(e) => setCustomHeaderColor(e.target.value)} /></div>
                       <div className="space-y-2"><Label>ヘッダーアイコン色</Label><ColorSwatch value={customHeaderIconColor || theme.headerIconColor} onChange={(e) => setCustomHeaderIconColor(e.target.value)} /></div>
@@ -956,7 +992,11 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>操作バー背景色</Label><ColorSwatch value={customToolbarColor || theme.toolbarBg} onChange={(e) => setCustomToolbarColor(e.target.value)} /></div>
                     <div className="space-y-2">
                       <Label>背景画像</Label>
-                      <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setWallpaper)}>画像を選択</FileButton>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setWallpaper)}>画像を選択</FileButton>
+                        {wallpaper ? <Button variant="outline" className="w-full sm:w-auto" onClick={() => setWallpaper("")}>背景画像を解除</Button> : null}
+                      </div>
+                      {wallpaper ? <img src={wallpaper} alt="背景画像プレビュー" className="max-h-48 w-full rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-3 text-xs text-black/45">背景画像は未設定です</div>}
                     </div>
                   </SectionCard>
 
@@ -965,7 +1005,11 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>アイコン文字</Label><Input value={avatarLabel} onChange={(e) => setAvatarLabel(e.target.value.slice(0, 2))} /></div>
                     <div className="space-y-2">
                       <Label>アイコン画像</Label>
-                      <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setAvatarImage)}>画像を選択</FileButton>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setAvatarImage)}>画像を選択</FileButton>
+                        {avatarImage ? <Button variant="outline" className="w-full sm:w-auto" onClick={() => setAvatarImage("")}>アイコン画像を解除</Button> : null}
+                      </div>
+                      {avatarImage ? <img src={avatarImage} alt="アイコン画像プレビュー" className="h-24 w-24 rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-3 text-xs text-black/45">アイコン画像は未設定です</div>}
                     </div>
                   </SectionCard>
                 </div>
