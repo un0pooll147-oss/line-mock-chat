@@ -263,7 +263,7 @@ export default function NotificationCreator() {
               <div className={`relative z-10 px-4 space-y-3 ${showLargeClock ? osType === "iphone" ? "pt-[230px]" : "pt-[205px]" : theme.topPadding}`}>
                 {sortedVisibleMessages.map((msg) => (
                   <div key={`${msg.id}-${msg.animatedAt ?? "static"}`}
-                    style={{ animation: "notifDrop 420ms cubic-bezier(0.22,1,0.36,1)" }}
+
                     className={`px-4 py-3 ${theme.notificationCard}`}>
                     <div className="flex items-start gap-3">
                       <div className={`w-10 h-10 overflow-hidden shrink-0 flex items-center justify-center text-sm font-semibold ${theme.iconWrap}`}>
@@ -290,7 +290,7 @@ export default function NotificationCreator() {
           </div>
         </div>
 
-        <style>{`@keyframes notifDrop{0%{opacity:0;transform:translateY(-20px) scale(0.985)}60%{opacity:1;transform:translateY(2px) scale(1)}100%{opacity:1;transform:translateY(0) scale(1)}}`}</style>
+
 
         {isShootMode && (
           <div className="px-3 pt-4">
