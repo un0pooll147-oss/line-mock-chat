@@ -781,7 +781,7 @@ export default function LineMockChatCreator() {
         </div>
       </div>
 
-      <div className={cn("fixed bottom-0 left-0 right-0 z-40 w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", fullScreenMode ? "bg-black/75 backdrop-blur-md" : "")} style={{ backgroundColor: fullScreenMode ? undefined : theme.toolbarBg }}>
+      <div className="fixed bottom-0 left-0 right-0 z-40 w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.toolbarBg }}>
         {showTopActions && showActionButtons && (
           <div className={cn("flex items-center justify-between gap-2", showControls && "mb-1")}>
 
@@ -791,15 +791,15 @@ export default function LineMockChatCreator() {
 
         {showControls && (
           <div className="flex items-end gap-2">
-            <button type="button" className={cn("mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-black/5", fullScreenMode ? "bg-white/90 text-black/70" : "text-black/55")} aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
-            <div className={cn("flex min-h-[44px] flex-1 items-end rounded-[22px] border px-3 py-2 shadow-sm", fullScreenMode ? "border-white/30 bg-white/96" : "border-black/10 bg-white")}>
+            <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
+            <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
               <Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputPlaceholder} rows={1} className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0" />
               <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
                 <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
                 <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
               </div>
             </div>
-            {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className={cn("mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-black/5", fullScreenMode ? "bg-white/90 text-black/70" : "text-black/55")} aria-label="マイク"><Mic className="h-5 w-5" /></button>}
+            {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
           </div>
         )}
       </div>
