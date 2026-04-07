@@ -707,7 +707,7 @@ export default function LineMockChatCreator() {
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
   return (
-    <div className={cn("flex min-h-screen flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ backgroundColor: fullScreenMode ? undefined : theme.outerBg }}>
+    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ minHeight: "100dvh", backgroundColor: fullScreenMode ? undefined : theme.outerBg }}>
       <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "")}>
         <div className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")} style={{ backgroundColor: deviceFrameMode ? undefined : theme.outerBg }}>
           <PhoneMockup ref={previewRef} onStartCall={startCall} onOpenSettings={openSettings} title={chatTitle} messages={messages} typingText={typingText} isTyping={isTyping} theme={theme} avatarImage={avatarImage} avatarLabel={avatarLabel} deviceTime={deviceTime} showStatusBar={showStatusBar} showMessageTime={showMessageTime} todayDate={todayDate} wallpaper={wallpaper} />
