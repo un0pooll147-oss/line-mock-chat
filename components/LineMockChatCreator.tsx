@@ -74,6 +74,7 @@ const defaultSettings = {
   inputPlaceholder: "メッセージを入力",
   wallpaper: "",
   showControls: true,
+  showNotificationModeButton: true,
   showTopActions: true,
   showActionButtons: true,
   showEditorAccess: true,
@@ -419,6 +420,7 @@ export default function LineMockChatCreator() {
   const [inputPlaceholder, setInputPlaceholder] = useState(initialUiSettings.inputPlaceholder);
   const [wallpaper, setWallpaper] = useState(initialUiSettings.wallpaper);
   const [showControls, setShowControls] = useState(initialUiSettings.showControls);
+  const [showNotificationModeButton, setShowNotificationModeButton] = useState(initialUiSettings.showNotificationModeButton ?? true);
   const [showTopActions, setShowTopActions] = useState(initialUiSettings.showTopActions);
   const [showActionButtons, setShowActionButtons] = useState(initialUiSettings.showActionButtons ?? true);
   const [showEditorAccess, setShowEditorAccess] = useState(initialUiSettings.showEditorAccess);
@@ -670,7 +672,7 @@ export default function LineMockChatCreator() {
     chatTitle, incomingCallTitle, incomingCallAvatarLabel, incomingCallAvatarImage, avatarLabel, avatarImage,
     deviceTime, messageTime, outgoingMessageTime, incomingMessageTime, outgoingMessageDate, incomingMessageDate,
     incomingSender, incomingText, themeKey, showStatusBar, fullScreenMode, deviceFrameMode, showMessageTime,
-    inputPlaceholder, wallpaper, showControls, showTopActions, showActionButtons, showEditorAccess, soundEnabled,
+    inputPlaceholder, wallpaper, showControls, showNotificationModeButton, showTopActions, showActionButtons, showEditorAccess, soundEnabled,
     ringtoneType, customRingtoneName, customRingtoneUrl, outgoingToneEnabled, outgoingToneType,
     customOutgoingToneName, customOutgoingToneUrl, callAutoSeconds: Number(callAutoSeconds) || 0,
     incomingCallAutoSeconds: Number(incomingCallAutoSeconds) || 1.5,
@@ -694,7 +696,7 @@ export default function LineMockChatCreator() {
     setShowStatusBar(settings.showStatusBar); setFullScreenMode(settings.fullScreenMode);
     setDeviceFrameMode(settings.deviceFrameMode); setShowMessageTime(settings.showMessageTime);
     setInputPlaceholder(settings.inputPlaceholder); setWallpaper(settings.wallpaper);
-    setShowControls(settings.showControls); setShowTopActions(settings.showTopActions);
+    setShowControls(settings.showControls); setShowNotificationModeButton(settings.showNotificationModeButton ?? true); setShowTopActions(settings.showTopActions);
     setShowActionButtons(settings.showActionButtons ?? true); setShowEditorAccess(settings.showEditorAccess);
     setSoundEnabled(settings.soundEnabled); setRingtoneType(settings.ringtoneType);
     setCustomRingtoneName(settings.customRingtoneName); setCustomRingtoneUrl(settings.customRingtoneUrl);
@@ -788,11 +790,13 @@ export default function LineMockChatCreator() {
 
         {showControls && (
           <>
-            <div className="mb-1 flex justify-end">
-              <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 hover:bg-black/12 transition">
-                通知画面モードへ →
-              </button>
-            </div>
+            {showNotificationModeButton && (
+              <div className="mb-1 flex justify-end">
+                <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 hover:bg-black/12 transition">
+                  通知画面モードへ →
+                </button>
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
               <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
@@ -959,6 +963,7 @@ export default function LineMockChatCreator() {
 
 
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">通知画面モードボタン表示</div><div className="text-xs text-black/50">下部バーの通知画面への切り替えボタン</div></div><Switch checked={showNotificationModeButton} onCheckedChange={setShowNotificationModeButton} /></div>
 
                   </SectionCard>
 

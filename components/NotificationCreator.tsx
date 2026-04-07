@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock3, Image as ImageIcon, MessageSquareMore, Palette, PlusCircle, Settings2, Trash2, UserCircle2 } from "lucide-react";
 
 type OSType = "iphone" | "android";
 type EditorTab = "preview" | "add" | "list" | "settings";
@@ -85,6 +85,69 @@ const osThemes: Record<OSType, ThemeConfig> = {
   },
 };
 
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function Button({ children, className = "", variant = "default", type = "button", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) {
+  const base = "inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const styles = variant === "outline" ? "border border-black/10 bg-white text-black hover:bg-black/[0.03]" : "bg-[#06C755] text-white hover:brightness-95";
+  return (
+    <button type={type as "button" | "submit" | "reset"} className={cn(base, styles, className)} {...props}>
+      {children}
+    </button>
+  );
+}
+
+function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
+}
+
+function Textarea({ className = "", ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
+}
+
+function Label({ children, className = "", ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
+  return <label {...props} className={cn("text-sm font-medium text-black/80", className)}>{children}</label>;
+}
+
+function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (v: boolean) => void }) {
+  return (
+    <button type="button" onClick={() => onCheckedChange(!checked)} className={cn("relative h-7 w-12 rounded-full transition", checked ? "bg-[#06C755]" : "bg-black/15")} aria-pressed={checked}>
+      <span className={cn("absolute top-1 h-5 w-5 rounded-full bg-white shadow transition", checked ? "left-6" : "left-1")} />
+    </button>
+  );
+}
+
+function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
+        <Icon className="h-4 w-4" />
+        {title}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={cn("rounded-2xl px-2 py-2 text-xs font-medium transition", active ? "bg-white text-black shadow-sm" : "text-black/55")}>{children}</button>;
+}
+
+function FileInputRow({ label, description, onChange, previewName }: { label: string; description: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void; previewName?: string }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <label className="block rounded-2xl border border-black/10 bg-white px-3 py-3 text-sm text-black/70">
+        <div className="mb-2 flex items-center gap-2 text-black/80"><ImageIcon className="h-4 w-4" />画像を選択</div>
+        <input type="file" accept="image/*" onChange={onChange} className="block w-full text-sm text-black/70" />
+      </label>
+      <div className="text-xs text-black/50">{previewName || description}</div>
+    </div>
+  );
+}
+
 export default function NotificationCreator() {
   const router = useRouter();
   const [appMode, setAppMode] = useState<AppMode>("edit");
@@ -114,7 +177,7 @@ export default function NotificationCreator() {
 
   const bgStyle = useMemo<React.CSSProperties>(() => {
     if (selectedWallpaper === "upload" && uploadedWallpaper) {
-      return { backgroundImage: "url(" + uploadedWallpaper + ")", backgroundSize: "cover", backgroundPosition: "center" };
+      return { backgroundImage: `url(${uploadedWallpaper})`, backgroundSize: "cover", backgroundPosition: "center" };
     }
     return { backgroundImage: presetWallpapers[selectedWallpaper] ?? presetWallpapers.simple, backgroundSize: "cover", backgroundPosition: "center" };
   }, [selectedWallpaper, uploadedWallpaper]);
@@ -123,7 +186,11 @@ export default function NotificationCreator() {
     return [...messages].filter((m) => m.visible).sort((a, b) => a.delaySeconds - b.delaySeconds || b.id - a.id);
   }, [messages]);
 
-  const clearTimers = () => { playTimeoutsRef.current.forEach((t) => clearTimeout(t)); playTimeoutsRef.current = []; };
+  const clearTimers = () => {
+    playTimeoutsRef.current.forEach((t) => clearTimeout(t));
+    playTimeoutsRef.current = [];
+  };
+
   useEffect(() => () => clearTimers(), []);
 
   const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -132,6 +199,7 @@ export default function NotificationCreator() {
     setUploadedWallpaper(URL.createObjectURL(file));
     setSelectedWallpaper("upload");
   };
+
   const handleIconUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -141,7 +209,19 @@ export default function NotificationCreator() {
   const addMessage = () => {
     if (!form.sender.trim() || !form.text.trim()) return;
     const delay = Math.max(0, Number(form.delaySeconds) || 0);
-    const msg: Message = { id: Date.now(), appName: form.appName.trim() || "LINE", groupName, sender: form.sender.trim(), text: form.text.trim(), time: form.time.trim() || "今", iconText: form.iconText.trim() || "森", iconImage: uploadedIcon ?? undefined, delaySeconds: delay, visible: true, animatedAt: Date.now() };
+    const msg: Message = {
+      id: Date.now(),
+      appName: form.appName.trim() || "LINE",
+      groupName,
+      sender: form.sender.trim(),
+      text: form.text.trim(),
+      time: form.time.trim() || "今",
+      iconText: form.iconText.trim() || "森",
+      iconImage: uploadedIcon ?? undefined,
+      delaySeconds: delay,
+      visible: true,
+      animatedAt: Date.now(),
+    };
     setMessages((prev) => [msg, ...prev]);
     setForm((prev) => ({ ...prev, sender: "", text: "", time: "" }));
     setUploadedIcon(null);
@@ -150,9 +230,15 @@ export default function NotificationCreator() {
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((m) => m.id !== id));
   const updateMessage = (id: number, key: keyof Message, value: string | number | boolean | null) => setMessages((prev) => prev.map((m) => m.id === id ? { ...m, [key]: value } : m));
-  const showNow = (id: number) => { setMessages((prev) => prev.map((m) => m.id === id ? { ...m, visible: true, animatedAt: Date.now() } : m)); if (vibrateEnabled && navigator.vibrate) navigator.vibrate([100, 50, 100]); };
+  const showNow = (id: number) => {
+    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, visible: true, animatedAt: Date.now() } : m));
+    if (vibrateEnabled && navigator.vibrate) navigator.vibrate([100, 50, 100]);
+  };
   const hideAll = () => setMessages((prev) => prev.map((m) => ({ ...m, visible: false, animatedAt: null })));
-  const showAll = () => { clearTimers(); setMessages((prev) => prev.map((m) => ({ ...m, visible: true, animatedAt: Date.now() }))); };
+  const showAll = () => {
+    clearTimers();
+    setMessages((prev) => prev.map((m) => ({ ...m, visible: true, animatedAt: Date.now() })));
+  };
 
   const playNotifications = () => {
     clearTimers();
@@ -169,189 +255,199 @@ export default function NotificationCreator() {
     playTimeoutsRef.current.push(setTimeout(() => clearTimers(), maxDelay * 1000 + 1200));
   };
 
-  const ic = "w-full rounded-2xl bg-white text-black px-4 py-3 outline-none text-sm";
-
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className={"mx-auto max-w-[720px] " + (isShootMode ? "pb-6" : "pb-36")}>
-
+    <div className="min-h-screen bg-[#fafafa] text-black">
+      <div className={cn("mx-auto w-full max-w-md", isShootMode ? "pb-6" : "pb-40")}>
         {!isShootMode && (
-          <div className="sticky top-0 z-30 bg-black px-3 pt-3 pb-3 border-b border-white/10">
-            <div className="flex items-center justify-between mb-2">
-              <button onClick={() => router.push("/")} className="text-sm text-white/60">← チャット画面へ</button>
-              <span className="text-sm font-semibold text-white/80">通知画面作成</span>
+          <div className="sticky top-0 z-30 border-b border-black/10 bg-[#fafafa]/95 px-4 pb-3 pt-4 backdrop-blur">
+            <div className="mb-3 flex items-center justify-between">
+              <button onClick={() => router.push("/")} className="rounded-full bg-black/[0.04] px-3 py-1 text-sm text-black/60 transition hover:bg-black/[0.07]">← チャット画面へ</button>
+              <span className="text-sm font-semibold text-black/75">通知画面モード</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 rounded-2xl bg-black/5 p-1 text-center">
               {(["edit", "preview", "shoot"] as AppMode[]).map((mode) => (
-                <button key={mode} onClick={() => setAppMode(mode)}
-                  className={"rounded-2xl border px-3 py-2 text-left " + (appMode === mode ? "border-white bg-white text-black" : "border-white/10 bg-white/5 text-white")}>
-                  <div className="text-xs font-semibold">{mode === "edit" ? "編集" : mode === "preview" ? "確認" : "撮影"}</div>
-                  <div className={"text-[10px] mt-0.5 " + (appMode === mode ? "text-black/60" : "text-white/45")}>
-                    {mode === "edit" ? "追加・修正・設定" : mode === "preview" ? "再生しながら確認" : "UI非表示で本番用"}
-                  </div>
-                </button>
+                <TabButton key={mode} active={appMode === mode} onClick={() => setAppMode(mode)}>
+                  {mode === "edit" ? "編集" : mode === "preview" ? "確認" : "撮影"}
+                </TabButton>
               ))}
             </div>
           </div>
         )}
 
-        <div className={isShootMode ? "pt-4 px-3" : "px-3 pt-3"}>
+        <div className={cn("px-4", isShootMode ? "pt-4" : "pt-4")}>
           <div className="mx-auto flex justify-center">
-            <div ref={previewRef} className={"relative w-full max-w-[390px] aspect-[390/844] overflow-hidden border border-white/10 shadow-2xl " + theme.phoneFrame} style={bgStyle}>
+            <div ref={previewRef} className={cn("relative w-full max-w-[390px] aspect-[390/844] overflow-hidden border border-white/10 shadow-2xl", theme.phoneFrame)} style={bgStyle}>
               <div className="absolute inset-0" style={{ backgroundColor: "rgba(0,0,0,0.12)" }} />
 
-              {theme.notch && <div className="absolute top-3 left-1/2 -translate-x-1/2 w-[140px] h-[30px] bg-black rounded-full z-20" />}
+              {theme.notch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
-              <div className="absolute top-0 left-0 right-0 z-20 px-6 pt-5 pb-3 flex items-center justify-between text-sm text-white">
+              <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 pb-3 pt-5 text-sm text-white">
                 <span className="font-medium">{phoneTime}</span>
                 <div className="flex items-center gap-1 text-xs opacity-90"><span>▂</span><span>◔</span><span>▮</span></div>
               </div>
 
               {showLargeClock && (
-                <div className={"absolute left-0 right-0 z-10 text-center " + theme.largeClockWrap}>
+                <div className={cn("absolute left-0 right-0 z-10 text-center", theme.largeClockWrap)}>
                   <div className={theme.largeClockTime}>{lockscreenTime}</div>
                   <div className={theme.largeClockDate}>{lockscreenDate}</div>
                 </div>
               )}
 
-              <div className={"relative z-10 px-4 space-y-3 " + (showLargeClock ? (osType === "iphone" ? "pt-[230px]" : "pt-[205px]") : theme.topPadding)}>
+              <div className={cn("relative z-10 space-y-3 px-4", showLargeClock ? (osType === "iphone" ? "pt-[230px]" : "pt-[205px]") : theme.topPadding)}>
                 {sortedVisible.map((msg) => (
-                  <div key={msg.id + "-" + (msg.animatedAt ?? "s")} className={"px-4 py-3 " + theme.notificationCard} style={{ backgroundColor: notifBg }}>
+                  <div key={`${msg.id}-${msg.animatedAt ?? "s"}`} className={cn("px-4 py-3", theme.notificationCard)} style={{ backgroundColor: notifBg }}>
                     <div className="flex items-start gap-3">
-                      <div className={"w-10 h-10 overflow-hidden shrink-0 flex items-center justify-center text-sm font-semibold " + theme.iconWrap} style={{ backgroundColor: iconBg }}>
-                        {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="w-full h-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
+                      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)} style={{ backgroundColor: iconBg }}>
+                        {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <div className={theme.appText}>{msg.appName}</div>
                           <div className={theme.timeText}>{msg.time}</div>
                         </div>
-                        <div className={"mt-0.5 truncate " + theme.groupText}>{msg.groupName}</div>
-                        <div className={"mt-0.5 truncate " + theme.senderText}>{msg.sender}</div>
-                        <div className={"mt-0.5 break-words leading-snug " + theme.bodyText}>{msg.text}</div>
+                        <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
+                        <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
+                        <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {theme.homeBar && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[140px] h-[5px] rounded-full z-20" style={{ backgroundColor: "rgba(255,255,255,0.75)" }} />}
+              {theme.homeBar && <div className="absolute bottom-2 left-1/2 z-20 h-[5px] w-[140px] -translate-x-1/2 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.75)" }} />}
             </div>
           </div>
         </div>
 
         {isShootMode && (
-          <div className="px-3 pt-4">
-            <div className="mx-auto max-w-[390px] grid grid-cols-2 gap-2">
-              <button onClick={() => setAppMode("preview")} className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black">確認モードへ戻る</button>
-              <button onClick={() => router.push("/")} className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold">チャット画面へ</button>
+          <div className="px-4 pt-4">
+            <div className="mx-auto grid max-w-[390px] grid-cols-2 gap-2">
+              <Button onClick={() => setAppMode("preview")} variant="outline" className="w-full">確認モードへ戻る</Button>
+              <Button onClick={() => router.push("/")} variant="outline" className="w-full">チャット画面へ</Button>
             </div>
           </div>
         )}
 
         {!isShootMode && (
           <>
-            <div className="sticky top-[104px] z-20 bg-black px-3 pt-3 pb-4">
+            <div className="sticky top-[106px] z-20 bg-[#fafafa]/95 px-4 pb-3 pt-3 backdrop-blur">
               <div className="flex gap-2 overflow-x-auto pb-1">
-                <button onClick={playNotifications} className="whitespace-nowrap rounded-full bg-green-500 px-4 py-2 text-sm font-semibold text-black">再生</button>
-                <button onClick={clearTimers} className="whitespace-nowrap rounded-full bg-yellow-500 px-4 py-2 text-sm font-semibold text-black">停止</button>
-                <button onClick={hideAll} className="whitespace-nowrap rounded-full bg-white/10 px-4 py-2 text-sm">非表示</button>
-                <button onClick={showAll} className="whitespace-nowrap rounded-full bg-white/10 px-4 py-2 text-sm">全表示</button>
+                <Button onClick={playNotifications} className="whitespace-nowrap">再生</Button>
+                <Button onClick={clearTimers} variant="outline" className="whitespace-nowrap">停止</Button>
+                <Button onClick={hideAll} variant="outline" className="whitespace-nowrap">非表示</Button>
+                <Button onClick={showAll} variant="outline" className="whitespace-nowrap">全表示</Button>
               </div>
             </div>
 
             {isEditMode && (
-              <div className="px-3 pt-2">
-                <div className="rounded-[28px] border border-white/10 bg-zinc-900 shadow-2xl overflow-hidden">
-                  <div className="flex justify-center pt-3"><div className="h-1.5 w-14 rounded-full bg-white/20" /></div>
-                  <div className="flex gap-2 overflow-x-auto px-3 py-3">
-                    {(["preview", "add", "list", "settings"] as EditorTab[]).map((tab) => (
-                      <button key={tab} onClick={() => setActiveTab(tab)} className={"whitespace-nowrap min-w-[72px] rounded-full px-4 py-2 text-sm font-medium " + (activeTab === tab ? "bg-white text-black" : "bg-white/10 text-white/80")}>
-                        {tab === "preview" ? "確認" : tab === "add" ? "追加" : tab === "list" ? "通知一覧" : "設定"}
-                      </button>
+              <div className="space-y-4 px-4 pt-1">
+                <div className="grid grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
+                  <TabButton active={activeTab === "preview"} onClick={() => setActiveTab("preview")}>確認</TabButton>
+                  <TabButton active={activeTab === "add"} onClick={() => setActiveTab("add")}>追加</TabButton>
+                  <TabButton active={activeTab === "list"} onClick={() => setActiveTab("list")}>通知一覧</TabButton>
+                  <TabButton active={activeTab === "settings"} onClick={() => setActiveTab("settings")}>設定</TabButton>
+                </div>
+
+                {activeTab === "preview" && (
+                  <SectionCard icon={MessageSquareMore} title="クイック確認">
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
+                      <div>表示中: {sortedVisible.length}件</div>
+                      <div>総数: {messages.length}件</div>
+                      <div>OS: {osType === "iphone" ? "iPhone風" : "Android風"}</div>
+                      <div>グループ名: {groupName}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => setActiveTab("add")} className="w-full">通知を追加</Button>
+                      <Button onClick={() => setActiveTab("list")} variant="outline" className="w-full">通知を編集</Button>
+                    </div>
+                  </SectionCard>
+                )}
+
+                {activeTab === "add" && (
+                  <SectionCard icon={PlusCircle} title="通知を追加">
+                    <div className="space-y-2"><Label>アプリ名</Label><Input value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} placeholder="LINE" /></div>
+                    <div className="space-y-2"><Label>送信者名</Label><Input value={form.sender} onChange={(e) => setForm({ ...form, sender: e.target.value })} placeholder="美咲" /></div>
+                    <div className="space-y-2"><Label>メッセージ</Label><Textarea value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="メッセージ内容" className="min-h-[110px] resize-none" /></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>通知時刻</Label><Input value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="22:18" /></div>
+                      <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={form.delaySeconds} onChange={(e) => setForm({ ...form, delaySeconds: e.target.value })} placeholder="1" /></div>
+                    </div>
+                    <div className="space-y-2"><Label>文字アイコン</Label><Input value={form.iconText} onChange={(e) => setForm({ ...form, iconText: e.target.value })} placeholder="森" /></div>
+                    <FileInputRow label="アイコン画像" description="画像を選ばない場合は文字アイコンを使います" onChange={handleIconUpload} previewName={uploadedIcon ? "画像を選択済み" : undefined} />
+                    <Button onClick={addMessage} className="w-full justify-center">追加する</Button>
+                  </SectionCard>
+                )}
+
+                {activeTab === "list" && (
+                  <div className="space-y-3">
+                    {messages.map((msg, index) => (
+                      <SectionCard key={msg.id} icon={Trash2} title={`通知 #${index + 1}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="truncate text-sm font-semibold text-black/80">{msg.sender || "未設定"}</div>
+                          <div className="flex gap-2">
+                            <Button onClick={() => showNow(msg.id)} variant="outline" className="px-3 py-1.5 text-xs">今表示</Button>
+                            <Button onClick={() => deleteMessage(msg.id)} variant="outline" className="border-red-200 px-3 py-1.5 text-xs text-red-500">削除</Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2"><Label>アプリ名</Label><Input value={msg.appName} onChange={(e) => updateMessage(msg.id, "appName", e.target.value)} /></div>
+                        <div className="space-y-2"><Label>グループ名</Label><Input value={msg.groupName} onChange={(e) => updateMessage(msg.id, "groupName", e.target.value)} /></div>
+                        <div className="space-y-2"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessage(msg.id, "sender", e.target.value)} /></div>
+                        <div className="space-y-2"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessage(msg.id, "text", e.target.value)} className="min-h-[100px] resize-none" /></div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2"><Label>通知時刻</Label><Input value={msg.time} onChange={(e) => updateMessage(msg.id, "time", e.target.value)} /></div>
+                          <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={msg.delaySeconds} onChange={(e) => updateMessage(msg.id, "delaySeconds", Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0)} /></div>
+                        </div>
+                        <div className="space-y-2"><Label>文字アイコン</Label><Input value={msg.iconText} onChange={(e) => updateMessage(msg.id, "iconText", e.target.value)} /></div>
+                        <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                          <div>
+                            <div className="text-sm font-medium">手動表示を有効にする</div>
+                            <div className="text-xs text-black/50">再生前の見え方を個別に調整できます</div>
+                          </div>
+                          <Switch checked={msg.visible} onCheckedChange={(value) => updateMessage(msg.id, "visible", value)} />
+                        </div>
+                      </SectionCard>
                     ))}
                   </div>
-                  <div className="px-3 pb-5">
-                    {activeTab === "preview" && (
-                      <div className="space-y-3">
-                        <div className="rounded-2xl bg-white/5 p-4 text-sm space-y-1">
-                          <div className="font-semibold mb-2">クイック確認</div>
-                          <div className="text-white/65">表示中: {sortedVisible.length}件　総数: {messages.length}件</div>
-                          <div className="text-white/65">OS: {osType === "iphone" ? "iPhone風" : "Android風"}　グループ: {groupName}</div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => setActiveTab("add")} className="rounded-2xl bg-white text-black py-3 text-sm font-semibold">通知を追加</button>
-                          <button onClick={() => setActiveTab("list")} className="rounded-2xl bg-white/10 py-3 text-sm font-semibold">通知を編集</button>
-                        </div>
+                )}
+
+                {activeTab === "settings" && (
+                  <div className="space-y-4">
+                    <SectionCard icon={UserCircle2} title="端末表示">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={() => setOsType("iphone")} variant={osType === "iphone" ? "default" : "outline"} className="w-full">iPhone風</Button>
+                        <Button onClick={() => setOsType("android")} variant={osType === "android" ? "default" : "outline"} className="w-full">Android風</Button>
                       </div>
-                    )}
-                    {activeTab === "add" && (
-                      <div className="space-y-3">
-                        <input type="text" value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} placeholder="アプリ名（例：LINE）" className={ic} />
-                        <input type="text" value={form.sender} onChange={(e) => setForm({ ...form, sender: e.target.value })} placeholder="送信者名" className={ic} />
-                        <textarea value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="メッセージ" className={ic + " min-h-[100px] resize-none"} />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input type="text" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="通知時刻" className={ic} />
-                          <input type="number" min="0" step="0.1" value={form.delaySeconds} onChange={(e) => setForm({ ...form, delaySeconds: e.target.value })} placeholder="表示秒数" className={ic} />
+                      <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" /></div>
+                      <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                        <div>
+                          <div className="text-sm font-medium">大きい時計を表示</div>
+                          <div className="text-xs text-black/50">ロック画面っぽい見せ方に切り替え</div>
                         </div>
-                        <input type="text" value={form.iconText} onChange={(e) => setForm({ ...form, iconText: e.target.value })} placeholder="文字アイコン" className={ic} />
-                        <label className="block rounded-2xl bg-white/5 px-4 py-3 text-sm">
-                          <div className="mb-2 text-white/80">アイコン画像</div>
-                          <input type="file" accept="image/*" onChange={handleIconUpload} className="block w-full text-sm text-white/80" />
-                        </label>
-                        <button onClick={addMessage} className="w-full rounded-2xl bg-green-500 py-4 text-base font-semibold text-black">通知を追加</button>
+                        <Switch checked={showLargeClock} onCheckedChange={setShowLargeClock} />
                       </div>
-                    )}
-                    {activeTab === "list" && (
-                      <div className="space-y-3">
-                        {messages.map((msg) => (
-                          <div key={msg.id} className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="text-sm font-semibold truncate">{msg.sender}</div>
-                              <div className="flex gap-2">
-                                <button onClick={() => showNow(msg.id)} className="rounded-full bg-blue-500/80 px-3 py-1.5 text-xs">今表示</button>
-                                <button onClick={() => deleteMessage(msg.id)} className="rounded-full bg-red-500/80 px-3 py-1.5 text-xs">削除</button>
-                              </div>
-                            </div>
-                            <input type="text" value={msg.appName} onChange={(e) => updateMessage(msg.id, "appName", e.target.value)} placeholder="アプリ名" className={ic} />
-                            <input type="text" value={msg.groupName} onChange={(e) => updateMessage(msg.id, "groupName", e.target.value)} placeholder="グループ名" className={ic} />
-                            <input type="text" value={msg.sender} onChange={(e) => updateMessage(msg.id, "sender", e.target.value)} placeholder="送信者名" className={ic} />
-                            <textarea value={msg.text} onChange={(e) => updateMessage(msg.id, "text", e.target.value)} placeholder="メッセージ" className={ic + " min-h-[90px] resize-none"} />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input type="text" value={msg.time} onChange={(e) => updateMessage(msg.id, "time", e.target.value)} placeholder="通知時刻" className={ic} />
-                              <input type="number" min="0" step="0.1" value={msg.delaySeconds} onChange={(e) => updateMessage(msg.id, "delaySeconds", Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0)} placeholder="表示秒数" className={ic} />
-                            </div>
-                            <input type="text" value={msg.iconText} onChange={(e) => updateMessage(msg.id, "iconText", e.target.value)} placeholder="文字アイコン" className={ic} />
-                            <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer">
-                              <input type="checkbox" checked={msg.visible} onChange={(e) => updateMessage(msg.id, "visible", e.target.checked)} />
-                              手動表示
-                            </label>
-                          </div>
-                        ))}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2"><Label>大きい時計</Label><Input value={lockscreenTime} onChange={(e) => setLockscreenTime(e.target.value)} placeholder="9:41" /></div>
+                        <div className="space-y-2"><Label>日付表示</Label><Input value={lockscreenDate} onChange={(e) => setLockscreenDate(e.target.value)} placeholder="4月5日 日曜日" /></div>
                       </div>
-                    )}
-                    {activeTab === "settings" && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <button onClick={() => setOsType("iphone")} className={"rounded-2xl py-3 text-sm font-semibold " + (osType === "iphone" ? "bg-white text-black" : "bg-white/10 text-white")}>iPhone風</button>
-                          <button onClick={() => setOsType("android")} className={"rounded-2xl py-3 text-sm font-semibold " + (osType === "android" ? "bg-white text-black" : "bg-white/10 text-white")}>Android風</button>
+                    </SectionCard>
+
+                    <SectionCard icon={Settings2} title="通知設定">
+                      <div className="space-y-2"><Label>グループ名</Label><Input value={groupName} onChange={(e) => { setGroupName(e.target.value); setMessages((prev) => prev.map((m) => ({ ...m, groupName: e.target.value }))); }} placeholder="森田家" /></div>
+                      <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                        <div>
+                          <div className="text-sm font-medium">バイブON</div>
+                          <div className="text-xs text-black/50">再生時に端末バイブを鳴らします</div>
                         </div>
-                        <input type="text" value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="ステータスバー時刻" className={ic} />
-                        <label className="flex items-center gap-3 rounded-2xl bg-white/5 px-4 py-3 text-sm text-white/90 cursor-pointer">
-                          <input type="checkbox" checked={showLargeClock} onChange={(e) => setShowLargeClock(e.target.checked)} />
-                          大きい時計を表示
-                        </label>
-                        <input type="text" value={lockscreenTime} onChange={(e) => setLockscreenTime(e.target.value)} placeholder="大きい時計" className={ic} />
-                        <input type="text" value={lockscreenDate} onChange={(e) => setLockscreenDate(e.target.value)} placeholder="日付表示（例：4月5日 日曜日）" className={ic} />
-                        <input type="text" value={groupName} onChange={(e) => { setGroupName(e.target.value); setMessages((prev) => prev.map((m) => ({ ...m, groupName: e.target.value }))); }} placeholder="グループ名" className={ic} />
-                        <label className="flex items-center gap-3 rounded-2xl bg-white/5 px-4 py-3 text-sm text-white/90 cursor-pointer">
-                          <input type="checkbox" checked={vibrateEnabled} onChange={(e) => setVibrateEnabled(e.target.checked)} />
-                          バイブON
-                        </label>
-                        <select value={selectedWallpaper} onChange={(e) => setSelectedWallpaper(e.target.value)} className={ic}>
+                        <Switch checked={vibrateEnabled} onCheckedChange={setVibrateEnabled} />
+                      </div>
+                    </SectionCard>
+
+                    <SectionCard icon={Palette} title="壁紙">
+                      <div className="space-y-2"><Label>プリセット壁紙</Label>
+                        <select value={selectedWallpaper} onChange={(e) => setSelectedWallpaper(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
                           <option value="simple">シンプル</option>
                           <option value="blue">青ベース</option>
                           <option value="red">赤ベース</option>
@@ -362,30 +458,24 @@ export default function NotificationCreator() {
                           <option value="pink">ピンクベース</option>
                           {uploadedWallpaper && <option value="upload">アップロード画像</option>}
                         </select>
-                        <label className="block rounded-2xl bg-white/5 px-4 py-3 text-sm">
-                          <div className="mb-2 text-white/80">壁紙画像アップロード</div>
-                          <input type="file" accept="image/*" onChange={handleWallpaperUpload} className="block w-full text-sm text-white/80" />
-                        </label>
-                        {uploadedWallpaper && (
-                          <button onClick={() => { setUploadedWallpaper(null); setSelectedWallpaper("simple"); }} className="w-full rounded-2xl bg-white/10 py-3 text-sm">アップロード壁紙を解除</button>
-                        )}
                       </div>
-                    )}
+                      <FileInputRow label="壁紙画像" description="アップロードすると背景に反映されます" onChange={handleWallpaperUpload} previewName={uploadedWallpaper ? "画像を選択済み" : undefined} />
+                      {uploadedWallpaper && <Button onClick={() => { setUploadedWallpaper(null); setSelectedWallpaper("simple"); }} variant="outline" className="w-full">アップロード壁紙を解除</Button>}
+                    </SectionCard>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {isPreviewMode && (
-              <div className="px-3 pt-4">
-                <div className="rounded-[28px] border border-white/10 bg-zinc-900 p-4 shadow-2xl space-y-3">
-                  <div className="text-sm font-semibold">確認モードの使い方</div>
-                  <div className="text-sm text-white/65">再生・停止・表示確認に集中するモードです。</div>
+              <div className="px-4 pt-4">
+                <SectionCard icon={Clock3} title="確認モード">
+                  <div className="text-sm text-black/65">このモードでは再生・停止・見え方の確認に集中できます。</div>
                   <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => setAppMode("edit")} className="rounded-2xl bg-white/10 py-3 text-sm font-semibold">編集モードへ</button>
-                    <button onClick={() => setAppMode("shoot")} className="rounded-2xl bg-white py-3 text-sm font-semibold text-black">撮影モードへ</button>
+                    <Button onClick={() => setAppMode("edit")} variant="outline" className="w-full">編集モードへ</Button>
+                    <Button onClick={() => setAppMode("shoot")} className="w-full">撮影モードへ</Button>
                   </div>
-                </div>
+                </SectionCard>
               </div>
             )}
           </>
@@ -393,13 +483,12 @@ export default function NotificationCreator() {
       </div>
 
       {!isShootMode && isEditMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-black">
-          <div className="mx-auto grid max-w-[720px] grid-cols-4 gap-2 px-3 py-3">
-            {(["preview", "add", "list", "settings"] as EditorTab[]).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={"rounded-2xl py-3 text-xs font-medium " + (activeTab === tab ? "bg-white text-black" : "bg-white/10")}>
-                {tab === "preview" ? "確認" : tab === "add" ? "追加" : tab === "list" ? "通知" : "設定"}
-              </button>
-            ))}
+        <div className="fixed bottom-0 left-0 right-0 z-30 w-full border-t border-black/10 bg-white px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+          <div className="mx-auto grid max-w-md grid-cols-4 gap-2">
+            <button type="button" onClick={() => setActiveTab("preview")} className={cn("rounded-2xl px-2 py-3 text-xs font-medium transition", activeTab === "preview" ? "bg-black text-white" : "bg-black/[0.04] text-black/70")}>確認</button>
+            <button type="button" onClick={() => setActiveTab("add")} className={cn("rounded-2xl px-2 py-3 text-xs font-medium transition", activeTab === "add" ? "bg-black text-white" : "bg-black/[0.04] text-black/70")}>追加</button>
+            <button type="button" onClick={() => setActiveTab("list")} className={cn("rounded-2xl px-2 py-3 text-xs font-medium transition", activeTab === "list" ? "bg-black text-white" : "bg-black/[0.04] text-black/70")}>通知</button>
+            <button type="button" onClick={() => setActiveTab("settings")} className={cn("rounded-2xl px-2 py-3 text-xs font-medium transition", activeTab === "settings" ? "bg-black text-white" : "bg-black/[0.04] text-black/70")}>設定</button>
           </div>
         </div>
       )}
