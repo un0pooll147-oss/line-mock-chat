@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Download,
   Play,
   PlusCircle,
   Image as ImageIcon,
@@ -20,7 +19,6 @@ import {
   Video,
   PhoneOff,
 } from "lucide-react";
-import html2canvas from "html2canvas";
 
 const initialMessages = [
   { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/03", time: "22:14" },
@@ -668,30 +666,7 @@ export default function LineMockChatCreator() {
     applySettings(defaultSettings);
   };
 
-  const exportPNG = async () => {
-    if (!previewRef.current) return;
-    const el = previewRef.current;
-    const rect = el.getBoundingClientRect();
-    const scrollX = window.scrollX || document.documentElement.scrollLeft;
-    const scrollY = window.scrollY || document.documentElement.scrollTop;
-    const canvas = await html2canvas(el, {
-      backgroundColor: null,
-      scale: 2,
-      useCORS: true,
-      width: rect.width,
-      height: rect.height,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      x: rect.left + scrollX,
-      y: rect.top + scrollY,
-      scrollX: -scrollX,
-      scrollY: -scrollY,
-    });
-    const link = document.createElement("a");
-    link.download = "chat.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
+
 
   const startCall = (type: string) => {
     clearCallTimer();
@@ -761,7 +736,7 @@ export default function LineMockChatCreator() {
       <div className={cn("fixed bottom-0 left-0 right-0 z-40 mx-auto w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", fullScreenMode ? "max-w-none bg-black/75 backdrop-blur-md" : "max-w-md")} style={{ backgroundColor: fullScreenMode ? undefined : theme.toolbarBg }}>
         {showTopActions && showActionButtons && (
           <div className={cn("flex items-center justify-between gap-2", showControls && "mb-1")}>
-            <Button onClick={exportPNG} variant="outline" className={cn("h-10 flex-1", fullScreenMode && "bg-white/95")}><Download className="mr-2 h-4 w-4" />画像ファイルへ書き出し(.png)</Button>
+
             {showEditorAccess && <Button variant="outline" className={cn("h-10 px-3", fullScreenMode && "bg-white/95")} onClick={openSettings}><Settings2 className="h-4 w-4" /></Button>}
           </div>
         )}
@@ -905,7 +880,7 @@ export default function LineMockChatCreator() {
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定・画像書き出し操作バー表示</div><div className="text-xs text-black/50">書き出し・設定ボタンの表示</div></div><Switch checked={showTopActions} onCheckedChange={setShowTopActions} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定操作バー表示</div><div className="text-xs text-black/50">設定ボタンの表示</div></div><Switch checked={showTopActions} onCheckedChange={setShowTopActions} /></div>
 
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
 
