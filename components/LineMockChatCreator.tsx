@@ -88,6 +88,7 @@ const defaultSettings = {
   customOutgoingToneName: "",
   customOutgoingToneUrl: "",
   callAutoSeconds: 1.5,
+  incomingCallAutoSeconds: 1.5,
   incomingDelaySeconds: 0,
   incomingCallBgColor: "#000000",
   incomingCallBgOpacity: 0.9,
@@ -429,6 +430,7 @@ export default function LineMockChatCreator() {
   const [customOutgoingToneName, setCustomOutgoingToneName] = useState(initialUiSettings.customOutgoingToneName || "");
   const [customOutgoingToneUrl, setCustomOutgoingToneUrl] = useState(initialUiSettings.customOutgoingToneUrl || "");
   const [callAutoSeconds, setCallAutoSeconds] = useState(initialUiSettings.callAutoSeconds);
+  const [incomingCallAutoSeconds, setIncomingCallAutoSeconds] = useState(initialUiSettings.incomingCallAutoSeconds || 1.5);
   const [incomingDelaySeconds, setIncomingDelaySeconds] = useState(initialUiSettings.incomingDelaySeconds || 0);
   const [incomingCallBgColor, setIncomingCallBgColor] = useState(initialUiSettings.incomingCallBgColor || "#000000");
   const [incomingCallBgOpacity, setIncomingCallBgOpacity] = useState(initialUiSettings.incomingCallBgOpacity ?? 0.9);
@@ -450,6 +452,17 @@ export default function LineMockChatCreator() {
     const base = themePresets[themeKey] || themePresets.line;
     return { ...base, appBg: customBgColor || base.appBg, headerBg: customHeaderColor || base.headerBg, toolbarBg: customToolbarColor || base.toolbarBg, headerIconColor: customHeaderIconColor || "#ffffff", outerBg: customOuterBgColor || customBgColor || base.appBg };
   }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor]);
+
+  useEffect(() => {
+    const headerColor = customHeaderColor || (themePresets[themeKey] || themePresets.line).headerBg;
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      (meta as HTMLMetaElement).name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    (meta as HTMLMetaElement).content = headerColor;
+  }, [themeKey, customHeaderColor]);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -524,9 +537,10 @@ export default function LineMockChatCreator() {
     ringtoneIntervalRef.current = window.setInterval(runPattern, outgoingToneType === "line" ? 1500 : 1800);
   };
 
-  const scheduleConnect = () => {
+  const scheduleConnect = (seconds?: number) => {
     clearCallTimer();
-    callTimeoutRef.current = window.setTimeout(() => { stopAudioTone(); setCallPhase("connected"); }, Math.max(0, Number(callAutoSeconds) || 0) * 1000);
+    const delay = seconds !== undefined ? seconds : Number(callAutoSeconds) || 0;
+    callTimeoutRef.current = window.setTimeout(() => { stopAudioTone(); setCallPhase("connected"); }, Math.max(0, delay) * 1000);
   };
 
   const simulateTyping = () => {
@@ -598,6 +612,7 @@ export default function LineMockChatCreator() {
     inputPlaceholder, wallpaper, showControls, showTopActions, showActionButtons, showEditorAccess, soundEnabled,
     ringtoneType, customRingtoneName, customRingtoneUrl, outgoingToneEnabled, outgoingToneType,
     customOutgoingToneName, customOutgoingToneUrl, callAutoSeconds: Number(callAutoSeconds) || 0,
+    incomingCallAutoSeconds: Number(incomingCallAutoSeconds) || 1.5,
     incomingDelaySeconds: Number(incomingDelaySeconds) || 0, incomingCallBgColor, incomingCallBgOpacity,
     outgoingCallBgColor, outgoingCallBgOpacity,
   });
@@ -624,7 +639,7 @@ export default function LineMockChatCreator() {
     setCustomRingtoneName(settings.customRingtoneName); setCustomRingtoneUrl(settings.customRingtoneUrl);
     setOutgoingToneEnabled(settings.outgoingToneEnabled ?? true); setOutgoingToneType(settings.outgoingToneType || "line");
     setCustomOutgoingToneName(settings.customOutgoingToneName || ""); setCustomOutgoingToneUrl(settings.customOutgoingToneUrl || "");
-    setCallAutoSeconds(settings.callAutoSeconds || 0); setIncomingDelaySeconds(settings.incomingDelaySeconds || 0);
+    setCallAutoSeconds(settings.callAutoSeconds || 0); setIncomingCallAutoSeconds(settings.incomingCallAutoSeconds || 1.5); setIncomingDelaySeconds(settings.incomingDelaySeconds || 0);
     setIncomingCallBgColor(settings.incomingCallBgColor || "#000000"); setIncomingCallBgOpacity(settings.incomingCallBgOpacity ?? 0.9);
     setOutgoingCallBgColor(settings.outgoingCallBgColor || "#000000"); setOutgoingCallBgOpacity(settings.outgoingCallBgOpacity ?? 0.9);
   };
@@ -672,7 +687,7 @@ export default function LineMockChatCreator() {
 
   const acceptIncomingCall = () => {
     if (!callMode) return;
-    stopAudioTone(); setCallPhase("connecting"); scheduleConnect();
+    stopAudioTone(); setCallPhase("connecting"); scheduleConnect(Number(incomingCallAutoSeconds) || 0);
   };
 
   const declineIncomingCall = () => {
@@ -761,9 +776,17 @@ export default function LineMockChatCreator() {
                   <SectionCard icon={Palette} title="デザイン">
                     <div className="space-y-2">
                       <Label>テーマ</Label>
-                      <select value={themeKey} onChange={(e) => setThemeKey(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
+                      <select value={themeKey} onChange={(e) => {
+                        setThemeKey(e.target.value);
+                        setCustomBgColor("");
+                        setCustomHeaderColor("");
+                        setCustomHeaderIconColor("");
+                        setCustomToolbarColor("");
+                        setCustomOuterBgColor("");
+                      }} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
                         {Object.entries(themePresets).map(([key, preset]) => <option key={key} value={key}>{preset.name}</option>)}
                       </select>
+                      <button type="button" onClick={() => { setCustomBgColor(""); setCustomHeaderColor(""); setCustomHeaderIconColor(""); setCustomToolbarColor(""); setCustomOuterBgColor(""); }} className="text-xs text-black/40 underline">カスタム色をリセット</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>背景色</Label><ColorSwatch value={customBgColor || theme.appBg} onChange={(e) => setCustomBgColor(e.target.value)} /></div>
@@ -871,7 +894,8 @@ export default function LineMockChatCreator() {
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">着信音（ダミー）</div><div className="text-xs text-black/50">着信時に音を鳴らす</div></div><Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} /></div>
                     <div className="space-y-2"><Label>着信音の種類</Label><select value={ringtoneType} onChange={(e) => setRingtoneType(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
                     <div className="space-y-2"><Label>着信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomRingtoneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customRingtoneName ? `選択中: ${customRingtoneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
-                    <div className="space-y-2"><Label>通話接続までの秒数</Label><Input type="number" min="0" step="0.1" value={callAutoSeconds} onChange={(e) => setCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中 / 応答後 から 通話中 に切り替わるまでの秒数</div></div>
+                    <div className="space-y-2"><Label>発信→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={callAutoSeconds} onChange={(e) => setCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中から通話中に切り替わるまでの秒数</div></div>
+                    <div className="space-y-2"><Label>着信応答→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={incomingCallAutoSeconds} onChange={(e) => setIncomingCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">着信を応答してから通話中に切り替わるまでの秒数</div></div>
                     <div className="space-y-2"><Label>着信までの秒数</Label><Input type="number" min="0" step="0.1" value={incomingDelaySeconds} onChange={(e) => setIncomingDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">ボタンを押してから指定秒数で着信</div></div>
                     <div className="space-y-2 pt-1"><Label>着信相手の名前</Label><Input value={incomingCallTitle} onChange={(e) => setIncomingCallTitle(e.target.value)} placeholder="母" /></div>
                     <div className="space-y-2"><Label>着信相手のアイコン文字</Label><Input value={incomingCallAvatarLabel} onChange={(e) => setIncomingCallAvatarLabel(e.target.value.slice(0, 2))} placeholder="母" /></div>
