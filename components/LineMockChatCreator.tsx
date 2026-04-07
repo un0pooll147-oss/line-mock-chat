@@ -45,6 +45,55 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
 
 const STORAGE_KEY = "line-mock-chat-default-settings-v4";
 
+function StatusCellDots({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 18 14" className={className} fill="currentColor" aria-hidden="true">
+      <circle cx="3" cy="10.7" r="1.2" opacity="0.55" />
+      <circle cx="7" cy="8.8" r="1.45" opacity="0.72" />
+      <circle cx="11" cy="6.7" r="1.7" opacity="0.85" />
+      <circle cx="15" cy="4.4" r="1.95" />
+    </svg>
+  );
+}
+
+function StatusWifi({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 14" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.3 5.2A12.2 12.2 0 0 1 10 2.5a12.2 12.2 0 0 1 7.7 2.7" strokeWidth="1.7" opacity="0.6" />
+      <path d="M4.8 7.8A8.2 8.2 0 0 1 10 5.9a8.2 8.2 0 0 1 5.2 1.9" strokeWidth="1.7" opacity="0.82" />
+      <path d="M7.4 10.2A4.4 4.4 0 0 1 10 9.3a4.4 4.4 0 0 1 2.6.9" strokeWidth="1.7" />
+      <circle cx="10" cy="12" r="1.05" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StatusBattery({ className = "", level = 100 }: { className?: string; level?: number }) {
+  const safeLevel = Math.max(0, Math.min(100, level));
+  const fillWidth = 16 * (safeLevel / 100);
+  return (
+    <svg viewBox="0 0 30 14" className={className} fill="none" aria-hidden="true">
+      <rect x="1" y="1.5" width="24" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <rect x="26.2" y="4.2" width="2.3" height="5.6" rx="1.1" fill="currentColor" />
+      <rect x="3.2" y="3.6" width={fillWidth} height="6.8" rx="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ChatStatusBar({ time, className = "" }: { time: string; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+        <span className="tabular-nums">{time}</span>
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[10px] w-[17px]" />
+          <StatusWifi className="h-[10px] w-[16px]" />
+          <StatusBattery className="h-[11px] w-[24px]" level={100} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const defaultSettings = {
   todayDate: "2026/04/23",
   customBgColor: "",
@@ -296,10 +345,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
     <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: theme.appBg }}>
       <div className="sticky top-0 z-10 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
         {showStatusBar && (
-          <div className="mb-1 flex items-center justify-between text-[11px] font-medium opacity-95">
-            <span>{deviceTime}</span>
-            <div className="flex items-center gap-1.5"><span>▂</span><span>◔</span><span>▮</span></div>
-          </div>
+          <ChatStatusBar time={deviceTime} className="mb-1" />
         )}
         <div className="flex items-center gap-3">
           {avatarImage ? <img src={avatarImage} alt="avatar" className="h-10 w-10 rounded-full object-cover ring-2 ring-white/20" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-sm font-semibold">{avatarLabel}</div>}

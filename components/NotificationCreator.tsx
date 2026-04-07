@@ -12,10 +12,13 @@ import {
   Trash2,
   UserCircle2,
   X,
+  ArrowDown,
+  ArrowUp,
 } from "lucide-react";
 
 type OSType = "iphone" | "android";
-type SettingsTab = "appearance" | "notifications" | "list" | "screen";
+type SettingsTab = "appearance" | "notifications" | "screen";
+type NotificationDirection = "top" | "bottom";
 
 type Message = {
   id: number;
@@ -27,7 +30,8 @@ type Message = {
   iconText: string;
   iconImage?: string;
   delaySeconds: number;
-  visible: boolean;
+  enabled: boolean;
+  displayed: boolean;
   animatedAt: number | null;
 };
 
@@ -37,15 +41,15 @@ type NotificationSettings = {
   lockscreenTime: string;
   lockscreenDate: string;
   showLargeClock: boolean;
-  vibrateEnabled: boolean;
   groupName: string;
   selectedWallpaper: string;
   uploadedWallpaper: string | null;
   messages: Message[];
   showSettingsButton: boolean;
+  notificationDirection: NotificationDirection;
 };
 
-const STORAGE_KEY = "notification-mock-settings-v2";
+const STORAGE_KEY = "notification-mock-settings-v3";
 
 const presetWallpapers: Record<string, string> = {
   simple: "linear-gradient(180deg, #7b8188 0%, #3d4349 35%, #111111 100%)",
@@ -121,7 +125,8 @@ const defaultMessages: Message[] = [
     time: "22:18",
     iconText: "森",
     delaySeconds: 1,
-    visible: true,
+    enabled: true,
+    displayed: true,
     animatedAt: null,
   },
 ];
@@ -132,16 +137,113 @@ const defaultSettings: NotificationSettings = {
   lockscreenTime: "9:41",
   lockscreenDate: "4月5日 日曜日",
   showLargeClock: true,
-  vibrateEnabled: true,
   groupName: "森田家",
   selectedWallpaper: "simple",
   uploadedWallpaper: null,
   messages: defaultMessages,
   showSettingsButton: true,
+  notificationDirection: "top",
 };
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
+}
+
+function StatusPin({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M8 1.5a4.5 4.5 0 0 0-4.5 4.5c0 2.94 3.16 6.58 4.06 7.56a.58.58 0 0 0 .88 0c.9-.98 4.06-4.62 4.06-7.56A4.5 4.5 0 0 0 8 1.5Zm0 6.1A1.6 1.6 0 1 1 8 4.4a1.6 1.6 0 0 1 0 3.2Z" />
+    </svg>
+  );
+}
+
+function StatusNfc({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 18 16" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 12.5c1.2-1.1 1.8-2.2 1.8-3.5S5.2 6.6 4 5.5" />
+      <path d="M7.2 14.1C8.9 12.6 9.8 10.9 9.8 9S8.9 5.4 7.2 3.9" />
+      <path d="M10.7 15.2c2.2-1.9 3.3-4 3.3-6.2s-1.1-4.3-3.3-6.2" />
+    </svg>
+  );
+}
+
+function StatusSignal({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 14" className={className} fill="none" aria-hidden="true">
+      <rect x="1" y="9" width="2.4" height="4" rx="0.7" fill="currentColor" opacity="0.7" />
+      <rect x="5.2" y="7" width="2.4" height="6" rx="0.7" fill="currentColor" opacity="0.82" />
+      <rect x="9.4" y="4.5" width="2.4" height="8.5" rx="0.7" fill="currentColor" opacity="0.9" />
+      <rect x="13.6" y="1.5" width="2.4" height="11.5" rx="0.7" fill="currentColor" />
+      <path d="M18 3.2l-2.3 2.3m0-2.3L18 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.82" />
+    </svg>
+  );
+}
+
+function StatusWifi({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 14" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.3 5.2A12.2 12.2 0 0 1 10 2.5a12.2 12.2 0 0 1 7.7 2.7" strokeWidth="1.7" opacity="0.6" />
+      <path d="M4.8 7.8A8.2 8.2 0 0 1 10 5.9a8.2 8.2 0 0 1 5.2 1.9" strokeWidth="1.7" opacity="0.82" />
+      <path d="M7.4 10.2A4.4 4.4 0 0 1 10 9.3a4.4 4.4 0 0 1 2.6.9" strokeWidth="1.7" />
+      <circle cx="10" cy="12" r="1.05" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StatusBattery({ className = "", level = 100 }: { className?: string; level?: number }) {
+  const safeLevel = Math.max(0, Math.min(100, level));
+  const fillWidth = 16 * (safeLevel / 100);
+  return (
+    <svg viewBox="0 0 30 14" className={className} fill="none" aria-hidden="true">
+      <rect x="1" y="1.5" width="24" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <rect x="26.2" y="4.2" width="2.3" height="5.6" rx="1.1" fill="currentColor" />
+      <rect x="3.2" y="3.6" width={fillWidth} height="6.8" rx="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function StatusCellDots({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 18 14" className={className} fill="currentColor" aria-hidden="true">
+      <circle cx="3" cy="10.7" r="1.2" opacity="0.55" />
+      <circle cx="7" cy="8.8" r="1.45" opacity="0.72" />
+      <circle cx="11" cy="6.7" r="1.7" opacity="0.85" />
+      <circle cx="15" cy="4.4" r="1.95" />
+    </svg>
+  );
+}
+
+function PhoneStatusBar({ osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
+  if (osType === "iphone") {
+    return (
+      <div className={cn("flex items-center justify-between px-6 text-[13px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_2px_rgba(0,0,0,0.22)]", className)}>
+        <div className="min-w-[52px] pl-1 tabular-nums">{time}</div>
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[11px] w-[18px]" />
+          <StatusWifi className="h-[11px] w-[17px]" />
+          <StatusBattery className="h-[12px] w-[25px]" level={level} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex items-center justify-between px-4 text-[13px] font-semibold tracking-[-0.015em] [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]", className)}>
+      <div className="flex items-center gap-2.5">
+        <span className="tabular-nums">{time}</span>
+        <StatusPin className="h-[13px] w-[13px] opacity-95" />
+        <StatusNfc className="h-[12px] w-[13px] opacity-90" />
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusSignal className="h-[12px] w-[18px] opacity-95" />
+        <StatusWifi className="h-[12px] w-[18px] opacity-95" />
+        <div className="flex items-center gap-1">
+          <StatusBattery className="h-[12px] w-[26px]" level={level} />
+          <span className="tabular-nums">{level}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Button({
@@ -168,6 +270,11 @@ function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInput
   return (
     <input
       {...props}
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      data-form-type="other"
       className={cn(
         "w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5",
         className,
@@ -180,6 +287,11 @@ function Textarea({ className = "", ...props }: React.TextareaHTMLAttributes<HTM
   return (
     <textarea
       {...props}
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="off"
+      spellCheck={false}
+      data-form-type="other"
       className={cn(
         "w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5",
         className,
@@ -262,16 +374,38 @@ function FileInputRow({
   );
 }
 
+function normalizeMessages(messages: any[] | undefined): Message[] {
+  if (!Array.isArray(messages) || messages.length === 0) return defaultSettings.messages;
+  return messages.map((m, index) => ({
+    id: typeof m.id === "number" ? m.id : Date.now() + index,
+    appName: String(m.appName ?? "LINE"),
+    groupName: String(m.groupName ?? defaultSettings.groupName),
+    sender: String(m.sender ?? ""),
+    text: String(m.text ?? ""),
+    time: String(m.time ?? "今"),
+    iconText: String(m.iconText ?? "森"),
+    iconImage: m.iconImage || undefined,
+    delaySeconds: Number.isFinite(Number(m.delaySeconds)) ? Number(m.delaySeconds) : 0,
+    enabled: typeof m.enabled === "boolean" ? m.enabled : typeof m.visible === "boolean" ? m.visible : true,
+    displayed: typeof m.displayed === "boolean" ? m.displayed : typeof m.visible === "boolean" ? m.visible : true,
+    animatedAt: typeof m.animatedAt === "number" ? m.animatedAt : null,
+  }));
+}
+
 function readStoredSettings(): NotificationSettings {
   if (typeof window === "undefined") return defaultSettings;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("notification-mock-settings-v2");
     if (!raw) return defaultSettings;
-    const parsed = JSON.parse(raw) as Partial<NotificationSettings>;
+    const parsed = JSON.parse(raw) as Partial<NotificationSettings> & { messages?: any[] };
     return {
       ...defaultSettings,
       ...parsed,
-      messages: Array.isArray(parsed.messages) && parsed.messages.length > 0 ? parsed.messages : defaultSettings.messages,
+      messages: normalizeMessages(parsed.messages),
+      notificationDirection:
+        parsed.notificationDirection === "bottom" || parsed.notificationDirection === "top"
+          ? parsed.notificationDirection
+          : defaultSettings.notificationDirection,
     };
   } catch {
     return defaultSettings;
@@ -289,12 +423,12 @@ export default function NotificationCreator() {
   const [lockscreenTime, setLockscreenTime] = useState(defaultSettings.lockscreenTime);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
-  const [vibrateEnabled, setVibrateEnabled] = useState(defaultSettings.vibrateEnabled);
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
   const [uploadedWallpaper, setUploadedWallpaper] = useState<string | null>(defaultSettings.uploadedWallpaper);
   const [messages, setMessages] = useState<Message[]>(defaultSettings.messages);
   const [showSettingsButton, setShowSettingsButton] = useState(defaultSettings.showSettingsButton);
+  const [notificationDirection, setNotificationDirection] = useState<NotificationDirection>(defaultSettings.notificationDirection);
 
   const [form, setForm] = useState({ appName: "LINE", sender: "", text: "", time: "", iconText: "森", delaySeconds: "1" });
   const [uploadedIcon, setUploadedIcon] = useState<string | null>(null);
@@ -308,12 +442,12 @@ export default function NotificationCreator() {
     setLockscreenTime(stored.lockscreenTime);
     setLockscreenDate(stored.lockscreenDate);
     setShowLargeClock(stored.showLargeClock);
-    setVibrateEnabled(stored.vibrateEnabled);
     setGroupName(stored.groupName);
     setSelectedWallpaper(stored.selectedWallpaper);
     setUploadedWallpaper(stored.uploadedWallpaper);
     setMessages(stored.messages);
     setShowSettingsButton(stored.showSettingsButton);
+    setNotificationDirection(stored.notificationDirection);
     setHydrated(true);
   }, []);
 
@@ -325,15 +459,28 @@ export default function NotificationCreator() {
       lockscreenTime,
       lockscreenDate,
       showLargeClock,
-      vibrateEnabled,
       groupName,
       selectedWallpaper,
       uploadedWallpaper,
       messages,
       showSettingsButton,
+      notificationDirection,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [hydrated, osType, phoneTime, lockscreenTime, lockscreenDate, showLargeClock, vibrateEnabled, groupName, selectedWallpaper, uploadedWallpaper, messages, showSettingsButton]);
+  }, [
+    hydrated,
+    osType,
+    phoneTime,
+    lockscreenTime,
+    lockscreenDate,
+    showLargeClock,
+    groupName,
+    selectedWallpaper,
+    uploadedWallpaper,
+    messages,
+    showSettingsButton,
+    notificationDirection,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -355,20 +502,15 @@ export default function NotificationCreator() {
     };
   }, [selectedWallpaper, uploadedWallpaper]);
 
-  const sortedVisible = useMemo(() => {
-    return [...messages].filter((m) => m.visible).sort((a, b) => a.delaySeconds - b.delaySeconds || b.id - a.id);
-  }, [messages]);
+  const renderedNotifications = useMemo(() => {
+    const enabledMessages = messages.filter((m) => m.enabled && m.displayed);
+    const sorted = [...enabledMessages].sort((a, b) => a.delaySeconds - b.delaySeconds || a.id - b.id);
+    return notificationDirection === "bottom" ? [...sorted].reverse() : sorted;
+  }, [messages, notificationDirection]);
 
   const clearTimers = () => {
     playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
     playTimeoutsRef.current = [];
-  };
-
-  const vibrate = () => {
-    if (!vibrateEnabled) return;
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]);
-    }
   };
 
   const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -398,13 +540,13 @@ export default function NotificationCreator() {
       iconText: form.iconText.trim() || "森",
       iconImage: uploadedIcon ?? undefined,
       delaySeconds: delay,
-      visible: true,
+      enabled: true,
+      displayed: true,
       animatedAt: Date.now(),
     };
-    setMessages((prev) => [msg, ...prev]);
+    setMessages((prev) => [...prev, msg]);
     setForm((prev) => ({ ...prev, sender: "", text: "", time: "" }));
     setUploadedIcon(null);
-    setActiveTab("list");
   };
 
   const deleteMessage = (id: number) => {
@@ -415,32 +557,23 @@ export default function NotificationCreator() {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: value } : m)));
   };
 
-  const showNow = (id: number) => {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, visible: true, animatedAt: Date.now() } : m)));
-    vibrate();
-  };
-
-  const hideAll = () => {
-    setMessages((prev) => prev.map((m) => ({ ...m, visible: false, animatedAt: null })));
-  };
-
-  const showAll = () => {
-    clearTimers();
-    setMessages((prev) => prev.map((m) => ({ ...m, visible: true, animatedAt: Date.now() })));
-    vibrate();
-  };
-
   const playNotifications = () => {
     clearTimers();
-    setMessages((prev) => prev.map((m) => ({ ...m, visible: false, animatedAt: null })));
-    const sorted = [...messages].sort((a, b) => a.delaySeconds - b.delaySeconds || a.id - b.id);
-    sorted.forEach((msg) => {
+    setMessages((prev) => prev.map((m) => ({ ...m, displayed: false, animatedAt: null })));
+    const enabledMessages = [...messages]
+      .filter((m) => m.enabled)
+      .sort((a, b) => a.delaySeconds - b.delaySeconds || a.id - b.id);
+
+    enabledMessages.forEach((msg) => {
       const timer = setTimeout(() => {
         setMessages((prev) =>
-          prev.map((item) => (item.id === msg.id ? { ...item, visible: true, animatedAt: Date.now() } : item)),
+          prev.map((item) =>
+            item.id === msg.id
+              ? { ...item, displayed: true, animatedAt: Date.now() }
+              : item,
+          ),
         );
-        vibrate();
-      }, msg.delaySeconds * 1000);
+      }, Math.max(0, msg.delaySeconds) * 1000);
       playTimeoutsRef.current.push(timer);
     });
   };
@@ -452,16 +585,17 @@ export default function NotificationCreator() {
     setLockscreenTime(defaultSettings.lockscreenTime);
     setLockscreenDate(defaultSettings.lockscreenDate);
     setShowLargeClock(defaultSettings.showLargeClock);
-    setVibrateEnabled(defaultSettings.vibrateEnabled);
     setGroupName(defaultSettings.groupName);
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
     setUploadedWallpaper(defaultSettings.uploadedWallpaper);
     setMessages(defaultSettings.messages);
     setShowSettingsButton(defaultSettings.showSettingsButton);
+    setNotificationDirection(defaultSettings.notificationDirection);
   };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
+  const topStackClass = showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock;
 
   return (
     <div className="relative h-[100dvh] w-screen overflow-hidden bg-black text-white">
@@ -470,14 +604,11 @@ export default function NotificationCreator() {
 
       {theme.showNotch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
-      <div className={cn("absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 pb-3 text-sm text-white", theme.topInset)}>
-        <span className="font-medium">{phoneTime}</span>
-        <div className="flex items-center gap-1 text-xs opacity-90">
-          <span>▂</span>
-          <span>◔</span>
-          <span>▮</span>
-        </div>
-      </div>
+      <PhoneStatusBar
+        osType={osType}
+        time={phoneTime}
+        className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
+      />
 
       {showLargeClock && (
         <div className="absolute inset-x-0 top-0 z-10 pt-[92px] text-center">
@@ -486,44 +617,80 @@ export default function NotificationCreator() {
         </div>
       )}
 
-      <div
-        className={cn(
-          "relative z-10 h-full overflow-hidden px-4 pb-[max(18px,env(safe-area-inset-bottom))]",
-          showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock,
-        )}
-      >
-        <div className="space-y-3">
-          {sortedVisible.map((msg) => (
-            <div
-              key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
-              className={cn("px-4 py-3 backdrop-blur-md", theme.notificationCard)}
-              style={{ backgroundColor: notifBg }}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)}
-                  style={{ backgroundColor: iconBg }}
-                >
-                  {msg.iconImage ? (
-                    <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" />
-                  ) : (
-                    <span>{msg.iconText || "森"}</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className={theme.appText}>{msg.appName}</div>
-                    <div className={theme.timeText}>{msg.time}</div>
+      {notificationDirection === "top" ? (
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 z-10 h-full overflow-hidden px-4 pb-[max(18px,env(safe-area-inset-bottom))]",
+            topStackClass,
+          )}
+        >
+          <div className="space-y-3">
+            {renderedNotifications.map((msg) => (
+              <div
+                key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
+                className={cn(
+                  "px-4 py-3 backdrop-blur-md",
+                  theme.notificationCard,
+                  msg.animatedAt ? "notification-enter-top" : "",
+                )}
+                style={{ backgroundColor: notifBg }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)}
+                    style={{ backgroundColor: iconBg }}
+                  >
+                    {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
                   </div>
-                  <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
-                  <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
-                  <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={theme.appText}>{msg.appName}</div>
+                      <div className={theme.timeText}>{msg.time}</div>
+                    </div>
+                    <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
+                    <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
+                    <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))]">
+          <div className="flex max-h-[48dvh] flex-col-reverse gap-3 overflow-hidden">
+            {renderedNotifications.map((msg) => (
+              <div
+                key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
+                className={cn(
+                  "pointer-events-auto px-4 py-3 backdrop-blur-md",
+                  theme.notificationCard,
+                  msg.animatedAt ? "notification-enter-bottom" : "",
+                )}
+                style={{ backgroundColor: notifBg }}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)}
+                    style={{ backgroundColor: iconBg }}
+                  >
+                    {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={theme.appText}>{msg.appName}</div>
+                      <div className={theme.timeText}>{msg.time}</div>
+                    </div>
+                    <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
+                    <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
+                    <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {theme.showHomeBar && (
         <div
@@ -574,10 +741,9 @@ export default function NotificationCreator() {
                 <span className="text-base">←</span>
               </button>
             </div>
-            <div className="grid grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid grid-cols-3 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
-              <TabButton active={activeTab === "list"} onClick={() => setActiveTab("list")}>一覧</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
             </div>
           </div>
@@ -590,7 +756,7 @@ export default function NotificationCreator() {
                     <Button onClick={() => setOsType("iphone")} variant={osType === "iphone" ? "default" : "outline"} className="w-full">iPhone風</Button>
                     <Button onClick={() => setOsType("android")} variant={osType === "android" ? "default" : "outline"} className="w-full">Android風</Button>
                   </div>
-                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" /></div>
+                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">大きい時計を表示</div>
@@ -599,7 +765,7 @@ export default function NotificationCreator() {
                     <Switch checked={showLargeClock} onCheckedChange={setShowLargeClock} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label>大きい時計</Label><Input value={lockscreenTime} onChange={(e) => setLockscreenTime(e.target.value)} placeholder="9:41" /></div>
+                    <div className="space-y-2"><Label>大きい時計</Label><Input value={lockscreenTime} onChange={(e) => setLockscreenTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
                     <div className="space-y-2"><Label>日付表示</Label><Input value={lockscreenDate} onChange={(e) => setLockscreenDate(e.target.value)} placeholder="4月5日 日曜日" /></div>
                   </div>
                 </SectionCard>
@@ -635,23 +801,61 @@ export default function NotificationCreator() {
 
             {activeTab === "notifications" && (
               <div className="space-y-4">
-                <SectionCard icon={Clock3} title="再生・演出">
-                  <div className="grid grid-cols-2 gap-2">
+                <SectionCard icon={Clock3} title="演出">
+                  <div className="space-y-3">
                     <Button onClick={playNotifications} className="w-full"><Clock3 className="mr-2 h-4 w-4" />再生</Button>
-                    <Button onClick={clearTimers} variant="outline" className="w-full">停止</Button>
-                    <Button onClick={hideAll} variant="outline" className="w-full">全非表示</Button>
-                    <Button onClick={showAll} variant="outline" className="w-full">全表示</Button>
-                  </div>
-                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
-                    <div>
-                      <div className="text-sm font-medium">バイブON</div>
-                      <div className="text-xs text-black/50">再生時に端末バイブを鳴らします</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => setNotificationDirection("top")} variant={notificationDirection === "top" ? "default" : "outline"} className="w-full">
+                        <ArrowDown className="mr-2 h-4 w-4" />上から表示
+                      </Button>
+                      <Button onClick={() => setNotificationDirection("bottom")} variant={notificationDirection === "bottom" ? "default" : "outline"} className="w-full">
+                        <ArrowUp className="mr-2 h-4 w-4" />下から表示
+                      </Button>
                     </div>
-                    <Switch checked={vibrateEnabled} onCheckedChange={setVibrateEnabled} />
+                    <div className="text-xs text-black/50">再生を押すと、各通知に設定した秒数で順番に表示されます。</div>
                   </div>
                 </SectionCard>
 
-                <SectionCard icon={MessageSquareMore} title="通知を追加">
+                <SectionCard icon={MessageSquareMore} title="通知一覧">
+                  <div className="space-y-3">
+                    {messages.length === 0 && <div className="rounded-2xl border border-dashed border-black/10 p-4 text-sm text-black/45">通知はまだありません。</div>}
+                    {messages.map((msg, index) => (
+                      <div key={msg.id} className="rounded-2xl border border-black/10 bg-[#fafafa] p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-black/80">通知 #{index + 1} ・ {msg.sender || "未設定"}</div>
+                            <div className="mt-1 text-xs text-black/50">{msg.appName} / {msg.groupName} / {msg.delaySeconds}秒後</div>
+                          </div>
+                          <Button onClick={() => deleteMessage(msg.id)} variant="outline" className="border-red-200 px-3 py-1.5 text-xs text-red-500">
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />削除
+                          </Button>
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-3">
+                            <div>
+                              <div className="text-sm font-medium">この通知を使う</div>
+                              <div className="text-xs text-black/50">再生時に表示する / しないを切り替えます</div>
+                            </div>
+                            <Switch checked={msg.enabled} onCheckedChange={(value) => updateMessage(msg.id, "enabled", value)} />
+                          </div>
+
+                          <div className="space-y-2"><Label>アプリ名</Label><Input value={msg.appName} onChange={(e) => updateMessage(msg.id, "appName", e.target.value)} /></div>
+                          <div className="space-y-2"><Label>グループ名</Label><Input value={msg.groupName} onChange={(e) => updateMessage(msg.id, "groupName", e.target.value)} /></div>
+                          <div className="space-y-2"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessage(msg.id, "sender", e.target.value)} /></div>
+                          <div className="space-y-2"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessage(msg.id, "text", e.target.value)} className="min-h-[90px] resize-none" /></div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2"><Label>通知時刻</Label><Input value={msg.time} onChange={(e) => updateMessage(msg.id, "time", e.target.value)} inputMode="numeric" /></div>
+                            <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={msg.delaySeconds} onChange={(e) => updateMessage(msg.id, "delaySeconds", Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0)} inputMode="decimal" /></div>
+                          </div>
+                          <div className="space-y-2"><Label>文字アイコン</Label><Input value={msg.iconText} onChange={(e) => updateMessage(msg.id, "iconText", e.target.value)} /></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </SectionCard>
+
+                <SectionCard icon={PlusCircle} title="通知を追加">
                   <div className="space-y-2"><Label>グループ名</Label><Input value={groupName} onChange={(e) => { const next = e.target.value; setGroupName(next); setMessages((prev) => prev.map((m) => ({ ...m, groupName: next }))); }} placeholder="森田家" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2"><Label>アプリ名</Label><Input value={form.appName} onChange={(e) => setForm({ ...form, appName: e.target.value })} placeholder="LINE" /></div>
@@ -659,45 +863,13 @@ export default function NotificationCreator() {
                   </div>
                   <div className="space-y-2"><Label>メッセージ</Label><Textarea value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="メッセージ内容" className="min-h-[110px] resize-none" /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label>通知時刻</Label><Input value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="22:18" /></div>
-                    <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={form.delaySeconds} onChange={(e) => setForm({ ...form, delaySeconds: e.target.value })} placeholder="1" /></div>
+                    <div className="space-y-2"><Label>通知時刻</Label><Input value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} placeholder="22:18" inputMode="numeric" /></div>
+                    <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={form.delaySeconds} onChange={(e) => setForm({ ...form, delaySeconds: e.target.value })} placeholder="1" inputMode="decimal" /></div>
                   </div>
                   <div className="space-y-2"><Label>文字アイコン</Label><Input value={form.iconText} onChange={(e) => setForm({ ...form, iconText: e.target.value })} placeholder="森" /></div>
                   <FileInputRow label="アイコン画像" description="画像を選ばない場合は文字アイコンを使います" onChange={handleIconUpload} previewName={uploadedIcon ? "画像を選択済み" : undefined} />
                   <Button onClick={addMessage} className="w-full justify-center"><PlusCircle className="mr-2 h-4 w-4" />通知を追加</Button>
                 </SectionCard>
-              </div>
-            )}
-
-            {activeTab === "list" && (
-              <div className="space-y-3">
-                {messages.map((msg, index) => (
-                  <SectionCard key={msg.id} icon={MessageSquareMore} title={`通知 #${index + 1}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="truncate text-sm font-semibold text-black/80">{msg.sender || "未設定"}</div>
-                      <div className="flex gap-2">
-                        <Button onClick={() => showNow(msg.id)} variant="outline" className="px-3 py-1.5 text-xs">今表示</Button>
-                        <Button onClick={() => deleteMessage(msg.id)} variant="outline" className="border-red-200 px-3 py-1.5 text-xs text-red-500">削除</Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2"><Label>アプリ名</Label><Input value={msg.appName} onChange={(e) => updateMessage(msg.id, "appName", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>グループ名</Label><Input value={msg.groupName} onChange={(e) => updateMessage(msg.id, "groupName", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessage(msg.id, "sender", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessage(msg.id, "text", e.target.value)} className="min-h-[90px] resize-none" /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2"><Label>通知時刻</Label><Input value={msg.time} onChange={(e) => updateMessage(msg.id, "time", e.target.value)} /></div>
-                      <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={msg.delaySeconds} onChange={(e) => updateMessage(msg.id, "delaySeconds", Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0)} /></div>
-                    </div>
-                    <div className="space-y-2"><Label>文字アイコン</Label><Input value={msg.iconText} onChange={(e) => updateMessage(msg.id, "iconText", e.target.value)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
-                      <div>
-                        <div className="text-sm font-medium">表示する</div>
-                        <div className="text-xs text-black/50">個別に表示・非表示を切り替えられます</div>
-                      </div>
-                      <Switch checked={msg.visible} onCheckedChange={(value) => updateMessage(msg.id, "visible", value)} />
-                    </div>
-                  </SectionCard>
-                ))}
               </div>
             )}
 
