@@ -12,13 +12,14 @@ import {
   Trash2,
   UserCircle2,
   X,
-  ArrowDown,
-  ArrowUp,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 type OSType = "iphone" | "android";
 type SettingsTab = "appearance" | "notifications" | "screen";
 type NotificationDirection = "top" | "bottom";
+type SoundPreset = "classic" | "digital" | "soft" | "upload";
 
 type Message = {
   id: number;
@@ -47,6 +48,11 @@ type NotificationSettings = {
   messages: Message[];
   showSettingsButton: boolean;
   notificationDirection: NotificationDirection;
+  vibrateOnNotify: boolean;
+  soundOnNotify: boolean;
+  notificationSoundPreset: SoundPreset;
+  uploadedSound: string | null;
+  uploadedSoundName: string;
 };
 
 const STORAGE_KEY = "notification-mock-settings-v3";
@@ -143,6 +149,11 @@ const defaultSettings: NotificationSettings = {
   messages: defaultMessages,
   showSettingsButton: true,
   notificationDirection: "top",
+  vibrateOnNotify: false,
+  soundOnNotify: false,
+  notificationSoundPreset: "classic",
+  uploadedSound: null,
+  uploadedSoundName: "",
 };
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -231,16 +242,11 @@ function PhoneStatusBar({ osType, time, level = 100, className = "" }: { osType:
     <div className={cn("flex items-center justify-between px-4 text-[13px] font-semibold tracking-[-0.015em] [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]", className)}>
       <div className="flex items-center gap-2.5">
         <span className="tabular-nums">{time}</span>
-        <StatusPin className="h-[13px] w-[13px] opacity-95" />
-        <StatusNfc className="h-[12px] w-[13px] opacity-90" />
       </div>
       <div className="flex items-center gap-2">
         <StatusSignal className="h-[12px] w-[18px] opacity-95" />
         <StatusWifi className="h-[12px] w-[18px] opacity-95" />
-        <div className="flex items-center gap-1">
-          <StatusBattery className="h-[12px] w-[26px]" level={level} />
-          <span className="tabular-nums">{level}</span>
-        </div>
+        <StatusBattery className="h-[12px] w-[26px] opacity-95" level={level} />
       </div>
     </div>
   );
@@ -406,6 +412,15 @@ function readStoredSettings(): NotificationSettings {
         parsed.notificationDirection === "bottom" || parsed.notificationDirection === "top"
           ? parsed.notificationDirection
           : defaultSettings.notificationDirection,
+      notificationSoundPreset:
+        parsed.notificationSoundPreset === "classic" ||
+        parsed.notificationSoundPreset === "digital" ||
+        parsed.notificationSoundPreset === "soft" ||
+        parsed.notificationSoundPreset === "upload"
+          ? parsed.notificationSoundPreset
+          : defaultSettings.notificationSoundPreset,
+      uploadedSound: typeof parsed.uploadedSound === "string" ? parsed.uploadedSound : defaultSettings.uploadedSound,
+      uploadedSoundName: typeof parsed.uploadedSoundName === "string" ? parsed.uploadedSoundName : defaultSettings.uploadedSoundName,
     };
   } catch {
     return defaultSettings;
@@ -429,11 +444,17 @@ export default function NotificationCreator() {
   const [messages, setMessages] = useState<Message[]>(defaultSettings.messages);
   const [showSettingsButton, setShowSettingsButton] = useState(defaultSettings.showSettingsButton);
   const [notificationDirection, setNotificationDirection] = useState<NotificationDirection>(defaultSettings.notificationDirection);
+  const [vibrateOnNotify, setVibrateOnNotify] = useState(defaultSettings.vibrateOnNotify);
+  const [soundOnNotify, setSoundOnNotify] = useState(defaultSettings.soundOnNotify);
+  const [notificationSoundPreset, setNotificationSoundPreset] = useState<SoundPreset>(defaultSettings.notificationSoundPreset);
+  const [uploadedSound, setUploadedSound] = useState<string | null>(defaultSettings.uploadedSound);
+  const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
 
   const [form, setForm] = useState({ appName: "LINE", sender: "", text: "", time: "", iconText: "森", delaySeconds: "1" });
   const [uploadedIcon, setUploadedIcon] = useState<string | null>(null);
 
   const playTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     const stored = readStoredSettings();
@@ -448,6 +469,11 @@ export default function NotificationCreator() {
     setMessages(stored.messages);
     setShowSettingsButton(stored.showSettingsButton);
     setNotificationDirection(stored.notificationDirection);
+    setVibrateOnNotify(stored.vibrateOnNotify);
+    setSoundOnNotify(stored.soundOnNotify);
+    setNotificationSoundPreset(stored.notificationSoundPreset);
+    setUploadedSound(stored.uploadedSound);
+    setUploadedSoundName(stored.uploadedSoundName);
     setHydrated(true);
   }, []);
 
@@ -465,6 +491,11 @@ export default function NotificationCreator() {
       messages,
       showSettingsButton,
       notificationDirection,
+      vibrateOnNotify,
+      soundOnNotify,
+      notificationSoundPreset,
+      uploadedSound,
+      uploadedSoundName,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [
@@ -480,12 +511,20 @@ export default function NotificationCreator() {
     messages,
     showSettingsButton,
     notificationDirection,
+    vibrateOnNotify,
+    soundOnNotify,
+    notificationSoundPreset,
+    uploadedSound,
+    uploadedSoundName,
   ]);
 
   useEffect(() => {
     return () => {
       playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
       playTimeoutsRef.current = [];
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close().catch(() => {});
+      }
     };
   }, []);
 
@@ -512,6 +551,79 @@ export default function NotificationCreator() {
     playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
     playTimeoutsRef.current = [];
   };
+  const ensureAudioContext = async () => {
+    if (typeof window === "undefined") return null;
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextClass();
+    }
+    if (audioContextRef.current.state === "suspended") {
+      await audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  };
+
+  const playPresetNotificationSound = async (preset: Exclude<SoundPreset, "upload">) => {
+    const ctx = await ensureAudioContext();
+    if (!ctx) return;
+
+    const presets: Record<Exclude<SoundPreset, "upload">, Array<{ frequency: number; duration: number; type: OscillatorType; gain: number }>> = {
+      classic: [
+        { frequency: 880, duration: 0.08, type: "sine", gain: 0.045 },
+        { frequency: 1320, duration: 0.11, type: "sine", gain: 0.04 },
+      ],
+      digital: [
+        { frequency: 1180, duration: 0.05, type: "square", gain: 0.028 },
+        { frequency: 980, duration: 0.05, type: "square", gain: 0.025 },
+        { frequency: 1320, duration: 0.08, type: "square", gain: 0.022 },
+      ],
+      soft: [
+        { frequency: 740, duration: 0.1, type: "triangle", gain: 0.035 },
+        { frequency: 990, duration: 0.13, type: "triangle", gain: 0.03 },
+      ],
+    };
+
+    let offset = 0;
+    presets[preset].forEach((tone) => {
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.type = tone.type;
+      oscillator.frequency.setValueAtTime(tone.frequency, ctx.currentTime + offset);
+      gainNode.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
+      gainNode.gain.exponentialRampToValueAtTime(tone.gain, ctx.currentTime + offset + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + tone.duration);
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.start(ctx.currentTime + offset);
+      oscillator.stop(ctx.currentTime + offset + tone.duration + 0.02);
+      offset += tone.duration * 0.72;
+    });
+  };
+
+  const playUploadedNotificationSound = () => {
+    if (!uploadedSound) return;
+    const audio = new Audio(uploadedSound);
+    audio.preload = "auto";
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  };
+
+  const playNotificationFeedback = () => {
+    if (vibrateOnNotify && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate([45]);
+    }
+
+    if (!soundOnNotify) return;
+
+    if (notificationSoundPreset === "upload") {
+      playUploadedNotificationSound();
+      return;
+    }
+
+    playPresetNotificationSound(notificationSoundPreset);
+  };
+
 
   const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -524,6 +636,29 @@ export default function NotificationCreator() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedIcon(URL.createObjectURL(file));
+  };
+
+
+  const handleExistingIconUpload = (id: number, e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const objectUrl = URL.createObjectURL(file);
+    setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, iconImage: objectUrl } : msg)));
+    e.target.value = "";
+  };
+
+  const handleSoundUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setUploadedSound(reader.result);
+        setUploadedSoundName(file.name);
+        setNotificationSoundPreset("upload");
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const addMessage = () => {
@@ -559,6 +694,8 @@ export default function NotificationCreator() {
 
   const playNotifications = () => {
     clearTimers();
+    setSettingsOpen(false);
+    void ensureAudioContext();
     setMessages((prev) => prev.map((m) => ({ ...m, displayed: false, animatedAt: null })));
     const enabledMessages = [...messages]
       .filter((m) => m.enabled)
@@ -573,6 +710,7 @@ export default function NotificationCreator() {
               : item,
           ),
         );
+        playNotificationFeedback();
       }, Math.max(0, msg.delaySeconds) * 1000);
       playTimeoutsRef.current.push(timer);
     });
@@ -591,6 +729,11 @@ export default function NotificationCreator() {
     setMessages(defaultSettings.messages);
     setShowSettingsButton(defaultSettings.showSettingsButton);
     setNotificationDirection(defaultSettings.notificationDirection);
+    setVibrateOnNotify(defaultSettings.vibrateOnNotify);
+    setSoundOnNotify(defaultSettings.soundOnNotify);
+    setNotificationSoundPreset(defaultSettings.notificationSoundPreset);
+    setUploadedSound(defaultSettings.uploadedSound);
+    setUploadedSoundName(defaultSettings.uploadedSoundName);
   };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
@@ -735,10 +878,11 @@ export default function NotificationCreator() {
               <button
                 type="button"
                 onClick={() => router.push("/")}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]"
-                aria-label="チャット画面へ戻る"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.07] whitespace-nowrap"
+                aria-label="チャット画面に戻る"
               >
                 <span className="text-base">←</span>
+                <span>チャット画面に戻る</span>
               </button>
             </div>
             <div className="grid grid-cols-3 rounded-2xl bg-black/5 p-1 text-center">
@@ -804,15 +948,60 @@ export default function NotificationCreator() {
                 <SectionCard icon={Clock3} title="演出">
                   <div className="space-y-3">
                     <Button onClick={playNotifications} className="w-full"><Clock3 className="mr-2 h-4 w-4" />再生</Button>
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs leading-relaxed text-black/55">
+                      再生を押すと設定画面が閉じ、そのまま撮影画面に切り替わります。通知は各通知に設定した秒数で順番に表示されます。
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <Button onClick={() => setNotificationDirection("top")} variant={notificationDirection === "top" ? "default" : "outline"} className="w-full">
-                        <ArrowDown className="mr-2 h-4 w-4" />上から表示
+                        <ChevronDown className="mr-2 h-4 w-4" />上から表示
                       </Button>
                       <Button onClick={() => setNotificationDirection("bottom")} variant={notificationDirection === "bottom" ? "default" : "outline"} className="w-full">
-                        <ArrowUp className="mr-2 h-4 w-4" />下から表示
+                        <ChevronUp className="mr-2 h-4 w-4" />下から表示
                       </Button>
                     </div>
-                    <div className="text-xs text-black/50">再生を押すと、各通知に設定した秒数で順番に表示されます。</div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-3">
+                      <div>
+                        <div className="text-sm font-medium">通知タイミングでバイブ</div>
+                        <div className="text-xs text-black/50">通知が表示される瞬間に端末バイブを鳴らします</div>
+                      </div>
+                      <Switch checked={vibrateOnNotify} onCheckedChange={setVibrateOnNotify} />
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-3">
+                      <div>
+                        <div className="text-sm font-medium">通知タイミングで通知音</div>
+                        <div className="text-xs text-black/50">任意の通知音やアップロード音源を再生できます</div>
+                      </div>
+                      <Switch checked={soundOnNotify} onCheckedChange={setSoundOnNotify} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>通知音の種類</Label>
+                      <select
+                        value={notificationSoundPreset}
+                        onChange={(e) => setNotificationSoundPreset(e.target.value as SoundPreset)}
+                        className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+                      >
+                        <option value="classic">クラシック</option>
+                        <option value="digital">デジタル</option>
+                        <option value="soft">ソフト</option>
+                        <option value="upload">アップロード音源</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>通知音データ</Label>
+                      <label className="block rounded-2xl border border-black/10 bg-white px-3 py-3 text-sm text-black/70">
+                        <div className="mb-2 flex items-center gap-2 text-black/80">
+                          <Clock3 className="h-4 w-4" />
+                          音源を選択
+                        </div>
+                        <input type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg" onChange={handleSoundUpload} className="block w-full text-sm text-black/70" />
+                      </label>
+                      <div className="text-xs text-black/50">{uploadedSoundName || "音楽データや効果音をアップロードして使えます"}</div>
+                      {uploadedSound && (
+                        <Button onClick={() => { setUploadedSound(null); setUploadedSoundName(""); if (notificationSoundPreset === "upload") setNotificationSoundPreset("classic"); }} variant="outline" className="w-full">
+                          アップロード音源を解除
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </SectionCard>
 
@@ -849,6 +1038,24 @@ export default function NotificationCreator() {
                             <div className="space-y-2"><Label>表示までの秒数</Label><Input type="number" min="0" step="0.1" value={msg.delaySeconds} onChange={(e) => updateMessage(msg.id, "delaySeconds", Number.isFinite(Number(e.target.value)) ? Number(e.target.value) : 0)} inputMode="decimal" /></div>
                           </div>
                           <div className="space-y-2"><Label>文字アイコン</Label><Input value={msg.iconText} onChange={(e) => updateMessage(msg.id, "iconText", e.target.value)} /></div>
+                          <div className="space-y-2">
+                            <Label>アイコン画像</Label>
+                            <label className="block rounded-2xl border border-black/10 bg-white px-3 py-3 text-sm text-black/70">
+                              <div className="mb-2 flex items-center gap-2 text-black/80">
+                                <ImageIcon className="h-4 w-4" />
+                                画像を選択して変更
+                              </div>
+                              <input type="file" accept="image/*" onChange={(e) => handleExistingIconUpload(msg.id, e)} className="block w-full text-sm text-black/70" />
+                            </label>
+                            {msg.iconImage ? (
+                              <div className="space-y-2">
+                                <img src={msg.iconImage} alt="通知アイコン" className="h-16 w-16 rounded-2xl border border-black/10 object-cover" />
+                                <Button onClick={() => updateMessage(msg.id, "iconImage", undefined)} variant="outline" className="w-full">アイコン画像を解除</Button>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-black/50">画像を設定しない場合は文字アイコンを使います</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

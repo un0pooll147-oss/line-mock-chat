@@ -162,11 +162,15 @@ function getCurrentTime() {
 }
 
 function buildOutgoingMessage(text: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, date: dateOverride, time: timeOverride || getCurrentTime() };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime() };
 }
 
 function buildIncomingMessage(text: string, sender: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, date: dateOverride, time: timeOverride || getCurrentTime() };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime() };
+}
+
+function buildOutgoingImageMessage(image: string, timeOverride: string, dateOverride = "") {
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime() };
 }
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -213,6 +217,7 @@ interface Message {
   type: string;
   sender: string;
   text: string;
+  image?: string;
   date: string;
   time: string;
 }
@@ -375,8 +380,20 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
                 <div className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
                   <div className="max-w-[78%]">
                     {msg.side === "left" && <div className={`mb-1 px-1 text-[11px] ${mutedColor}`}>{msg.sender}</div>}
-                    <div className={cn("rounded-[18px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]", msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]", msg.side === "left" && theme.name === "ダーク" ? "text-white" : textColor)} style={{ backgroundColor: msg.side === "right" ? theme.selfBubble : theme.otherBubble }}>
-                      <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                    <div
+                      className={cn(
+                        "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
+                        msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
+                        msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
+                        msg.side === "left" && theme.name === "ダーク" ? "text-white" : textColor,
+                      )}
+                      style={{ backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble }}
+                    >
+                      {msg.type === "image" && msg.image ? (
+                        <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" />
+                      ) : (
+                        <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                      )}
                     </div>
                     {showMessageTime && <div className={cn("mt-1 px-1 text-[10px]", timeColor, msg.side === "right" ? "text-right" : "text-left")}>{msg.time}</div>}
                   </div>
@@ -494,6 +511,7 @@ export default function LineMockChatCreator() {
   const [typingText, setTypingText] = useState("");
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const outgoingImageInputRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
   const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>([{ id: 1, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
@@ -640,6 +658,11 @@ export default function LineMockChatCreator() {
     setInputText("");
   };
 
+  const sendImageInstant = (imageData: string) => {
+    if (!imageData || isTyping) return;
+    setMessages((prev) => [...prev, buildOutgoingImageMessage(imageData, outgoingMessageTime, outgoingMessageDate)]);
+  };
+
   const addIncomingMessage = () => {
     const source = incomingText.trim();
     if (!source) return;
@@ -687,7 +710,7 @@ export default function LineMockChatCreator() {
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
-  const updateMessageField = (id: number, field: string, value: string) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, [field]: value } : msg)));
+  const updateMessageField = (id: number, field: keyof Message | string, value: string) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, [field]: value } : msg)));
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
     const file = event.target.files?.[0];
@@ -695,6 +718,34 @@ export default function LineMockChatCreator() {
     const reader = new FileReader();
     reader.onload = () => setter(String(reader.result));
     reader.readAsDataURL(file);
+  };
+
+  const handleOutgoingImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        sendImageInstant(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleHistoryImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === id ? { ...msg, type: "image", image: reader.result as string, text: msg.text || "" } : msg)),
+        );
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
   };
 
   const handleCustomRingtoneUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -846,9 +897,10 @@ export default function LineMockChatCreator() {
             <div className="flex items-end gap-2">
               <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
               <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
+                <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
                 <Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputPlaceholder} rows={1} className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0" />
                 <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
-                  <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
                   <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
                 </div>
               </div>
@@ -937,7 +989,11 @@ export default function LineMockChatCreator() {
 
                   <SectionCard icon={MessageSquareMore} title="メッセージ追加">
                     <div className="space-y-2"><Label>自分のメッセージ</Label><Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} className="min-h-24" placeholder="ここにセリフを書く" /></div>
-                    <Button onClick={sendInstant} disabled={!inputText.trim() || isTyping} className="w-full"><SendHorizontal className="mr-2 h-4 w-4" />すぐ送信</Button>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button onClick={sendInstant} disabled={!inputText.trim() || isTyping} className="w-full"><SendHorizontal className="mr-2 h-4 w-4" />すぐ送信</Button>
+                      <FileButton accept="image/*" onFile={handleOutgoingImageUpload}>画像をアップロードして送信</FileButton>
+                    </div>
+                    <div className="text-xs text-black/45">チャット画面ではテキストだけでなく画像もそのまま送信できます。</div>
                     <div className="space-y-2 pt-2"><Label>相手名</Label><Input value={incomingSender} onChange={(e) => setIncomingSender(e.target.value)} /></div>
                     <div className="space-y-2"><Label>相手のメッセージ</Label><Textarea value={incomingText} onChange={(e) => setIncomingText(e.target.value)} className="min-h-24" placeholder="受信メッセージを入力" /></div>
                     <Button onClick={addIncomingMessage} variant="outline" className="w-full">相手メッセージを追加</Button>
@@ -982,7 +1038,28 @@ export default function LineMockChatCreator() {
                       </div>
                       <div className="space-y-2">
                         {msg.side === "left" && <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessageField(msg.id, "sender", e.target.value)} /></div>}
-                        <div className="space-y-1"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} className="min-h-20" /></div>
+                        <div className="space-y-1">
+                          <Label>メッセージ種類</Label>
+                          <select value={msg.type} onChange={(e) => updateMessageField(msg.id, "type", e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
+                            <option value="text">テキスト</option>
+                            <option value="image">画像</option>
+                          </select>
+                        </div>
+                        {msg.type === "image" ? (
+                          <div className="space-y-2">
+                            <Label>画像</Label>
+                            {msg.image ? <img src={msg.image} alt="履歴画像" className="max-h-56 w-full rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-4 text-sm text-black/45">画像が未設定です</div>}
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <FileButton accept="image/*" onFile={(e) => handleHistoryImageUpload(msg.id, e)}>画像を変更</FileButton>
+                              {msg.image ? (
+                                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setMessages((prev) => prev.map((item) => item.id === msg.id ? { ...item, image: "", type: "text" } : item))}>画像を解除</Button>
+                              ) : null}
+                            </div>
+                            <div className="space-y-1"><Label>補助テキスト</Label><Input value={msg.text || ""} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} placeholder="必要ならメモ用に残せます" /></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} className="min-h-20" /></div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1"><Label>日付</Label><Input value={msg.date || ""} onChange={(e) => updateMessageField(msg.id, "date", e.target.value)} placeholder="2026/04/04" /></div>
                           <div className="space-y-1"><Label>時刻</Label><Input value={msg.time} onChange={(e) => updateMessageField(msg.id, "time", e.target.value)} /></div>
