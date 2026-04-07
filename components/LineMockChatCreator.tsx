@@ -751,7 +751,7 @@ export default function LineMockChatCreator() {
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
   return (
-    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ minHeight: "100dvh", backgroundColor: fullScreenMode ? undefined : theme.outerBg }}>
+    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ minHeight: "100dvh", width: "100%", maxWidth: "100vw", overflowX: "hidden", backgroundColor: fullScreenMode ? undefined : theme.outerBg }}>
       <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "")}>
         <div className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")} style={{ backgroundColor: deviceFrameMode ? undefined : theme.outerBg }}>
           <PhoneMockup ref={previewRef} onStartCall={startCall} onOpenSettings={openSettings} title={chatTitle} messages={messages} typingText={typingText} isTyping={isTyping} theme={theme} avatarImage={avatarImage} avatarLabel={avatarLabel} deviceTime={deviceTime} showStatusBar={showStatusBar} showMessageTime={showMessageTime} todayDate={todayDate} wallpaper={wallpaper} />
@@ -905,10 +905,10 @@ export default function LineMockChatCreator() {
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">上部ボタン表示</div><div className="text-xs text-black/50">タイピング再生・書き出しなど</div></div><Switch checked={showTopActions} onCheckedChange={setShowTopActions} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ボタンUIだけ非表示</div><div className="text-xs text-black/50">この部分だけ消す</div></div><Switch checked={showActionButtons} onCheckedChange={setShowActionButtons} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定・画像書き出し操作バー表示</div><div className="text-xs text-black/50">書き出し・設定ボタンの表示</div></div><Switch checked={showTopActions} onCheckedChange={setShowTopActions} /></div>
+
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">編集パネルを表示</div><div className="text-xs text-black/50">オフにすると下部の設定ボタンだけ消えます。ヘッダーの歯車は残ります。</div></div><Switch checked={showEditorAccess} onCheckedChange={setShowEditorAccess} /></div>
+
                   </SectionCard>
 
                   <SectionCard icon={Phone} title="通話演出">
