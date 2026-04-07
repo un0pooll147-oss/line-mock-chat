@@ -243,6 +243,22 @@ function ColorSwatch({ value, onChange }: { value: string; onChange: (e: React.C
   );
 }
 
+function FileButton({ accept, onFile, children }: { accept: string; onFile: (e: React.ChangeEvent<HTMLInputElement>) => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={ref}
+        type="file"
+        accept={accept}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        onChange={onFile}
+      />
+      <Button variant="outline" onClick={() => ref.current?.click()}>{children}</Button>
+    </>
+  );
+}
+
 interface Theme {
   name: string;
   appBg: string;
@@ -760,7 +776,7 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>操作バー背景色</Label><ColorSwatch value={customToolbarColor || theme.toolbarBg} onChange={(e) => setCustomToolbarColor(e.target.value)} /></div>
                     <div className="space-y-2">
                       <Label>背景画像</Label>
-                      <label className="inline-block"><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setWallpaper)} /><Button variant="outline">画像を選択</Button></label>
+                      <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setWallpaper)}>画像を選択</FileButton>
                     </div>
                   </SectionCard>
 
@@ -769,7 +785,7 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>アイコン文字</Label><Input value={avatarLabel} onChange={(e) => setAvatarLabel(e.target.value.slice(0, 2))} /></div>
                     <div className="space-y-2">
                       <Label>アイコン画像</Label>
-                      <label className="inline-block"><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setAvatarImage)} /><Button variant="outline">画像を選択</Button></label>
+                      <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setAvatarImage)}>画像を選択</FileButton>
                     </div>
                   </SectionCard>
                 </div>
@@ -849,17 +865,17 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>発信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={outgoingCallBgOpacity} onChange={(e) => setOutgoingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(outgoingCallBgOpacity * 100)}%</div></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">発信音（ダミー）</div><div className="text-xs text-black/50">発信中に音を鳴らす</div></div><Switch checked={outgoingToneEnabled} onCheckedChange={setOutgoingToneEnabled} /></div>
                     <div className="space-y-2"><Label>発信音の種類</Label><select value={outgoingToneType} onChange={(e) => setOutgoingToneType(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
-                    <div className="space-y-2"><Label>発信音アップロード</Label><label className="inline-block"><input type="file" accept="audio/*" className="hidden" onChange={handleCustomOutgoingToneUpload} /><Button variant="outline">音源を選択</Button></label><div className="text-xs text-black/50">{customOutgoingToneName ? `選択中: ${customOutgoingToneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
+                    <div className="space-y-2"><Label>発信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomOutgoingToneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customOutgoingToneName ? `選択中: ${customOutgoingToneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
                     <div className="space-y-2"><Label>着信画面 背景色</Label><ColorSwatch value={incomingCallBgColor} onChange={(e) => setIncomingCallBgColor(e.target.value)} /></div>
                     <div className="space-y-2"><Label>着信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={incomingCallBgOpacity} onChange={(e) => setIncomingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(incomingCallBgOpacity * 100)}%</div></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">着信音（ダミー）</div><div className="text-xs text-black/50">着信時に音を鳴らす</div></div><Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} /></div>
                     <div className="space-y-2"><Label>着信音の種類</Label><select value={ringtoneType} onChange={(e) => setRingtoneType(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
-                    <div className="space-y-2"><Label>着信音アップロード</Label><label className="inline-block"><input type="file" accept="audio/*" className="hidden" onChange={handleCustomRingtoneUpload} /><Button variant="outline">音源を選択</Button></label><div className="text-xs text-black/50">{customRingtoneName ? `選択中: ${customRingtoneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
+                    <div className="space-y-2"><Label>着信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomRingtoneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customRingtoneName ? `選択中: ${customRingtoneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
                     <div className="space-y-2"><Label>通話接続までの秒数</Label><Input type="number" min="0" step="0.1" value={callAutoSeconds} onChange={(e) => setCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中 / 応答後 から 通話中 に切り替わるまでの秒数</div></div>
                     <div className="space-y-2"><Label>着信までの秒数</Label><Input type="number" min="0" step="0.1" value={incomingDelaySeconds} onChange={(e) => setIncomingDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">ボタンを押してから指定秒数で着信</div></div>
                     <div className="space-y-2 pt-1"><Label>着信相手の名前</Label><Input value={incomingCallTitle} onChange={(e) => setIncomingCallTitle(e.target.value)} placeholder="母" /></div>
                     <div className="space-y-2"><Label>着信相手のアイコン文字</Label><Input value={incomingCallAvatarLabel} onChange={(e) => setIncomingCallAvatarLabel(e.target.value.slice(0, 2))} placeholder="母" /></div>
-                    <div className="space-y-2"><Label>着信相手のアイコン画像</Label><label className="inline-block"><input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, setIncomingCallAvatarImage)} /><Button variant="outline">画像を選択</Button></label></div>
+                    <div className="space-y-2"><Label>着信相手のアイコン画像</Label><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setIncomingCallAvatarImage)}>画像を選択</FileButton></div>
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <Button onClick={() => scheduleIncomingCall("voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声着信</Button>
                       <Button onClick={() => scheduleIncomingCall("video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ着信</Button>
