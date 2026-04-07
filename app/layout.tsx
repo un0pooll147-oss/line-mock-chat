@@ -18,18 +18,18 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  interactiveWidget: "resizes-visual",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" style={{ height: "100%", overflow: "hidden" }}>
+    <html lang="ja">
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body style={{ height: "100%", margin: 0, padding: 0, overflow: "hidden" }}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
