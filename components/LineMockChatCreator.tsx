@@ -21,14 +21,14 @@ import {
 } from "lucide-react";
 
 const initialMessages = [
-  { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/03", time: "22:14" },
+  { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:14" },
   {
     id: 2,
     side: "left",
     type: "text",
     sender: "美咲",
     text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね",
-    date: "2026/04/04",
+    date: "2026/04/23",
     time: "22:15",
   },
 ];
@@ -46,7 +46,7 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
 const STORAGE_KEY = "line-mock-chat-default-settings-v4";
 
 const defaultSettings = {
-  todayDate: "2026/04/04",
+  todayDate: "2026/04/23",
   customBgColor: "",
   customHeaderColor: "",
   customHeaderIconColor: "",
@@ -58,14 +58,14 @@ const defaultSettings = {
   incomingCallAvatarImage: "",
   avatarLabel: "美",
   avatarImage: "",
-  deviceTime: "9:41",
-  messageTime: "22:14",
+  deviceTime: "22:18",
+  messageTime: "22:18",
   incomingSender: "美咲",
   incomingText: "",
-  outgoingMessageTime: "22:14",
-  incomingMessageTime: "22:14",
-  outgoingMessageDate: "2026/04/04",
-  incomingMessageDate: "2026/04/04",
+  outgoingMessageTime: "22:18",
+  incomingMessageTime: "22:18",
+  outgoingMessageDate: "2026/04/23",
+  incomingMessageDate: "2026/04/23",
   themeKey: "line",
   showStatusBar: true,
   fullScreenMode: false,
@@ -78,20 +78,20 @@ const defaultSettings = {
   showActionButtons: true,
   showEditorAccess: true,
   soundEnabled: true,
-  ringtoneType: "iphone",
+  ringtoneType: "line",
   customRingtoneName: "",
   customRingtoneUrl: "",
   outgoingToneEnabled: true,
   outgoingToneType: "line",
   customOutgoingToneName: "",
   customOutgoingToneUrl: "",
-  callAutoSeconds: 1.5,
+  callAutoSeconds: 5,
   incomingCallAutoSeconds: 1.5,
-  incomingDelaySeconds: 0,
+  incomingDelaySeconds: 5,
   incomingCallBgColor: "#000000",
-  incomingCallBgOpacity: 0.9,
+  incomingCallBgOpacity: 1,
   outgoingCallBgColor: "#000000",
-  outgoingCallBgOpacity: 0.9,
+  outgoingCallBgOpacity: 1,
 };
 
 function readStoredDefaultSettings() {
