@@ -445,12 +445,9 @@ export default function LineMockChatCreator() {
   const [isTyping, setIsTyping] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
-  const [timedMsgText, setTimedMsgText] = useState("");
-  const [timedMsgDelay, setTimedMsgDelay] = useState(3);
-  const [timedMsgPending, setTimedMsgPending] = useState(false);
-  const [timedMsgCountdown, setTimedMsgCountdown] = useState(0);
-  const timedMsgRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const timedMsgIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  interface TimedMsg { id: number; sender: string; text: string; delay: number; countdown: number; pending: boolean; }
+  const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>([{ id: 1, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
+  const timedMsgTimers = useRef<Record<number, { timeout: ReturnType<typeof setTimeout>; interval: ReturnType<typeof setInterval> }>>({});
 
   const theme = useMemo(() => {
     const base = themePresets[themeKey] || themePresets.line;
@@ -480,17 +477,23 @@ export default function LineMockChatCreator() {
   const openSettings = () => setSettingsOpen(true);
 
   useEffect(() => {
-    const requestFullscreen = () => {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
-    };
-    const handleClick = () => {
-      if (!document.fullscreenElement) requestFullscreen();
-    };
-    document.addEventListener("click", handleClick, { once: true });
-    return () => document.removeEventListener("click", handleClick);
-  }, []);
+    if (fullScreenMode) {
+      const requestFullscreen = () => {
+        const el = document.documentElement;
+        if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+        else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+      };
+      const handleClick = () => {
+        if (!document.fullscreenElement) requestFullscreen();
+      };
+      document.addEventListener("click", handleClick, { once: true });
+      return () => document.removeEventListener("click", handleClick);
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  }, [fullScreenMode]);
 
   const clearTypingTimers = () => {
     if (typingIntervalRef.current) { clearInterval(typingIntervalRef.current); typingIntervalRef.current = null; }
@@ -594,33 +597,43 @@ export default function LineMockChatCreator() {
     setIncomingText("");
   };
 
-  const scheduleIncomingMessage = () => {
-    const source = timedMsgText.trim();
-    if (!source || timedMsgPending) return;
-    setTimedMsgPending(true);
-    setTimedMsgCountdown(Number(timedMsgDelay));
-    timedMsgIntervalRef.current = window.setInterval(() => {
-      setTimedMsgCountdown((prev) => {
-        if (prev <= 1) {
-          if (timedMsgIntervalRef.current) clearInterval(timedMsgIntervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
+  const startTimedMsg = (id: number) => {
+    const msg = timedMsgs.find(m => m.id === id);
+    if (!msg || !msg.text.trim() || msg.pending) return;
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: true, countdown: m.delay } : m));
+    const interval = window.setInterval(() => {
+      setTimedMsgs(prev => prev.map(m => {
+        if (m.id !== id) return m;
+        if (m.countdown <= 1) { clearInterval(interval); return { ...m, countdown: 0 }; }
+        return { ...m, countdown: m.countdown - 1 };
+      }));
     }, 1000);
-    timedMsgRef.current = window.setTimeout(() => {
-      setMessages((prev) => [...prev, buildIncomingMessage(source, incomingSender, incomingMessageTime, incomingMessageDate)]);
-      setTimedMsgPending(false);
-      setTimedMsgCountdown(0);
-      setTimedMsgText("");
-    }, Math.max(0, Number(timedMsgDelay)) * 1000);
+    const timeout = window.setTimeout(() => {
+      setMessages(prev => [...prev, buildIncomingMessage(msg.text.trim(), msg.sender, incomingMessageTime, incomingMessageDate)]);
+      setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: false, countdown: 0, text: "" } : m));
+      delete timedMsgTimers.current[id];
+    }, Math.max(0, msg.delay) * 1000);
+    timedMsgTimers.current[id] = { timeout, interval };
   };
 
-  const cancelTimedMessage = () => {
-    if (timedMsgRef.current) clearTimeout(timedMsgRef.current);
-    if (timedMsgIntervalRef.current) clearInterval(timedMsgIntervalRef.current);
-    setTimedMsgPending(false);
-    setTimedMsgCountdown(0);
+  const cancelTimedMsg = (id: number) => {
+    const t = timedMsgTimers.current[id];
+    if (t) { clearTimeout(t.timeout); clearInterval(t.interval); delete timedMsgTimers.current[id]; }
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: false, countdown: 0 } : m));
+  };
+
+  const addTimedMsgSlot = () => {
+    const newId = Date.now();
+    setTimedMsgs(prev => [...prev, { id: newId, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
+  };
+
+  const removeTimedMsgSlot = (id: number) => {
+    cancelTimedMsg(id);
+    setTimedMsgs(prev => prev.filter(m => m.id !== id));
+  };
+
+  const updateTimedMsg = (id: number, field: string, value: string | number) => {
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
@@ -768,7 +781,7 @@ export default function LineMockChatCreator() {
         </div>
       </div>
 
-      <div className={cn("fixed bottom-0 left-0 right-0 z-40 mx-auto w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", fullScreenMode ? "max-w-none bg-black/75 backdrop-blur-md" : "max-w-md")} style={{ backgroundColor: fullScreenMode ? undefined : theme.toolbarBg }}>
+      <div className={cn("fixed bottom-0 left-0 right-0 z-40 w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", fullScreenMode ? "bg-black/75 backdrop-blur-md" : "")} style={{ backgroundColor: fullScreenMode ? undefined : theme.toolbarBg }}>
         {showTopActions && showActionButtons && (
           <div className={cn("flex items-center justify-between gap-2", showControls && "mb-1")}>
 
@@ -877,16 +890,26 @@ export default function LineMockChatCreator() {
 
                     <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 space-y-3 mt-2">
                       <div className="text-xs font-semibold text-black/60">タイマーメッセージ</div>
-                      <div className="space-y-2"><Label>内容</Label><Textarea value={timedMsgText} onChange={(e) => setTimedMsgText(e.target.value)} className="min-h-20" placeholder="○秒後に届くメッセージ" disabled={timedMsgPending} /></div>
-                      <div className="space-y-2"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={timedMsgDelay} onChange={(e) => setTimedMsgDelay(Number(e.target.value))} disabled={timedMsgPending} /></div>
-                      {timedMsgPending ? (
-                        <div className="space-y-2">
-                          <div className="text-center text-sm font-medium text-black/60">{timedMsgCountdown}秒後に届きます…</div>
-                          <Button onClick={cancelTimedMessage} variant="outline" className="w-full text-red-500">キャンセル</Button>
+                      {timedMsgs.map((msg, idx) => (
+                        <div key={msg.id} className="rounded-2xl border border-black/10 bg-white p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs font-medium text-black/50">メッセージ {idx + 1}</div>
+                            {timedMsgs.length > 1 && <button type="button" onClick={() => removeTimedMsgSlot(msg.id)} className="text-xs text-red-400 hover:text-red-600">削除</button>}
+                          </div>
+                          <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateTimedMsg(msg.id, "sender", e.target.value)} disabled={msg.pending} placeholder="美咲" /></div>
+                          <div className="space-y-1"><Label>メッセージ内容</Label><Textarea value={msg.text} onChange={(e) => updateTimedMsg(msg.id, "text", e.target.value)} className="min-h-16" placeholder="○秒後に届くメッセージ" disabled={msg.pending} /></div>
+                          <div className="space-y-1"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={msg.delay} onChange={(e) => updateTimedMsg(msg.id, "delay", Number(e.target.value))} disabled={msg.pending} /></div>
+                          {msg.pending ? (
+                            <div className="space-y-2">
+                              <div className="text-center text-sm font-medium text-black/60">{msg.countdown}秒後に届きます…</div>
+                              <Button onClick={() => cancelTimedMsg(msg.id)} variant="outline" className="w-full text-red-500 border-red-200">キャンセル</Button>
+                            </div>
+                          ) : (
+                            <Button onClick={() => startTimedMsg(msg.id)} disabled={!msg.text.trim()} className="w-full">タイマーセット</Button>
+                          )}
                         </div>
-                      ) : (
-                        <Button onClick={scheduleIncomingMessage} disabled={!timedMsgText.trim()} className="w-full">タイマーセット</Button>
-                      )}
+                      ))}
+                      <Button onClick={addTimedMsgSlot} variant="outline" className="w-full">＋ メッセージを追加</Button>
                     </div>
                   </SectionCard>
                 </div>
