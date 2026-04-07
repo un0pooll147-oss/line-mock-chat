@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Play,
   PlusCircle,
   Image as ImageIcon,
   Smile,
