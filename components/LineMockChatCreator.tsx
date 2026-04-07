@@ -340,15 +340,20 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   showMessageTime: boolean;
   todayDate: string;
   wallpaper: string;
-}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper }, ref) {
+  unifyWallpaper?: boolean;
+}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false }, ref) {
   const textColor = theme.name === "ダーク" ? "text-white" : "text-black";
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
   const sortedMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
+  const chatAreaStyle = wallpaper && !unifyWallpaper
+    ? { backgroundImage: `url(${wallpaper})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : undefined;
+
   return (
-    <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: theme.appBg }}>
+    <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: unifyWallpaper && wallpaper ? "transparent" : theme.appBg }}>
       <div className="sticky top-0 z-10 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
         {showStatusBar && (
           <ChatStatusBar time={deviceTime} className="mb-1" />
@@ -364,7 +369,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 px-3 pt-4 pb-2" style={wallpaper ? { backgroundImage: `url(${wallpaper})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+      <div className="flex-1 min-h-0 px-3 pt-4 pb-2" style={chatAreaStyle}>
         <div className="flex flex-col gap-3">
           {sortedMessages.map((msg, index) => {
             const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
@@ -898,8 +903,28 @@ export default function LineMockChatCreator() {
   return (
     <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ height: fullScreenMode ? "100dvh" : undefined, minHeight: fullScreenMode ? undefined : "100dvh", width: "100%", maxWidth: "100vw", overflow: fullScreenMode ? "hidden" : undefined, position: "relative", ...(fullScreenMode ? {} : (unifiedStageStyle || {})) }}>
       <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "") }>
-        <div className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")} style={deviceFrameMode ? undefined : unifiedStageStyle}>
-          <PhoneMockup ref={previewRef} onStartCall={startCall} onOpenSettings={openSettings} title={chatTitle} messages={messages} typingText={typingText} isTyping={isTyping} theme={theme} avatarImage={avatarImage} avatarLabel={avatarLabel} deviceTime={deviceTime} showStatusBar={showStatusBar} showMessageTime={showMessageTime} todayDate={todayDate} wallpaper={wallpaper} />
+        <div
+          className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")}
+          style={deviceFrameMode ? undefined : (unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle)}
+        >
+          <PhoneMockup
+            ref={previewRef}
+            onStartCall={startCall}
+            onOpenSettings={openSettings}
+            title={chatTitle}
+            messages={messages}
+            typingText={typingText}
+            isTyping={isTyping}
+            theme={theme}
+            avatarImage={avatarImage}
+            avatarLabel={avatarLabel}
+            deviceTime={deviceTime}
+            showStatusBar={showStatusBar}
+            showMessageTime={showMessageTime}
+            todayDate={todayDate}
+            wallpaper={wallpaper}
+            unifyWallpaper={unifyChatBackground}
+          />
         </div>
       </div>
 
