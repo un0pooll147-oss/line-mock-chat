@@ -900,8 +900,18 @@ export default function LineMockChatCreator() {
   const overlayBgOpacity = activeCallDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
+  const stageContainerStyle: React.CSSProperties = {
+    height: fullScreenMode ? "100dvh" : undefined,
+    minHeight: fullScreenMode ? undefined : "100dvh",
+    width: "100%",
+    maxWidth: "100vw",
+    overflow: fullScreenMode ? "hidden" : undefined,
+    position: "relative",
+    ...(unifiedStageStyle || {}),
+  };
+
   return (
-    <div className={cn("flex flex-col", fullScreenMode ? "bg-black max-w-none" : "mx-auto max-w-md")} style={{ height: fullScreenMode ? "100dvh" : undefined, minHeight: fullScreenMode ? undefined : "100dvh", width: "100%", maxWidth: "100vw", overflow: fullScreenMode ? "hidden" : undefined, position: "relative", ...(fullScreenMode ? {} : (unifiedStageStyle || {})) }}>
+    <div className={cn("flex flex-col", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
       <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "") }>
         <div
           className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")}
