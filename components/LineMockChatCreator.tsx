@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Play,
   PlusCircle,
@@ -386,6 +387,7 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
 }
 
 export default function LineMockChatCreator() {
+  const router = useRouter();
   const initialUiSettings = useMemo(() => readStoredDefaultSettings(), []);
 
   const [chatTitle, setChatTitle] = useState(initialUiSettings.chatTitle);
@@ -785,7 +787,12 @@ export default function LineMockChatCreator() {
 
 
         {showControls && (
-          <div className="flex items-end gap-2">
+          <div className="mb-1 flex justify-end">
+            <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 hover:bg-black/12 transition">
+              通知画面モードへ →
+            </button>
+          </div>
+      <div className="flex items-end gap-2">
             <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
             <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
               <Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputPlaceholder} rows={1} className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0" />
