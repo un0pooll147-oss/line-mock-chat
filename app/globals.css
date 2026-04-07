@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
 html {
   height: -webkit-fill-available;
 }
@@ -9,5 +21,4 @@ html {
 body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
-  overscroll-behavior: none;
 }
