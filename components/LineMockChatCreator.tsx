@@ -782,12 +782,7 @@ export default function LineMockChatCreator() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.toolbarBg }}>
-        {showTopActions && showActionButtons && (
-          <div className={cn("flex items-center justify-between gap-2", showControls && "mb-1")}>
 
-            {showEditorAccess && <Button variant="outline" className={cn("h-10 px-3", fullScreenMode && "bg-white/95")} onClick={openSettings}><Settings2 className="h-4 w-4" /></Button>}
-          </div>
-        )}
 
         {showControls && (
           <div className="flex items-end gap-2">
