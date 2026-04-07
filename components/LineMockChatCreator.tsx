@@ -385,6 +385,8 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
   );
 }
 
+interface TimedMsg { id: number; sender: string; text: string; delay: number; countdown: number; pending: boolean; }
+
 export default function LineMockChatCreator() {
   const router = useRouter();
   const initialUiSettings = useMemo(() => readStoredDefaultSettings(), []);
@@ -446,7 +448,6 @@ export default function LineMockChatCreator() {
   const [isTyping, setIsTyping] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
-  interface TimedMsg { id: number; sender: string; text: string; delay: number; countdown: number; pending: boolean; }
   const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>([{ id: 1, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
   const timedMsgTimers = useRef<Record<number, { timeout: ReturnType<typeof setTimeout>; interval: ReturnType<typeof setInterval> }>>({});
 
