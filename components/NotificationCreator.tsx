@@ -53,6 +53,8 @@ type NotificationSettings = {
   notificationSoundPreset: SoundPreset;
   uploadedSound: string | null;
   uploadedSoundName: string;
+  fullScreenMode: boolean;
+  deviceFrameMode: boolean;
 };
 
 const STORAGE_KEY = "notification-mock-settings-v3";
@@ -154,6 +156,8 @@ const defaultSettings: NotificationSettings = {
   notificationSoundPreset: "classic",
   uploadedSound: null,
   uploadedSoundName: "",
+  fullScreenMode: false,
+  deviceFrameMode: false,
 };
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -449,6 +453,8 @@ export default function NotificationCreator() {
   const [notificationSoundPreset, setNotificationSoundPreset] = useState<SoundPreset>(defaultSettings.notificationSoundPreset);
   const [uploadedSound, setUploadedSound] = useState<string | null>(defaultSettings.uploadedSound);
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
+  const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
+  const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
 
   const [form, setForm] = useState({ appName: "LINE", sender: "", text: "", time: "", iconText: "森", delaySeconds: "1" });
   const [uploadedIcon, setUploadedIcon] = useState<string | null>(null);
@@ -474,6 +480,8 @@ export default function NotificationCreator() {
     setNotificationSoundPreset(stored.notificationSoundPreset);
     setUploadedSound(stored.uploadedSound);
     setUploadedSoundName(stored.uploadedSoundName);
+    setFullScreenMode(stored.fullScreenMode);
+    setDeviceFrameMode(stored.deviceFrameMode);
     setHydrated(true);
   }, []);
 
@@ -496,6 +504,8 @@ export default function NotificationCreator() {
       notificationSoundPreset,
       uploadedSound,
       uploadedSoundName,
+      fullScreenMode,
+      deviceFrameMode,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [
@@ -516,6 +526,8 @@ export default function NotificationCreator() {
     notificationSoundPreset,
     uploadedSound,
     uploadedSoundName,
+    fullScreenMode,
+    deviceFrameMode,
   ]);
 
   useEffect(() => {
@@ -734,16 +746,36 @@ export default function NotificationCreator() {
     setNotificationSoundPreset(defaultSettings.notificationSoundPreset);
     setUploadedSound(defaultSettings.uploadedSound);
     setUploadedSoundName(defaultSettings.uploadedSoundName);
+    setFullScreenMode(defaultSettings.fullScreenMode);
+    setDeviceFrameMode(defaultSettings.deviceFrameMode);
   };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
   const topStackClass = showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock;
 
+  const stageContainerStyle: React.CSSProperties = {
+    height: fullScreenMode ? "100dvh" : undefined,
+    minHeight: fullScreenMode ? undefined : "100dvh",
+    width: "100%",
+    maxWidth: "100vw",
+    overflow: fullScreenMode ? "hidden" : undefined,
+    position: "relative",
+  };
+  const previewShellClassName = deviceFrameMode ? "p-4" : "p-0";
+  const settingsButtonClassName = deviceFrameMode
+    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
+    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
+  const hiddenSettingsButtonClassName = deviceFrameMode
+    ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
+    : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
+
   return (
-    <div className="relative h-[100dvh] w-screen overflow-hidden bg-black text-white">
-      <div className="absolute inset-0" style={bgStyle} />
-      <div className="absolute inset-0 bg-black/15" />
+    <div className={cn("flex flex-col bg-black", fullScreenMode ? "max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
+      <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
+        <div className={cn("relative h-full min-h-[100dvh] w-full overflow-hidden bg-black text-white", deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}> 
+          <div className="absolute inset-0" style={bgStyle} />
+          <div className="absolute inset-0 bg-black/15" />
 
       {theme.showNotch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
@@ -842,25 +874,28 @@ export default function NotificationCreator() {
         />
       )}
 
-      {showSettingsButton && (
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
-          aria-label="設定を開く"
-        >
-          <Settings2 className="h-6 w-6" />
-        </button>
-      )}
+          {showSettingsButton && (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className={settingsButtonClassName}
+              aria-label="設定を開く"
+            >
+              <Settings2 className="h-6 w-6" />
+            </button>
+          )}
 
-      {!showSettingsButton && (
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0"
-          aria-label="隠し設定ボタン"
-        />
-      )}
+          {!showSettingsButton && (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className={hiddenSettingsButtonClassName}
+              aria-label="隠し設定ボタン"
+            />
+          )}
+
+        </div>
+      </div>
 
       {settingsOpen && (
         <div className="fixed inset-0 z-40 bg-[#f5f5f5] text-black">
@@ -1083,6 +1118,20 @@ export default function NotificationCreator() {
             {activeTab === "screen" && (
               <div className="space-y-4">
                 <SectionCard icon={Settings2} title="画面操作">
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                    <div>
+                      <div className="text-sm font-medium">フルスクリーンモード</div>
+                      <div className="text-xs text-black/50">余白や中央寄せを解除して、画面いっぱいに表示します。</div>
+                    </div>
+                    <Switch checked={fullScreenMode} onCheckedChange={setFullScreenMode} />
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                    <div>
+                      <div className="text-sm font-medium">デバイスフレーム</div>
+                      <div className="text-xs text-black/50">黒フチのスマホフレーム内で表示します。</div>
+                    </div>
+                    <Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} />
+                  </div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">右下の設定ボタン表示</div>

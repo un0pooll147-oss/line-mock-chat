@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 const initialMessages = [
-  { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:14" },
+  { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:14", visible: true },
   {
     id: 2,
     side: "left",
@@ -30,6 +30,7 @@ const initialMessages = [
     text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね",
     date: "2026/04/23",
     time: "22:15",
+    visible: true,
   },
 ];
 
@@ -163,15 +164,15 @@ function getCurrentTime() {
 }
 
 function buildOutgoingMessage(text: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime() };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
 }
 
 function buildIncomingMessage(text: string, sender: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime() };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
 }
 
 function buildOutgoingImageMessage(image: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime() };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
 }
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -221,6 +222,7 @@ interface Message {
   image?: string;
   date: string;
   time: string;
+  visible?: boolean;
 }
 
 function compareMessagesAsc(a: Message, b: Message) {
@@ -346,7 +348,14 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
-  const sortedMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
+  const sortedMessages = useMemo(() => [...messages].filter((msg) => msg.visible !== false).sort(compareMessagesAsc), [messages]);
+  const messageScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = messageScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, typingText, isTyping]);
 
   const chatAreaStyle = wallpaper && !unifyWallpaper
     ? { backgroundImage: `url(${wallpaper})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -369,7 +378,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 px-3 pt-4 pb-2" style={chatAreaStyle}>
+      <div ref={messageScrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-24" style={chatAreaStyle}>
         <div className="flex flex-col gap-3">
           {sortedMessages.map((msg, index) => {
             const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
@@ -737,6 +746,7 @@ export default function LineMockChatCreator() {
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
   const updateMessageField = (id: number, field: keyof Message | string, value: string) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, [field]: value } : msg)));
+  const toggleMessageVisibility = (id: number) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, visible: msg.visible === false ? true : false } : msg)));
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
     const file = event.target.files?.[0];
@@ -909,10 +919,17 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
+  const controlsInsideFrame = deviceFrameMode;
+  const controlsWrapperClassName = controlsInsideFrame
+    ? "absolute bottom-4 left-4 right-4 z-40"
+    : "fixed bottom-0 left-0 right-0 z-40 w-full";
+  const controlsInnerStyle = controlsInsideFrame
+    ? { left: 8, right: 8, position: "relative" as const }
+    : undefined;
 
   return (
     <div className={cn("flex flex-col", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
-      <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0 pb-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4" : "") }>
+      <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
         <div
           className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")}
           style={deviceFrameMode ? undefined : (unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle)}
@@ -938,7 +955,20 @@ export default function LineMockChatCreator() {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 w-full border-t border-black/10 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.toolbarBg }}>
+      <div className={controlsWrapperClassName}>
+        <div
+          className={cn(
+            "border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
+            controlsInsideFrame
+              ? "overflow-hidden rounded-[28px] border border-black/10"
+              : "w-full"
+          )}
+          style={{
+            backgroundColor: theme.toolbarBg,
+            paddingBottom: controlsInsideFrame ? 8 : "max(8px,env(safe-area-inset-bottom))",
+            ...(controlsInnerStyle || {}),
+          }}
+        >
 
 
         {showControls && (
@@ -964,6 +994,7 @@ export default function LineMockChatCreator() {
             </div>
           </>
         )}
+        </div>
       </div>
 
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
@@ -1089,7 +1120,7 @@ export default function LineMockChatCreator() {
                           <div className="space-y-1"><Label>メッセージ内容</Label><Textarea value={msg.text} onChange={(e) => updateTimedMsg(msg.id, "text", e.target.value)} className="min-h-16" placeholder="○秒後に届くメッセージ" disabled={msg.pending} /></div>
                           <div className="space-y-1"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={msg.delay} onChange={(e) => updateTimedMsg(msg.id, "delay", Number(e.target.value))} disabled={msg.pending} /></div>
                           {msg.pending ? (
-                            <div className="space-y-2">
+                        <div className="space-y-2">
                               <div className="text-center text-sm font-medium text-black/60">{msg.countdown}秒後に届きます…</div>
                               <Button onClick={() => cancelTimedMsg(msg.id)} variant="outline" className="w-full text-red-500 border-red-200">キャンセル</Button>
                             </div>
@@ -1106,14 +1137,23 @@ export default function LineMockChatCreator() {
 
               {activeTab === "messages" && (
                 <div className="space-y-3">
+                  <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-2 text-xs text-black/60">履歴ごとに「隠す / 表示する」を切り替えると、チャット画面への表示を個別に調整できます。</div>
                   {sortedHistoryMessages.map((msg, index) => (
-                    <div key={msg.id} className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
-                      <div className="mb-3 flex items-center justify-between">
+                    <div key={msg.id} className={cn("rounded-3xl border border-black/10 bg-white p-4 shadow-sm transition", msg.visible === false && "opacity-70")}>
+                      <div className="mb-3 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 text-sm font-semibold">
                           <span className={cn("inline-flex rounded-full px-2 py-1 text-xs", msg.side === "right" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700")}>{msg.side === "right" ? "自分" : "相手"}</span>
-                          #{index + 1}
+                          <span>#{index + 1}</span>
+                          <span className={cn("inline-flex rounded-full px-2 py-1 text-[11px]", msg.visible === false ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700")}>
+                            {msg.visible === false ? "非表示" : "表示中"}
+                          </span>
                         </div>
-                        <button type="button" onClick={() => deleteMessage(msg.id)} className="rounded-full p-2 text-black/45 hover:bg-black/5 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => toggleMessageVisibility(msg.id)}>
+                            {msg.visible === false ? "表示する" : "隠す"}
+                          </Button>
+                          <button type="button" onClick={() => deleteMessage(msg.id)} className="rounded-full p-2 text-black/45 hover:bg-black/5 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         {msg.side === "left" && <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessageField(msg.id, "sender", e.target.value)} /></div>}
