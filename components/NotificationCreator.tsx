@@ -57,7 +57,7 @@ type NotificationSettings = {
   deviceFrameMode: boolean;
 };
 
-const STORAGE_KEY = "notification-mock-settings-v3";
+const STORAGE_KEY = "notification-mock-settings-v4";
 
 const presetWallpapers: Record<string, string> = {
   simple: "linear-gradient(180deg, #7b8188 0%, #3d4349 35%, #111111 100%)",
@@ -534,6 +534,7 @@ export default function NotificationCreator() {
     return () => {
       playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
       playTimeoutsRef.current = [];
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
@@ -640,22 +641,41 @@ export default function NotificationCreator() {
   const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadedWallpaper(URL.createObjectURL(file));
-    setSelectedWallpaper("upload");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setUploadedWallpaper(reader.result);
+        setSelectedWallpaper("upload");
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleIconUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadedIcon(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setUploadedIcon(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
 
   const handleExistingIconUpload = (id: number, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, iconImage: objectUrl } : msg)));
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, iconImage: reader.result as string } : msg)));
+      }
+    };
+    reader.readAsDataURL(file);
     e.target.value = "";
   };
 
@@ -728,6 +748,39 @@ export default function NotificationCreator() {
     });
   };
 
+  const saveCurrentAsDefault = () => {
+    if (typeof window === "undefined") {
+      showToast("保存に失敗しました");
+      return;
+    }
+    const payload: NotificationSettings = {
+      osType,
+      phoneTime,
+      lockscreenTime,
+      lockscreenDate,
+      showLargeClock,
+      groupName,
+      selectedWallpaper,
+      uploadedWallpaper,
+      messages,
+      showSettingsButton,
+      notificationDirection,
+      vibrateOnNotify,
+      soundOnNotify,
+      notificationSoundPreset,
+      uploadedSound,
+      uploadedSoundName,
+      fullScreenMode,
+      deviceFrameMode,
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      showToast("既定の設定を保存しました");
+    } catch {
+      showToast("保存に失敗しました");
+    }
+  };
+
   const resetToDefault = () => {
     clearTimers();
     setOsType(defaultSettings.osType);
@@ -748,6 +801,7 @@ export default function NotificationCreator() {
     setUploadedSoundName(defaultSettings.uploadedSoundName);
     setFullScreenMode(defaultSettings.fullScreenMode);
     setDeviceFrameMode(defaultSettings.deviceFrameMode);
+    showToast("初期設定に戻しました");
   };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
@@ -1117,6 +1171,10 @@ export default function NotificationCreator() {
 
             {activeTab === "screen" && (
               <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-2">
+                  <Button onClick={saveCurrentAsDefault} variant="outline" className="w-full justify-center">今の設定を既定にする</Button>
+                </div>
+
                 <SectionCard icon={Settings2} title="画面操作">
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
@@ -1152,6 +1210,14 @@ export default function NotificationCreator() {
           </div>
         </div>
       )}
+
+      {toastMessage ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
+          <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
+            {toastMessage}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

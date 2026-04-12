@@ -21,17 +21,17 @@ import {
 } from "lucide-react";
 
 const initialMessages = [
-  { id: 1, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:14", visible: true },
-  {
-    id: 2,
-    side: "left",
-    type: "text",
-    sender: "美咲",
-    text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね",
-    date: "2026/04/23",
-    time: "22:15",
-    visible: true,
-  },
+  { id: 1, side: "left", type: "text", sender: "美咲", text: "昨日ありがと。無事帰れた？", date: "2026/04/22", time: "21:08", visible: true },
+  { id: 2, side: "right", type: "text", sender: "あなた", text: "帰れたよ。さっき家着いた", date: "2026/04/22", time: "21:11", visible: true },
+  { id: 3, side: "left", type: "text", sender: "美咲", text: "よかった。ちょっと雨強かったもんね", date: "2026/04/22", time: "21:12", visible: true },
+  { id: 4, side: "right", type: "text", sender: "あなた", text: "駅出た瞬間やばかった。また傘借りちゃってごめん", date: "2026/04/22", time: "21:14", visible: true },
+  { id: 5, side: "left", type: "text", sender: "美咲", text: "全然いいよ笑 ちゃんと明日返してくれれば", date: "2026/04/22", time: "21:15", visible: true },
+  { id: 6, side: "left", type: "text", sender: "美咲", text: "それより昨日、なんか元気なかったけど大丈夫？", date: "2026/04/22", time: "21:17", visible: true },
+  { id: 7, side: "right", type: "text", sender: "あなた", text: "少し考え事してただけ。気にさせてたらごめん", date: "2026/04/22", time: "21:20", visible: true },
+  { id: 8, side: "left", type: "text", sender: "美咲", text: "ならいいけど。無理してるならちゃんと言ってね", date: "2026/04/22", time: "21:21", visible: true },
+  { id: 9, side: "right", type: "text", sender: "あなた", text: "ありがと。そういうとこ助かる", date: "2026/04/22", time: "21:24", visible: true },
+  { id: 10, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:15", visible: true },
+  { id: 11, side: "left", type: "text", sender: "美咲", text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね", date: "2026/04/23", time: "22:16", visible: true },
 ];
 
 const themePresets: Record<string, { name: string; appBg: string; headerBg: string; selfBubble: string; otherBubble: string; toolbarBg: string }> = {
@@ -44,7 +44,7 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
   purple: { name: "パープル", appBg: "#f3e5f5", headerBg: "#8e24aa", selfBubble: "#ce93d8", otherBubble: "#ffffff", toolbarBg: "#faf5ff" },
 };
 
-const STORAGE_KEY = "line-mock-chat-default-settings-v4";
+const STORAGE_KEY = "line-mock-chat-default-settings-v5";
 
 function StatusCellDots({ className = "" }: { className?: string }) {
   return (
@@ -146,15 +146,50 @@ const defaultSettings = {
   outgoingCallBgOpacity: 1,
 };
 
+const initialTimedMessages = [{ id: 1, sender: defaultSettings.incomingSender, text: "", delay: 3, countdown: 0, pending: false }];
+
+function normalizeStoredMessages(messages: any[] | undefined) {
+  if (!Array.isArray(messages) || messages.length === 0) return initialMessages;
+  return messages.map((msg, index) => ({
+    id: typeof msg?.id === "number" ? msg.id : Date.now() + index,
+    side: msg?.side === "right" ? "right" : "left",
+    type: msg?.type === "image" ? "image" : "text",
+    sender: String(msg?.sender ?? ""),
+    text: String(msg?.text ?? ""),
+    image: typeof msg?.image === "string" ? msg.image : "",
+    date: String(msg?.date ?? ""),
+    time: String(msg?.time ?? ""),
+    visible: typeof msg?.visible === "boolean" ? msg.visible : true,
+  }));
+}
+
+function normalizeStoredTimedMessages(items: any[] | undefined, fallbackSender = defaultSettings.incomingSender) {
+  if (!Array.isArray(items) || items.length === 0) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
+  return items.map((item, index) => ({
+    id: typeof item?.id === "number" ? item.id : Date.now() + index,
+    sender: String(item?.sender ?? fallbackSender),
+    text: String(item?.text ?? ""),
+    delay: Number.isFinite(Number(item?.delay)) ? Number(item.delay) : 0,
+    countdown: Number.isFinite(Number(item?.countdown)) ? Number(item.countdown) : 0,
+    pending: typeof item?.pending === "boolean" ? item.pending : false,
+  }));
+}
+
 function readStoredDefaultSettings() {
-  if (typeof window === "undefined") return defaultSettings;
+  const fallback = { ...defaultSettings, messages: initialMessages, timedMsgs: initialTimedMessages };
+  if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultSettings;
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    return { ...defaultSettings, ...parsed };
+    const merged = { ...defaultSettings, ...parsed };
+    return {
+      ...merged,
+      messages: normalizeStoredMessages(parsed?.messages),
+      timedMsgs: normalizeStoredTimedMessages(parsed?.timedMsgs, String(parsed?.incomingSender ?? merged.incomingSender ?? defaultSettings.incomingSender)),
+    };
   } catch {
-    return defaultSettings;
+    return fallback;
   }
 }
 
@@ -523,15 +558,17 @@ export default function LineMockChatCreator() {
   const [callPhase, setCallPhase] = useState("idle");
   const [activeCallProfile, setActiveCallProfile] = useState<{ title: string; avatarImage: string; avatarLabel: string } | null>(null);
   const [activeCallDirection, setActiveCallDirection] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(initialUiSettings.messages || initialMessages);
   const [typingText, setTypingText] = useState("");
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const outgoingImageInputRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
-  const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>([{ id: 1, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
+  const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>(initialUiSettings.timedMsgs || initialTimedMessages);
+  const [toastMessage, setToastMessage] = useState("");
   const timedMsgTimers = useRef<Record<number, { timeout: ReturnType<typeof setTimeout>; interval: ReturnType<typeof setInterval> }>>({});
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const theme = useMemo(() => {
     const base = themePresets[themeKey] || themePresets.line;
@@ -578,6 +615,18 @@ export default function LineMockChatCreator() {
   const customAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const openSettings = () => setSettingsOpen(true);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(""), 2200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (fullScreenMode) {
@@ -787,17 +836,31 @@ export default function LineMockChatCreator() {
   const handleCustomRingtoneUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    if (customRingtoneUrl && customRingtoneUrl.startsWith("blob:")) URL.revokeObjectURL(customRingtoneUrl);
-    setCustomRingtoneUrl(objectUrl); setCustomRingtoneName(file.name); setRingtoneType("custom");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomRingtoneUrl(reader.result);
+        setCustomRingtoneName(file.name);
+        setRingtoneType("custom");
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
   };
 
   const handleCustomOutgoingToneUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    if (customOutgoingToneUrl && customOutgoingToneUrl.startsWith("blob:")) URL.revokeObjectURL(customOutgoingToneUrl);
-    setCustomOutgoingToneUrl(objectUrl); setCustomOutgoingToneName(file.name); setOutgoingToneType("custom");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomOutgoingToneUrl(reader.result);
+        setCustomOutgoingToneName(file.name);
+        setOutgoingToneType("custom");
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
   };
 
   const buildCurrentSettings = () => ({
@@ -813,7 +876,20 @@ export default function LineMockChatCreator() {
     outgoingCallBgColor, outgoingCallBgOpacity,
   });
 
-  const applySettings = (settings: typeof defaultSettings) => {
+  const buildCurrentDefaultSnapshot = () => ({
+    ...buildCurrentSettings(),
+    messages,
+    timedMsgs: timedMsgs.map((item) => ({
+      id: item.id,
+      sender: item.sender,
+      text: item.text,
+      delay: Number(item.delay) || 0,
+      countdown: 0,
+      pending: false,
+    })),
+  });
+
+  const applySettings = (settings: typeof defaultSettings & { messages?: any[]; timedMsgs?: any[] }) => {
     setCustomBgColor(settings.customBgColor || ""); setCustomHeaderColor(settings.customHeaderColor || "");
     setCustomHeaderIconColor(settings.customHeaderIconColor || ""); setCustomToolbarColor(settings.customToolbarColor || "");
     setCustomOuterBgColor(settings.customOuterBgColor || ""); setUnifyChatBackground(settings.unifyChatBackground ?? true); setChatTitle(settings.chatTitle);
@@ -838,17 +914,35 @@ export default function LineMockChatCreator() {
     setCallAutoSeconds(settings.callAutoSeconds || 0); setIncomingCallAutoSeconds(settings.incomingCallAutoSeconds || 1.5); setIncomingDelaySeconds(settings.incomingDelaySeconds || 0);
     setIncomingCallBgColor(settings.incomingCallBgColor || "#000000"); setIncomingCallBgOpacity(settings.incomingCallBgOpacity ?? 0.9);
     setOutgoingCallBgColor(settings.outgoingCallBgColor || "#000000"); setOutgoingCallBgOpacity(settings.outgoingCallBgOpacity ?? 0.9);
+    setMessages(normalizeStoredMessages(settings.messages));
+    setTimedMsgs(normalizeStoredTimedMessages(settings.timedMsgs, settings.incomingSender || defaultSettings.incomingSender));
   };
 
   const saveCurrentAsDefaultSettings = () => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildCurrentSettings()));
+    if (typeof window === "undefined") {
+      showToast("保存に失敗しました");
+      return;
+    }
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildCurrentDefaultSnapshot()));
+      showToast("既定の設定を保存しました");
+    } catch {
+      showToast("保存に失敗しました");
+    }
   };
 
-  const resetToSavedDefaultSettings = () => applySettings(readStoredDefaultSettings());
+  const resetToSavedDefaultSettings = () => {
+    applySettings(readStoredDefaultSettings());
+    showToast("既定の設定に戻しました");
+  };
   const resetSavedDefaultsToAppDefaults = () => {
-    if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY);
-    applySettings(defaultSettings);
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY);
+      applySettings(defaultSettings);
+      showToast("初期設定に戻しました");
+    } catch {
+      showToast("初期設定への復元に失敗しました");
+    }
   };
 
 
@@ -1237,6 +1331,14 @@ export default function LineMockChatCreator() {
           </div>
         </div>
       )}
+
+      {toastMessage ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
+          <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
+            {toastMessage}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
