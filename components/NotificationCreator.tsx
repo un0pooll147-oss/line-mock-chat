@@ -141,9 +141,9 @@ const defaultMessages: Message[] = [
 
 const defaultSettings: NotificationSettings = {
   osType: "iphone",
-  phoneTime: "9:41",
-  lockscreenTime: "9:41",
-  lockscreenDate: "4月5日 日曜日",
+  phoneTime: "22:18",
+  lockscreenTime: "22:18",
+  lockscreenDate: "4月23日 木曜日",
   showLargeClock: true,
   groupName: "森田家",
   selectedWallpaper: "simple",
@@ -962,8 +962,8 @@ export default function NotificationCreator() {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-40 bg-[#f5f5f5] text-black">
-          <div className="sticky top-0 z-20 border-b border-black/10 bg-[#f5f5f5]/95 px-4 pb-3 pt-[max(14px,env(safe-area-inset-top))] backdrop-blur">
+        <div className="fixed inset-0 z-40 flex min-h-[100dvh] flex-col overflow-hidden bg-[#f5f5f5] text-black">
+          <div className="shrink-0 border-b border-black/10 bg-[#f5f5f5]/95 px-4 pb-3 pt-[max(14px,env(safe-area-inset-top))] backdrop-blur">
             <div className="mb-3 flex items-center justify-between gap-3">
               <button
                 type="button"
@@ -991,7 +991,7 @@ export default function NotificationCreator() {
             </div>
           </div>
 
-          <div className="h-[calc(100dvh-116px)] overflow-y-auto px-4 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))] overscroll-contain">
             {activeTab === "appearance" && (
               <div className="space-y-4">
                 <SectionCard icon={Palette} title="端末・見た目">
