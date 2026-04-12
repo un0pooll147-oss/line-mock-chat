@@ -455,12 +455,14 @@ export default function NotificationCreator() {
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
   const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
+  const [toastMessage, setToastMessage] = useState("");
 
   const [form, setForm] = useState({ appName: "LINE", sender: "", text: "", time: "", iconText: "森", delaySeconds: "1" });
   const [uploadedIcon, setUploadedIcon] = useState<string | null>(null);
 
   const playTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = readStoredSettings();
@@ -564,6 +566,14 @@ export default function NotificationCreator() {
     playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
     playTimeoutsRef.current = [];
   };
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    if (typeof window === "undefined") return;
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(""), 2200);
+  };
+
   const ensureAudioContext = async () => {
     if (typeof window === "undefined") return null;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
