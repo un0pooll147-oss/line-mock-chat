@@ -734,6 +734,41 @@ export default function LineMockChatCreator() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleViewportReset = () => {
+      window.setTimeout(() => {
+        const vv = window.visualViewport;
+        if (!vv) {
+          setKeyboardInset(0);
+          return;
+        }
+        const baseHeight = Math.max(window.innerHeight || 0, viewportBaseHeightRef.current || 0, Math.round(vv.height + vv.offsetTop));
+        const occupiedBottom = vv.height + vv.offsetTop;
+        const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
+        setKeyboardInset(nextInset > 120 ? nextInset : 0);
+      }, 60);
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setComposerFocused(false);
+      }
+      handleViewportReset();
+    };
+
+    window.addEventListener("resize", handleViewportReset);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    window.addEventListener("orientationchange", handleViewportReset);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportReset);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      window.removeEventListener("orientationchange", handleViewportReset);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!composerFocused) return;
     const timer = window.setTimeout(() => {
       if (scrollRef.current) {
@@ -764,7 +799,7 @@ export default function LineMockChatCreator() {
 
 
   const [frameScreenBounds, setFrameScreenBounds] = useState<{ left: number; width: number; bottomGap: number } | null>(null);
-  const keyboardOpen = composerFocused && keyboardInset > 0;
+  const keyboardOpen = keyboardInset > 0;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1211,20 +1246,8 @@ export default function LineMockChatCreator() {
   };
   const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 108) : 24;
 
-  const controlsWrapperStyle: React.CSSProperties | undefined = showControls
-    ? deviceFrameMode && frameScreenBounds
-      ? {
-          left: frameScreenBounds.left,
-          width: frameScreenBounds.width,
-          bottom: Math.max(frameScreenBounds.bottomGap, keyboardInset),
-        }
-      : {
-          left: 0,
-          right: 0,
-          width: "100%",
-          bottom: keyboardInset,
-        }
-    : undefined;
+  const showFloatingComposer = showControls && keyboardOpen;
+  const frameComposerBottom = Math.max(0, keyboardInset - (frameScreenBounds?.bottomGap || 0));
 
   const controlsContent = showControls ? (
     <>
@@ -1243,7 +1266,7 @@ export default function LineMockChatCreator() {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onFocus={() => setComposerFocused(true)}
-            onBlur={() => window.setTimeout(() => setComposerFocused(false), 120)}
+            onBlur={() => window.setTimeout(() => { if (document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") setComposerFocused(false); }, 180)}
             placeholder={inputPlaceholder}
             rows={1}
             className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
@@ -1266,7 +1289,7 @@ export default function LineMockChatCreator() {
       )}
       style={{
         backgroundColor: theme.toolbarBg,
-        paddingBottom: deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))",
+        paddingBottom: keyboardOpen ? 8 : (deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))"),
       }}
     >
       {controlsContent}
@@ -1306,7 +1329,14 @@ export default function LineMockChatCreator() {
                     bottomPadding={messageListBottomPadding}
                   />
                 </div>
-                {/* controls panel is rendered once at the root level to avoid input remounts while typing */}
+                {controlsPanel && (
+                  <div
+                    className={cn(showFloatingComposer ? "absolute inset-x-0 z-[60]" : "shrink-0")}
+                    style={showFloatingComposer ? { bottom: frameComposerBottom } : undefined}
+                  >
+                    {controlsPanel}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1315,45 +1345,41 @@ export default function LineMockChatCreator() {
         <>
           <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", "pb-0")}>
             <div
-              className="h-full min-h-0 overflow-hidden"
+              className="flex h-full min-h-0 flex-col overflow-hidden"
               style={unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle}
             >
-              <PhoneMockup
-                ref={previewRef}
-                onStartCall={startCall}
-                onOpenSettings={openSettings}
-                title={chatTitle}
-                messages={messages}
-                typingText={typingText}
-                isTyping={isTyping}
-                theme={theme}
-                avatarImage={avatarImage}
-                avatarLabel={avatarLabel}
-                deviceTime={deviceTime}
-                showStatusBar={showStatusBar}
-                showMessageTime={showMessageTime}
-                todayDate={todayDate}
-                wallpaper={wallpaper}
-                unifyWallpaper={unifyChatBackground}
-                bottomPadding={messageListBottomPadding}
-              />
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <PhoneMockup
+                  ref={previewRef}
+                  onStartCall={startCall}
+                  onOpenSettings={openSettings}
+                  title={chatTitle}
+                  messages={messages}
+                  typingText={typingText}
+                  isTyping={isTyping}
+                  theme={theme}
+                  avatarImage={avatarImage}
+                  avatarLabel={avatarLabel}
+                  deviceTime={deviceTime}
+                  showStatusBar={showStatusBar}
+                  showMessageTime={showMessageTime}
+                  todayDate={todayDate}
+                  wallpaper={wallpaper}
+                  unifyWallpaper={unifyChatBackground}
+                  bottomPadding={messageListBottomPadding}
+                />
+              </div>
+              {controlsPanel && (
+                <div
+                  className={cn(showFloatingComposer ? "fixed z-[60]" : "shrink-0")}
+                  style={showFloatingComposer ? { left: 0, right: 0, bottom: keyboardInset, width: "100vw", maxWidth: "100vw" } : undefined}
+                >
+                  {controlsPanel}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* controls panel is rendered once at the root level to keep the textarea mounted while typing */}
         </>
-      )}
-
-      {controlsPanel && controlsWrapperStyle && (
-        <div
-          className={cn(
-            "fixed z-[60]",
-            !deviceFrameMode && "inset-x-0 mx-auto max-w-md"
-          )}
-          style={controlsWrapperStyle}
-        >
-          {controlsPanel}
-        </div>
       )}
 
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
