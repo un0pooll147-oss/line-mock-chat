@@ -55,6 +55,42 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
 
 const STORAGE_KEY = "line-mock-chat-default-settings-v5";
 
+const getToastMeta = (message: string) => {
+  if (message.includes("失敗")) {
+    return {
+      icon: "!",
+      iconClassName: "bg-red-50 text-red-600 ring-1 ring-red-100",
+      borderClassName: "border-red-100",
+      subtitle: "保存できなかったため、もう一度お試しください。",
+    };
+  }
+
+  if (message.includes("ありません")) {
+    return {
+      icon: "i",
+      iconClassName: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+      borderClassName: "border-amber-100",
+      subtitle: "操作できる項目がない状態です。",
+    };
+  }
+
+  if (message.includes("削除")) {
+    return {
+      icon: "✓",
+      iconClassName: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+      borderClassName: "border-slate-200",
+      subtitle: "画面の内容を更新しました。",
+    };
+  }
+
+  return {
+    icon: "✓",
+    iconClassName: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100",
+    borderClassName: "border-emerald-100",
+    subtitle: "現在の設定をこの端末に反映しました。",
+  };
+};
+
 function StatusCellDots({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 18 14" className={className} fill="currentColor" aria-hidden="true">
@@ -1471,14 +1507,33 @@ export default function LineMockChatCreator() {
       )}
 
       {toastMessage && typeof document !== "undefined"
-        ? createPortal(
-            <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[9999] flex justify-center px-4">
-              <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
-                {toastMessage}
-              </div>
-            </div>,
-            document.body,
-          )
+        ? (() => {
+            const toastMeta = getToastMeta(toastMessage);
+
+            return createPortal(
+              <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[9999] flex justify-center px-3">
+                <div
+                  className={`w-full max-w-md overflow-hidden rounded-2xl border bg-white/96 shadow-[0_16px_40px_rgba(15,23,42,0.18)] backdrop-blur-md ${toastMeta.borderClassName}`}
+                >
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold ${toastMeta.iconClassName}`}
+                    >
+                      {toastMeta.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[14px] font-semibold leading-5 text-slate-900">{toastMessage}</div>
+                      <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{toastMeta.subtitle}</div>
+                    </div>
+                  </div>
+                  <div className="h-1 w-full bg-black/5">
+                    <div className="h-full w-full bg-black/20" />
+                  </div>
+                </div>
+              </div>,
+              document.body,
+            );
+          })()
         : null}
     </div>
   );
