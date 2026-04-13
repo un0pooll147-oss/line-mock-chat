@@ -423,8 +423,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   todayDate: string;
   wallpaper: string;
   unifyWallpaper?: boolean;
-  scrollContainerRef?: React.MutableRefObject<HTMLDivElement | null>;
-}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, scrollContainerRef }, ref) {
+}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false }, ref) {
   const textColor = theme.name === "ダーク" ? "text-white" : "text-black";
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
@@ -460,7 +459,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
       </div>
 
       <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
-        <div ref={(el) => { messageScrollRef.current = el; if (scrollContainerRef) scrollContainerRef.current = el; }} className="absolute inset-0 overflow-y-auto overscroll-contain px-3 pt-4 pb-24">
+        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4 pb-24">
           <div className="flex flex-col gap-3">
             {sortedMessages.map((msg, index) => {
               const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
@@ -1147,11 +1146,11 @@ export default function LineMockChatCreator() {
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
   const stageContainerStyle: React.CSSProperties = {
-    height: fullScreenMode ? "100dvh" : undefined,
-    minHeight: fullScreenMode ? undefined : "100dvh",
+    height: "100dvh",
+    minHeight: "100dvh",
     width: "100%",
     maxWidth: "100vw",
-    overflow: fullScreenMode ? "hidden" : undefined,
+    overflow: "hidden",
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
@@ -1168,10 +1167,10 @@ export default function LineMockChatCreator() {
     : undefined;
 
   return (
-    <div className={cn("flex flex-col", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
-      <div className={cn("flex-1 overflow-hidden min-h-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
+    <div className={cn("flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
+      <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
         <div
-          className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")}
+          className={cn("h-full min-h-0 overflow-hidden", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl")}
           style={deviceFrameMode ? undefined : (unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle)}
         >
           <PhoneMockup
@@ -1191,7 +1190,6 @@ export default function LineMockChatCreator() {
             todayDate={todayDate}
             wallpaper={wallpaper}
             unifyWallpaper={unifyChatBackground}
-            scrollContainerRef={scrollRef}
           />
         </div>
       </div>
