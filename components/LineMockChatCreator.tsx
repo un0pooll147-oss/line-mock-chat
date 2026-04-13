@@ -1211,10 +1211,19 @@ export default function LineMockChatCreator() {
   };
   const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 108) : 24;
 
-  const floatingControlsWrapperStyle: React.CSSProperties | undefined = keyboardOpen
+  const controlsWrapperStyle: React.CSSProperties | undefined = showControls
     ? deviceFrameMode && frameScreenBounds
-      ? { left: frameScreenBounds.left, width: frameScreenBounds.width, bottom: keyboardInset }
-      : { left: 0, right: 0, width: "100%", bottom: keyboardInset }
+      ? {
+          left: frameScreenBounds.left,
+          width: frameScreenBounds.width,
+          bottom: Math.max(frameScreenBounds.bottomGap, keyboardInset),
+        }
+      : {
+          left: 0,
+          right: 0,
+          width: "100%",
+          bottom: keyboardInset,
+        }
     : undefined;
 
   const controlsContent = showControls ? (
@@ -1297,7 +1306,7 @@ export default function LineMockChatCreator() {
                     bottomPadding={messageListBottomPadding}
                   />
                 </div>
-                {!(deviceFrameMode && keyboardOpen) && controlsPanel}
+                {/* controls panel is rendered once at the root level to avoid input remounts while typing */}
               </div>
             </div>
           </div>
@@ -1331,16 +1340,18 @@ export default function LineMockChatCreator() {
             </div>
           </div>
 
-          {controlsPanel && !deviceFrameMode && !keyboardOpen && (
-            <div className="relative z-40 w-full shrink-0">
-              {controlsPanel}
-            </div>
-          )}
+          {/* controls panel is rendered once at the root level to keep the textarea mounted while typing */}
         </>
       )}
 
-      {controlsPanel && keyboardOpen && floatingControlsWrapperStyle && (
-        <div className="fixed z-[60]" style={floatingControlsWrapperStyle}>
+      {controlsPanel && controlsWrapperStyle && (
+        <div
+          className={cn(
+            "fixed z-[60]",
+            !deviceFrameMode && "inset-x-0 mx-auto max-w-md"
+          )}
+          style={controlsWrapperStyle}
+        >
           {controlsPanel}
         </div>
       )}
