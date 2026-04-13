@@ -1337,8 +1337,8 @@ export default function NotificationCreator() {
     ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
     : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
   const phoneButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[#06C755]/90 text-white shadow-2xl backdrop-blur-md transition hover:brightness-95 active:scale-95"
-    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[#06C755]/90 text-white shadow-2xl backdrop-blur-md transition hover:brightness-95 active:scale-95";
+    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
+    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
   const hiddenSettingsButtonClassName = deviceFrameMode
     ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
     : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
@@ -1454,7 +1454,11 @@ export default function NotificationCreator() {
               className={phoneButtonClassName}
               aria-label="通話発信"
             >
-              {quickCallMode === "video" ? <Video className="h-6 w-6" /> : <Phone className="h-6 w-6" />}
+              {quickCallMode === "video" ? (
+                <Video className="h-6 w-6 mix-blend-difference text-white" />
+              ) : (
+                <Phone className="h-6 w-6 mix-blend-difference text-white" />
+              )}
             </button>
           )}
 
