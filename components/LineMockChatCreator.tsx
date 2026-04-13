@@ -1314,7 +1314,7 @@ export default function LineMockChatCreator() {
               <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
               <div
                 ref={frameScreenRef}
-                className="absolute inset-[8px] relative flex min-h-0 flex-col overflow-hidden rounded-[30px]"
+                className="absolute inset-[8px] flex min-h-0 h-[calc(100%-16px)] flex-col overflow-hidden rounded-[30px]"
                 style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
               >
                 <div className="min-h-0 flex-1 overflow-hidden">
