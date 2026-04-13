@@ -460,7 +460,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
 
       <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
         <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto overscroll-contain px-3 pt-4 pb-24">
-          <div className="flex min-h-full flex-col justify-end gap-3">
+          <div className="flex flex-col gap-3">
             {sortedMessages.map((msg, index) => {
               const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
               const dividerLabel = formatLineDateLabel(msg.date, todayDate);
