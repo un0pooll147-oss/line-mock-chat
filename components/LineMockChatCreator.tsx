@@ -429,7 +429,8 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   todayDate: string;
   wallpaper: string;
   unifyWallpaper?: boolean;
-}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false }, ref) {
+  bottomPadding?: number;
+}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
@@ -464,7 +465,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
       </div>
 
       <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
-        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4 pb-24">
+        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4" style={{ paddingBottom: bottomPadding }}>
           <div className="flex flex-col gap-3">
             {sortedMessages.map((msg, index) => {
               const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
@@ -672,6 +673,7 @@ export default function LineMockChatCreator() {
 
   const previewRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const frameScreenRef = useRef<HTMLDivElement>(null);
   const viewportBaseHeightRef = useRef(0);
   const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -759,6 +761,41 @@ export default function LineMockChatCreator() {
       }
     }
   }, [fullScreenMode]);
+
+
+  const [frameScreenBounds, setFrameScreenBounds] = useState<{ left: number; width: number; bottomGap: number } | null>(null);
+  const keyboardOpen = composerFocused && keyboardInset > 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateFrameScreenBounds = () => {
+      if (!deviceFrameMode || !frameScreenRef.current) {
+        setFrameScreenBounds(null);
+        return;
+      }
+
+      const rect = frameScreenRef.current.getBoundingClientRect();
+      setFrameScreenBounds({
+        left: Math.round(rect.left),
+        width: Math.round(rect.width),
+        bottomGap: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
+      });
+    };
+
+    updateFrameScreenBounds();
+    window.addEventListener("resize", updateFrameScreenBounds);
+    window.addEventListener("orientationchange", updateFrameScreenBounds);
+    window.visualViewport?.addEventListener("resize", updateFrameScreenBounds);
+    window.visualViewport?.addEventListener("scroll", updateFrameScreenBounds);
+
+    return () => {
+      window.removeEventListener("resize", updateFrameScreenBounds);
+      window.removeEventListener("orientationchange", updateFrameScreenBounds);
+      window.visualViewport?.removeEventListener("resize", updateFrameScreenBounds);
+      window.visualViewport?.removeEventListener("scroll", updateFrameScreenBounds);
+    };
+  }, [deviceFrameMode, keyboardOpen, wallpaper, fullScreenMode]);
 
   const clearTypingTimers = () => {
     if (typingIntervalRef.current) { clearInterval(typingIntervalRef.current); typingIntervalRef.current = null; }
@@ -1172,9 +1209,10 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const keyboardAwareBottom = !deviceFrameMode && fullScreenMode && keyboardInset > 0 ? keyboardInset : undefined;
-  const floatingControlsWrapperStyle: React.CSSProperties | undefined = keyboardAwareBottom !== undefined
-    ? { bottom: keyboardAwareBottom }
+  const messageListBottomPadding = showControls ? (keyboardOpen ? 132 : 108) : 24;
+
+  const floatingControlsWrapperStyle: React.CSSProperties | undefined = deviceFrameMode && keyboardOpen && frameScreenBounds
+    ? { left: frameScreenBounds.left, width: frameScreenBounds.width, bottom: 0 }
     : undefined;
 
   const controlsContent = showControls ? (
@@ -1217,7 +1255,7 @@ export default function LineMockChatCreator() {
       )}
       style={{
         backgroundColor: theme.toolbarBg,
-        paddingBottom: deviceFrameMode ? 8 : (keyboardInset > 0 ? 0 : "max(8px,env(safe-area-inset-bottom))"),
+        paddingBottom: deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))",
       }}
     >
       {controlsContent}
@@ -1232,6 +1270,7 @@ export default function LineMockChatCreator() {
             <div className="relative h-full max-h-full w-auto max-w-full" style={{ aspectRatio: "9 / 19.5" }}>
               <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
               <div
+                ref={frameScreenRef}
                 className="absolute inset-[8px] flex min-h-0 flex-col overflow-hidden rounded-[30px]"
                 style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
               >
@@ -1253,9 +1292,10 @@ export default function LineMockChatCreator() {
                     todayDate={todayDate}
                     wallpaper={wallpaper}
                     unifyWallpaper={unifyChatBackground}
+                    bottomPadding={messageListBottomPadding}
                   />
                 </div>
-                {controlsPanel}
+                {!(deviceFrameMode && keyboardOpen) && controlsPanel}
               </div>
             </div>
           </div>
@@ -1284,16 +1324,23 @@ export default function LineMockChatCreator() {
                 todayDate={todayDate}
                 wallpaper={wallpaper}
                 unifyWallpaper={unifyChatBackground}
+                bottomPadding={messageListBottomPadding}
               />
             </div>
           </div>
 
-          {controlsPanel && (
-            <div className="fixed bottom-0 left-0 right-0 z-40 w-full" style={floatingControlsWrapperStyle}>
+          {controlsPanel && !deviceFrameMode && (
+            <div className="fixed bottom-0 left-0 right-0 z-40 w-full">
               {controlsPanel}
             </div>
           )}
         </>
+      )}
+
+      {controlsPanel && deviceFrameMode && keyboardOpen && frameScreenBounds && (
+        <div className="fixed z-[55]" style={floatingControlsWrapperStyle}>
+          {controlsPanel}
+        </div>
       )}
 
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
@@ -1301,9 +1348,25 @@ export default function LineMockChatCreator() {
       {settingsOpen && (
         <div className="fixed inset-0 z-50 bg-black/35">
           <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
-            <div className="mb-4 shrink-0 flex items-center justify-between">
+            <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]"
+                aria-label="閉じる"
+              >
+                <X className="h-5 w-5" />
+              </button>
               <div className="text-lg font-semibold">設定</div>
-              <button type="button" onClick={() => setSettingsOpen(false)} className="rounded-full p-2 text-black/60 hover:bg-black/5"><X className="h-5 w-5" /></button>
+              <button
+                type="button"
+                onClick={() => router.push("/notification")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.07] whitespace-nowrap"
+                aria-label="通知画面モードへ"
+              >
+                <span>通知画面モードへ</span>
+                <span className="text-base">→</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
