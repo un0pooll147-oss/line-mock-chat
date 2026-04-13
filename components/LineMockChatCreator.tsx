@@ -1209,10 +1209,12 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const messageListBottomPadding = showControls ? (keyboardOpen ? 132 : 108) : 24;
+  const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 108) : 24;
 
-  const floatingControlsWrapperStyle: React.CSSProperties | undefined = deviceFrameMode && keyboardOpen && frameScreenBounds
-    ? { left: frameScreenBounds.left, width: frameScreenBounds.width, bottom: 0 }
+  const floatingControlsWrapperStyle: React.CSSProperties | undefined = keyboardOpen
+    ? deviceFrameMode && frameScreenBounds
+      ? { left: frameScreenBounds.left, width: frameScreenBounds.width, bottom: keyboardInset }
+      : { left: 0, right: 0, width: "100%", bottom: keyboardInset }
     : undefined;
 
   const controlsContent = showControls ? (
@@ -1329,7 +1331,7 @@ export default function LineMockChatCreator() {
             </div>
           </div>
 
-          {controlsPanel && !deviceFrameMode && (
+          {controlsPanel && !deviceFrameMode && !keyboardOpen && (
             <div className="fixed bottom-0 left-0 right-0 z-40 w-full">
               {controlsPanel}
             </div>
@@ -1337,8 +1339,8 @@ export default function LineMockChatCreator() {
         </>
       )}
 
-      {controlsPanel && deviceFrameMode && keyboardOpen && frameScreenBounds && (
-        <div className="fixed z-[55]" style={floatingControlsWrapperStyle}>
+      {controlsPanel && keyboardOpen && floatingControlsWrapperStyle && (
+        <div className="fixed z-[60]" style={floatingControlsWrapperStyle}>
           {controlsPanel}
         </div>
       )}
