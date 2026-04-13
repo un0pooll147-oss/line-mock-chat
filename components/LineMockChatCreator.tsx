@@ -1170,7 +1170,7 @@ export default function LineMockChatCreator() {
     maxWidth: "100vw",
     overflow: "hidden",
     position: "relative",
-    ...(deviceFrameMode ? { backgroundColor: theme.outerBg } : (unifiedStageStyle || {})),
+    ...(unifiedStageStyle || {}),
   };
   const keyboardAwareBottom = !deviceFrameMode && fullScreenMode && keyboardInset > 0 ? keyboardInset : undefined;
   const floatingControlsWrapperStyle: React.CSSProperties | undefined = keyboardAwareBottom !== undefined
@@ -1227,36 +1227,36 @@ export default function LineMockChatCreator() {
   return (
     <div className={cn("flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
       {deviceFrameMode ? (
-        <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden p-0">
-          <div className="mx-auto flex h-full w-full min-h-0 max-w-md flex-col overflow-hidden bg-black p-[10px] shadow-2xl" style={{ borderRadius: 34 }}>
-            <div
-              className="flex h-full min-h-0 flex-col overflow-hidden"
-              style={{
-                borderRadius: 24,
-                ...(unifyChatBackground && wallpaper ? (unifiedStageStyle || {}) : { backgroundColor: theme.outerBg }),
-              }}
-            >
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <PhoneMockup
-                  ref={previewRef}
-                  onStartCall={startCall}
-                  onOpenSettings={openSettings}
-                  title={chatTitle}
-                  messages={messages}
-                  typingText={typingText}
-                  isTyping={isTyping}
-                  theme={theme}
-                  avatarImage={avatarImage}
-                  avatarLabel={avatarLabel}
-                  deviceTime={deviceTime}
-                  showStatusBar={showStatusBar}
-                  showMessageTime={showMessageTime}
-                  todayDate={todayDate}
-                  wallpaper={wallpaper}
-                  unifyWallpaper={unifyChatBackground}
-                />
+        <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
+          <div className="absolute inset-0 flex items-center justify-center p-2">
+            <div className="relative h-full max-h-full w-auto max-w-full" style={{ aspectRatio: "9 / 19.5" }}>
+              <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
+              <div
+                className="absolute inset-[8px] flex min-h-0 flex-col overflow-hidden rounded-[30px]"
+                style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
+              >
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <PhoneMockup
+                    ref={previewRef}
+                    onStartCall={startCall}
+                    onOpenSettings={openSettings}
+                    title={chatTitle}
+                    messages={messages}
+                    typingText={typingText}
+                    isTyping={isTyping}
+                    theme={theme}
+                    avatarImage={avatarImage}
+                    avatarLabel={avatarLabel}
+                    deviceTime={deviceTime}
+                    showStatusBar={showStatusBar}
+                    showMessageTime={showMessageTime}
+                    todayDate={todayDate}
+                    wallpaper={wallpaper}
+                    unifyWallpaper={unifyChatBackground}
+                  />
+                </div>
+                {controlsPanel}
               </div>
-              {controlsPanel}
             </div>
           </div>
         </div>
