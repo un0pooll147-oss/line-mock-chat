@@ -22,17 +22,25 @@ import {
 } from "lucide-react";
 
 const initialMessages = [
-  { id: 1, side: "left", type: "text", sender: "美咲", text: "昨日ありがと。無事帰れた？", date: "2026/04/22", time: "21:08", visible: true },
-  { id: 2, side: "right", type: "text", sender: "あなた", text: "帰れたよ。さっき家着いた", date: "2026/04/22", time: "21:11", visible: true },
-  { id: 3, side: "left", type: "text", sender: "美咲", text: "よかった。ちょっと雨強かったもんね", date: "2026/04/22", time: "21:12", visible: true },
-  { id: 4, side: "right", type: "text", sender: "あなた", text: "駅出た瞬間やばかった。また傘借りちゃってごめん", date: "2026/04/22", time: "21:14", visible: true },
-  { id: 5, side: "left", type: "text", sender: "美咲", text: "全然いいよ笑 ちゃんと明日返してくれれば", date: "2026/04/22", time: "21:15", visible: true },
-  { id: 6, side: "left", type: "text", sender: "美咲", text: "それより昨日、なんか元気なかったけど大丈夫？", date: "2026/04/22", time: "21:17", visible: true },
-  { id: 7, side: "right", type: "text", sender: "あなた", text: "少し考え事してただけ。気にさせてたらごめん", date: "2026/04/22", time: "21:20", visible: true },
-  { id: 8, side: "left", type: "text", sender: "美咲", text: "ならいいけど。無理してるならちゃんと言ってね", date: "2026/04/22", time: "21:21", visible: true },
-  { id: 9, side: "right", type: "text", sender: "あなた", text: "ありがと。そういうとこ助かる", date: "2026/04/22", time: "21:24", visible: true },
-  { id: 10, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:15", visible: true },
-  { id: 11, side: "left", type: "text", sender: "美咲", text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね", date: "2026/04/23", time: "22:16", visible: true },
+  { id: 1, side: "left", type: "text", sender: "美咲", text: "ちゃんと帰れた？", date: "2026/04/22", time: "21:08", visible: true },
+  { id: 2, side: "right", type: "text", sender: "あなた", text: "うん、今着いた。ちょっと疲れたけど大丈夫", date: "2026/04/22", time: "21:10", visible: true },
+  { id: 3, side: "left", type: "text", sender: "美咲", text: "よかった。今日はほんとに無理してる感じしたから心配だった", date: "2026/04/22", time: "21:12", visible: true },
+  { id: 4, side: "right", type: "text", sender: "あなた", text: "ごめんね、ちょっと考えすぎてたかも", date: "2026/04/22", time: "21:15", visible: true },
+  { id: 5, side: "left", type: "text", sender: "美咲", text: "全然いいよ。そういう時くらい頼って", date: "2026/04/22", time: "21:16", visible: true },
+  { id: 6, side: "right", type: "text", sender: "あなた", text: "ありがとう。そう言ってもらえると安心する", date: "2026/04/22", time: "21:18", visible: true },
+  { id: 7, side: "left", type: "text", sender: "美咲", text: "ならよかった。帰ってから何か食べた？", date: "2026/04/22", time: "21:20", visible: true },
+  { id: 8, side: "right", type: "text", sender: "あなた", text: "まだ。お風呂入ってから軽く食べようかなって", date: "2026/04/22", time: "21:22", visible: true },
+  { id: 9, side: "left", type: "text", sender: "美咲", text: "そっか。あったかいもの飲んで、ちゃんと休みなね", date: "2026/04/22", time: "21:23", visible: true },
+  { id: 10, side: "right", type: "text", sender: "あなた", text: "うん。なんか今日、少しだけ救われた気がする", date: "2026/04/22", time: "21:25", visible: true },
+  { id: 11, side: "left", type: "text", sender: "美咲", text: "大げさじゃない？", date: "2026/04/22", time: "21:26", visible: true },
+  { id: 12, side: "right", type: "text", sender: "あなた", text: "でもほんと。いてくれてよかったって思った", date: "2026/04/22", time: "21:28", visible: true },
+  { id: 13, side: "left", type: "text", sender: "美咲", text: "…それ言われると嬉しい", date: "2026/04/22", time: "21:29", visible: true },
+  { id: 14, side: "right", type: "text", sender: "あなた", text: "ほんとだよ", date: "2026/04/22", time: "21:31", visible: true },
+  { id: 15, side: "left", type: "text", sender: "美咲", text: "明日も早いし、ゆっくり休んで", date: "2026/04/22", time: "21:34", visible: true },
+  { id: 16, side: "right", type: "text", sender: "あなた", text: "ありがと。おやすみなさい。また明日ね", date: "2026/04/22", time: "21:35", visible: true },
+  { id: 17, side: "left", type: "text", sender: "美咲", text: "おやすみ。いい夢見てね。", date: "2026/04/22", time: "21:36", visible: true },
+  { id: 18, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:15", visible: true },
+  { id: 19, side: "left", type: "text", sender: "美咲", text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね", date: "2026/04/23", time: "22:16", visible: true },
 ];
 
 const themePresets: Record<string, { name: string; appBg: string; headerBg: string; selfBubble: string; otherBubble: string; toolbarBg: string }> = {
@@ -846,6 +854,16 @@ export default function LineMockChatCreator() {
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
+  const clearAllMessages = () => {
+    if (messages.length === 0) {
+      showToast("削除する履歴がありません");
+      return;
+    }
+    const confirmed = window.confirm("チャット履歴をすべて削除しますか？\nこの操作は元に戻せません。");
+    if (!confirmed) return;
+    setMessages([]);
+    showToast("チャット履歴を全削除しました");
+  };
   const updateMessageField = (id: number, field: keyof Message | string, value: string) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, [field]: value } : msg)));
   const toggleMessageVisibility = (id: number) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, visible: msg.visible === false ? true : false } : msg)));
 
@@ -1329,6 +1347,18 @@ export default function LineMockChatCreator() {
               {activeTab === "messages" && (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-2 text-xs text-black/60">履歴ごとに「隠す / 表示する」を切り替えると、チャット画面への表示を個別に調整できます。</div>
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm">
+                    <div>
+                      <div className="text-sm font-semibold text-black/75">履歴をまとめて操作</div>
+                      <div className="text-xs text-black/45">件数: {sortedHistoryMessages.length}件</div>
+                    </div>
+                    <Button variant="outline" className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={clearAllMessages}>
+                      <Trash2 className="mr-2 h-4 w-4" />全削除
+                    </Button>
+                  </div>
+                  {sortedHistoryMessages.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-black/10 bg-white px-4 py-8 text-center text-sm text-black/45">履歴はありません。メッセージを追加するとここに表示されます。</div>
+                  ) : null}
                   {sortedHistoryMessages.map((msg, index) => (
                     <div key={msg.id} className={cn("rounded-3xl border border-black/10 bg-white p-4 shadow-sm transition", msg.visible === false && "opacity-70")}>
                       <div className="mb-3 flex items-center justify-between gap-2">
@@ -1442,7 +1472,7 @@ export default function LineMockChatCreator() {
 
       {toastMessage && typeof document !== "undefined"
         ? createPortal(
-            <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[9999] flex justify-center px-4">
+            <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[9999] flex justify-center px-4">
               <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
                 {toastMessage}
               </div>

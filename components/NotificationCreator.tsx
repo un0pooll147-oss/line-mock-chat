@@ -1419,7 +1419,7 @@ export default function NotificationCreator() {
 
       {toastMessage && typeof document !== "undefined"
         ? createPortal(
-            <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[9999] flex justify-center px-4">
+            <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[9999] flex justify-center px-4">
               <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
                 {toastMessage}
               </div>
