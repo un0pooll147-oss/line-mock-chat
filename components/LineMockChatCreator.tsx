@@ -480,7 +480,7 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
   const isConnecting = phase === "connecting";
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity }}>
+    <div className="absolute inset-0 z-[60] flex h-full w-full flex-col items-center justify-center overflow-hidden px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity }}>
       <div className="mb-6">
         {avatarImage ? <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" /> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold ring-4 ring-white/10">{avatarLabel}</div>}
       </div>
@@ -505,6 +505,7 @@ interface TimedMsg { id: number; sender: string; text: string; delay: number; co
 export default function LineMockChatCreator() {
   const router = useRouter();
   const initialUiSettings = useMemo(() => readStoredDefaultSettings(), []);
+  const processedBridgeRef = useRef(false);
 
   const [chatTitle, setChatTitle] = useState(initialUiSettings.chatTitle);
   const [incomingCallTitle, setIncomingCallTitle] = useState(initialUiSettings.incomingCallTitle);
@@ -563,6 +564,8 @@ export default function LineMockChatCreator() {
   const [typingText, setTypingText] = useState("");
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [composerFocused, setComposerFocused] = useState(false);
   const outgoingImageInputRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
@@ -608,6 +611,7 @@ export default function LineMockChatCreator() {
 
   const previewRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const viewportBaseHeightRef = useRef(0);
   const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -628,6 +632,53 @@ export default function LineMockChatCreator() {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateKeyboardInset = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        setKeyboardInset(0);
+        return;
+      }
+
+      const baseHeight = viewportBaseHeightRef.current || window.innerHeight || vv.height;
+      const occupiedBottom = vv.height + vv.offsetTop;
+      const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
+      const keyboardOpen = nextInset > 120;
+
+      if (!keyboardOpen) {
+        viewportBaseHeightRef.current = Math.max(window.innerHeight || 0, Math.round(occupiedBottom));
+      }
+
+      setKeyboardInset(keyboardOpen ? nextInset : 0);
+    };
+
+    viewportBaseHeightRef.current = window.innerHeight || window.visualViewport?.height || 0;
+    updateKeyboardInset();
+
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", updateKeyboardInset);
+    vv?.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("orientationchange", updateKeyboardInset);
+
+    return () => {
+      vv?.removeEventListener("resize", updateKeyboardInset);
+      vv?.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("orientationchange", updateKeyboardInset);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!composerFocused) return;
+    const timer = window.setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [composerFocused, keyboardInset]);
 
   useEffect(() => {
     if (fullScreenMode) {
@@ -997,6 +1048,39 @@ export default function LineMockChatCreator() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customRingtoneUrl, customOutgoingToneUrl]);
 
+  useEffect(() => {
+    if (processedBridgeRef.current || typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("line-mock-chat-call-bridge");
+    if (!raw) return;
+    processedBridgeRef.current = true;
+    try {
+      const parsed = JSON.parse(raw);
+      window.localStorage.removeItem("line-mock-chat-call-bridge");
+      if (parsed?.title) setActiveCallProfile({
+        title: String(parsed.title),
+        avatarLabel: String(parsed.avatarLabel || avatarLabel).slice(0, 2),
+        avatarImage: String(parsed.avatarImage || ""),
+      });
+      if (parsed?.direction === "incoming") {
+        setCallMode(parsed?.mode === "video" ? "video" : "voice");
+        setActiveCallDirection("incoming");
+        setCallPhase("incoming");
+      } else if (parsed?.direction === "outgoing") {
+        setCallMode(parsed?.mode === "video" ? "video" : "voice");
+        setActiveCallDirection("outgoing");
+        setCallPhase("calling");
+        if (fullScreenMode) { const el = document.documentElement as any; if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }
+        clearCallTimer();
+        callTimeoutRef.current = window.setTimeout(() => {
+          setCallPhase("connected");
+        }, Math.max(0, Number(callAutoSeconds || 0)) * 1000);
+      }
+    } catch {
+      window.localStorage.removeItem("line-mock-chat-call-bridge");
+    }
+  }, [avatarLabel, callAutoSeconds, fullScreenMode]);
+
+
   const callOverlayVisible = callPhase !== "idle" && Boolean(callMode);
   const overlayTitle = activeCallProfile?.title || chatTitle;
   const overlayAvatarImage = activeCallProfile?.avatarImage || "";
@@ -1020,6 +1104,10 @@ export default function LineMockChatCreator() {
     : "fixed bottom-0 left-0 right-0 z-40 w-full";
   const controlsInnerStyle = controlsInsideFrame
     ? { left: 8, right: 8, position: "relative" as const }
+    : undefined;
+  const keyboardAwareBottom = !controlsInsideFrame && fullScreenMode && keyboardInset > 0 ? keyboardInset : undefined;
+  const controlsWrapperStyle: React.CSSProperties | undefined = keyboardAwareBottom !== undefined
+    ? { bottom: keyboardAwareBottom }
     : undefined;
 
   return (
@@ -1050,7 +1138,7 @@ export default function LineMockChatCreator() {
         </div>
       </div>
 
-      <div className={controlsWrapperClassName}>
+      <div className={controlsWrapperClassName} style={controlsWrapperStyle}>
         <div
           className={cn(
             "border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
@@ -1060,7 +1148,7 @@ export default function LineMockChatCreator() {
           )}
           style={{
             backgroundColor: theme.toolbarBg,
-            paddingBottom: controlsInsideFrame ? 8 : "max(8px,env(safe-area-inset-bottom))",
+            paddingBottom: controlsInsideFrame ? 8 : (keyboardInset > 0 ? 0 : "max(8px,env(safe-area-inset-bottom))"),
             ...(controlsInnerStyle || {}),
           }}
         >
@@ -1077,9 +1165,17 @@ export default function LineMockChatCreator() {
             )}
             <div className="flex items-end gap-2">
               <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
-              <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
+              <div className={cn("flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 shadow-sm", keyboardInset > 0 ? "py-2" : "py-2")}>
                 <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
-                <Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={inputPlaceholder} rows={1} className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0" />
+                <Textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onFocus={() => setComposerFocused(true)}
+                  onBlur={() => window.setTimeout(() => setComposerFocused(false), 120)}
+                  placeholder={inputPlaceholder}
+                  rows={1}
+                  className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
+                />
                 <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
                   <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
                   <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
@@ -1096,8 +1192,8 @@ export default function LineMockChatCreator() {
 
       {settingsOpen && (
         <div className="fixed inset-0 z-50 bg-black/35">
-          <div className="absolute inset-x-0 bottom-0 mx-auto h-[86vh] w-full max-w-md rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
+            <div className="mb-4 shrink-0 flex items-center justify-between">
               <div className="text-lg font-semibold">設定</div>
               <button type="button" onClick={() => setSettingsOpen(false)} className="rounded-full p-2 text-black/60 hover:bg-black/5"><X className="h-5 w-5" /></button>
             </div>
@@ -1109,7 +1205,7 @@ export default function LineMockChatCreator() {
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
             </div>
 
-            <div className="mt-4 h-[calc(86vh-104px)] overflow-y-auto pb-10">
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
               {activeTab === "appearance" && (
                 <div className="space-y-4">
                   <SectionCard icon={Palette} title="デザイン">
@@ -1328,6 +1424,17 @@ export default function LineMockChatCreator() {
                   </SectionCard>
                 </div>
               )}
+
+              <div className="mt-5 rounded-2xl border border-dashed border-black/10 bg-black/[0.02] px-4 py-3 text-center text-xs text-black/45">
+                ここが設定画面の最下部です
+              </div>
+            </div>
+            <div className="pointer-events-none shrink-0 bg-gradient-to-t from-[#fafafa] via-[#fafafa]/95 to-transparent pb-[max(12px,env(safe-area-inset-bottom))] pt-4">
+              <div className="flex items-center gap-3 text-[10px] text-black/28">
+                <div className="h-px flex-1 bg-black/8" />
+                <span>スクロール終点</span>
+                <div className="h-px flex-1 bg-black/8" />
+              </div>
             </div>
           </div>
         </div>

@@ -15,6 +15,9 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Phone,
+  Video,
+  PhoneOff,
 } from "lucide-react";
 
 type OSType = "iphone" | "android";
@@ -277,6 +280,67 @@ function PhoneStatusBar({ osType, time, level = 100, className = "" }: { osType:
   );
 }
 
+function NotificationCallOverlay({
+  visible,
+  mode,
+  phase,
+  title,
+  avatarImage,
+  avatarLabel,
+  onAccept,
+  onDecline,
+  onEnd,
+}: {
+  visible: boolean;
+  mode: "voice" | "video" | null;
+  phase: "idle" | "incoming" | "calling" | "connecting" | "connected";
+  title: string;
+  avatarImage?: string;
+  avatarLabel: string;
+  onAccept: () => void;
+  onDecline: () => void;
+  onEnd: () => void;
+}) {
+  if (!visible || !mode) return null;
+  const isIncoming = phase === "incoming";
+  const isCalling = phase === "calling";
+  const isConnecting = phase === "connecting";
+
+  return (
+    <div className="absolute inset-0 z-[70] flex h-full w-full flex-col items-center justify-center overflow-hidden bg-black px-6 text-white">
+      <div className="mb-6">
+        {avatarImage ? (
+          <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" />
+        ) : (
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold ring-4 ring-white/10">
+            {avatarLabel}
+          </div>
+        )}
+      </div>
+      <div className="text-2xl font-semibold">{title}</div>
+      <div className="mt-2 text-sm opacity-75">{mode === "video" ? "ビデオ通話" : "音声通話"}</div>
+      <div className="mt-4 text-lg">{isIncoming ? "着信中…" : isCalling ? "発信中…" : isConnecting ? "接続中…" : "通話中"}</div>
+
+      {isIncoming && (
+        <div className="mt-10 flex items-center gap-8">
+          <button type="button" onClick={onDecline} className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500 shadow-lg transition active:scale-95" aria-label="拒否">
+            <PhoneOff className="h-7 w-7" />
+          </button>
+          <button type="button" onClick={onAccept} className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-[#06C755] shadow-lg transition active:scale-95" aria-label="応答">
+            {mode === "video" ? <Video className="h-7 w-7" /> : <Phone className="h-7 w-7" />}
+          </button>
+        </div>
+      )}
+
+      {(isCalling || isConnecting || phase === "connected") && (
+        <button type="button" onClick={onEnd} className="mt-10 rounded-full bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg transition active:scale-95">
+          通話終了
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Button({
   children,
   className = "",
@@ -477,6 +541,9 @@ export default function NotificationCreator() {
   const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
   const [toastMessage, setToastMessage] = useState("");
+  const [callMode, setCallMode] = useState<"voice" | "video" | null>(null);
+  const [callPhase, setCallPhase] = useState<"idle" | "incoming" | "calling" | "connecting" | "connected">("idle");
+  const [callDirection, setCallDirection] = useState<"incoming" | "outgoing" | null>(null);
 
   const [form, setForm] = useState({ appName: "LINE", sender: "", text: "", time: "", iconText: "森", delaySeconds: "1" });
   const [uploadedIcon, setUploadedIcon] = useState<string | null>(null);
@@ -484,6 +551,7 @@ export default function NotificationCreator() {
   const playTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = readStoredSettings();
@@ -558,6 +626,7 @@ export default function NotificationCreator() {
       playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
       playTimeoutsRef.current = [];
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (callTimerRef.current) clearTimeout(callTimerRef.current);
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
@@ -680,6 +749,70 @@ export default function NotificationCreator() {
     playPresetNotificationSound(notificationSoundPreset);
   };
 
+  const clearCallTimer = () => {
+    if (callTimerRef.current) {
+      clearTimeout(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+  };
+
+  const getCallProfile = () => {
+    const source = [...messages].filter((msg) => msg.enabled).sort((a, b) => a.id - b.id).at(-1) ?? defaultMessages[0];
+    return {
+      title: source?.sender?.trim() || source?.groupName?.trim() || groupName || "着信",
+      avatarLabel: (source?.iconText?.trim() || source?.sender?.trim() || groupName || "着").slice(0, 2),
+      avatarImage: source?.iconImage || undefined,
+    };
+  };
+
+  const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video") => {
+    clearCallTimer();
+    setSettingsOpen(false);
+    if (fullScreenMode) requestDocumentFullscreen();
+    setCallDirection(direction);
+    setCallMode(mode);
+    if (direction === "incoming") {
+      setCallPhase("incoming");
+    } else {
+      setCallPhase("calling");
+      callTimerRef.current = setTimeout(() => {
+        setCallPhase("connected");
+      }, 2500);
+    }
+  };
+
+  const acceptNotificationCall = () => {
+    clearCallTimer();
+    setCallPhase("connecting");
+    callTimerRef.current = setTimeout(() => {
+      setCallPhase("connected");
+    }, 1200);
+  };
+
+  const endNotificationCall = () => {
+    clearCallTimer();
+    setCallPhase("idle");
+    setCallMode(null);
+    setCallDirection(null);
+  };
+
+  const handleOpenChatCallScreen = (direction: "incoming" | "outgoing", mode: "voice" | "video") => {
+    const profile = getCallProfile();
+    try {
+      window.localStorage.setItem(
+        "line-mock-chat-call-bridge",
+        JSON.stringify({
+          direction,
+          mode,
+          title: profile.title,
+          avatarLabel: profile.avatarLabel,
+          avatarImage: profile.avatarImage || "",
+          at: Date.now(),
+        }),
+      );
+    } catch {}
+    router.push("/");
+  };
 
   const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1245,6 +1378,23 @@ export default function NotificationCreator() {
                   <Button onClick={() => router.push("/")} variant="outline" className="w-full"><span className="mr-2">←</span>チャット画面へ戻る</Button>
                 </SectionCard>
 
+                <SectionCard icon={Phone} title="通話画面">
+                  <div className="text-sm text-black/60">通知画面モードから、そのまま通話画面も出せます。</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={() => startNotificationCall("incoming", "voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声着信</Button>
+                    <Button onClick={() => startNotificationCall("incoming", "video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ着信</Button>
+                    <Button onClick={() => startNotificationCall("outgoing", "voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声発信</Button>
+                    <Button onClick={() => startNotificationCall("outgoing", "video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ発信</Button>
+                  </div>
+                  <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
+                    通知画面のまま出す方法と、チャット画面側の通話演出設定を使う方法の両方を選べます。
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={() => handleOpenChatCallScreen("incoming", "voice")} variant="outline" className="w-full">チャット側で音声着信</Button>
+                    <Button onClick={() => handleOpenChatCallScreen("outgoing", "voice")} variant="outline" className="w-full">チャット側で音声発信</Button>
+                  </div>
+                </SectionCard>
+
                 <SectionCard icon={UserCircle2} title="リセット">
                   <div className="text-sm text-black/60">通知画面の見た目や通知内容を初期状態に戻します。</div>
                   <Button onClick={resetToDefault} variant="outline" className="w-full">通知画面を初期設定に戻す</Button>
@@ -1254,6 +1404,18 @@ export default function NotificationCreator() {
           </div>
         </div>
       )}
+
+      <NotificationCallOverlay
+        visible={callPhase !== "idle" && Boolean(callMode)}
+        mode={callMode}
+        phase={callPhase}
+        title={getCallProfile().title}
+        avatarImage={getCallProfile().avatarImage}
+        avatarLabel={getCallProfile().avatarLabel}
+        onAccept={acceptNotificationCall}
+        onDecline={endNotificationCall}
+        onEnd={endNotificationCall}
+      />
 
       {toastMessage && typeof document !== "undefined"
         ? createPortal(
