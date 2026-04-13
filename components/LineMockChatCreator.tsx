@@ -624,7 +624,6 @@ export default function LineMockChatCreator() {
   const [isTyping, setIsTyping] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [composerFocused, setComposerFocused] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const outgoingImageInputRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
@@ -703,12 +702,10 @@ export default function LineMockChatCreator() {
     const updateKeyboardInset = () => {
       const vv = window.visualViewport;
       if (!vv) {
-        setViewportHeight(window.innerHeight || null);
         setKeyboardInset(0);
         return;
       }
 
-      setViewportHeight(Math.round(vv.height));
       const baseHeight = viewportBaseHeightRef.current || window.innerHeight || vv.height;
       const occupiedBottom = vv.height + vv.offsetTop;
       const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
@@ -722,19 +719,16 @@ export default function LineMockChatCreator() {
     };
 
     viewportBaseHeightRef.current = window.innerHeight || window.visualViewport?.height || 0;
-    setViewportHeight(Math.round(window.visualViewport?.height || window.innerHeight || 0));
     updateKeyboardInset();
 
     const vv = window.visualViewport;
     vv?.addEventListener("resize", updateKeyboardInset);
     vv?.addEventListener("scroll", updateKeyboardInset);
-    window.addEventListener("resize", updateKeyboardInset);
     window.addEventListener("orientationchange", updateKeyboardInset);
 
     return () => {
       vv?.removeEventListener("resize", updateKeyboardInset);
       vv?.removeEventListener("scroll", updateKeyboardInset);
-      window.removeEventListener("resize", updateKeyboardInset);
       window.removeEventListener("orientationchange", updateKeyboardInset);
     };
   }, []);
@@ -746,11 +740,9 @@ export default function LineMockChatCreator() {
       window.setTimeout(() => {
         const vv = window.visualViewport;
         if (!vv) {
-          setViewportHeight(window.innerHeight || null);
           setKeyboardInset(0);
           return;
         }
-        setViewportHeight(Math.round(vv.height));
         const baseHeight = Math.max(window.innerHeight || 0, viewportBaseHeightRef.current || 0, Math.round(vv.height + vv.offsetTop));
         const occupiedBottom = vv.height + vv.offsetTop;
         const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
@@ -1252,8 +1244,6 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const messageListBottomPadding = showControls ? 32 : 24;
-
   const controlsContent = showControls ? (
     <>
       {showNotificationModeButton && (
@@ -1286,15 +1276,24 @@ export default function LineMockChatCreator() {
     </>
   ) : null;
 
+  const messageListBottomPadding = keyboardOpen ? 124 : (showControls ? 32 : 24);
+
   const controlsPanel = controlsContent ? (
     <div
-      className={cn(
-        "border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
-        deviceFrameMode ? "w-full" : "w-full"
-      )}
+      className="border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
       style={{
         backgroundColor: theme.toolbarBg,
-        paddingBottom: keyboardOpen ? 8 : (deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))"),
+        paddingBottom: keyboardOpen ? 0 : (deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))"),
+        ...(keyboardOpen ? {
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100vw",
+          maxWidth: "100vw",
+          zIndex: 45,
+          boxSizing: "border-box",
+        } : {}),
       }}
     >
       {controlsContent}
@@ -1302,14 +1301,7 @@ export default function LineMockChatCreator() {
   ) : null;
 
   return (
-    <div
-      className={cn("flex min-h-0 flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")}
-      style={{
-        ...stageContainerStyle,
-        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
-        minHeight: viewportHeight ? `${viewportHeight}px` : "100dvh",
-      }}
-    >
+    <div className={cn("flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
       {deviceFrameMode ? (
         <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
           <div className="absolute inset-0 flex items-center justify-center p-2">
