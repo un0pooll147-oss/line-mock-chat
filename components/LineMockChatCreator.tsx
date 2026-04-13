@@ -1332,7 +1332,7 @@ export default function LineMockChatCreator() {
           </div>
 
           {controlsPanel && !deviceFrameMode && !keyboardOpen && (
-            <div className="fixed bottom-0 left-0 right-0 z-40 w-full">
+            <div className="relative z-40 w-full shrink-0">
               {controlsPanel}
             </div>
           )}
