@@ -1252,7 +1252,7 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 32) : 24;
+  const messageListBottomPadding = showControls ? 32 : 24;
 
   const controlsContent = showControls ? (
     <>
@@ -1288,20 +1288,10 @@ export default function LineMockChatCreator() {
 
   const controlsPanel = controlsContent ? (
     <div
-      className="w-full border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
+      className="w-full shrink-0 border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
       style={{
         backgroundColor: theme.toolbarBg,
-        paddingBottom: keyboardOpen ? 0 : (deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))"),
-        ...(keyboardOpen
-          ? {
-              position: "fixed",
-              left: 0,
-              right: 0,
-              bottom: `${Math.max(0, keyboardInset)}px`,
-              width: "100vw",
-              zIndex: 80,
-            }
-          : {}),
+        paddingBottom: deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))",
       }}
     >
       {controlsContent}
@@ -1348,13 +1338,7 @@ export default function LineMockChatCreator() {
                     bottomPadding={messageListBottomPadding}
                   />
                 </div>
-                {controlsPanel && (
-                  keyboardOpen ? controlsPanel : (
-                    <div className="relative shrink-0">
-                      {controlsPanel}
-                    </div>
-                  )
-                )}
+                {controlsPanel}
               </div>
             </div>
           </div>
@@ -1387,13 +1371,7 @@ export default function LineMockChatCreator() {
                   bottomPadding={messageListBottomPadding}
                 />
               </div>
-              {controlsPanel && (
-                keyboardOpen ? controlsPanel : (
-                  <div className="relative shrink-0">
-                    {controlsPanel}
-                  </div>
-                )
-              )}
+              {controlsPanel}
             </div>
           </div>
         </>
