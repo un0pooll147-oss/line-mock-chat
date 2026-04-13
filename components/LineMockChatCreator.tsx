@@ -434,10 +434,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   useEffect(() => {
     const el = messageScrollRef.current;
     if (!el) return;
-    const raf = window.requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-    });
-    return () => window.cancelAnimationFrame(raf);
+    el.scrollTop = el.scrollHeight;
   }, [messages, typingText, isTyping]);
 
   const chatAreaStyle = wallpaper && !unifyWallpaper
@@ -462,8 +459,8 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
       </div>
 
       <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
-        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4 pb-24">
-          <div className="flex flex-col gap-3">
+        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto overscroll-contain px-3 pt-4 pb-24">
+          <div className="flex min-h-full flex-col justify-end gap-3">
             {sortedMessages.map((msg, index) => {
               const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
               const dividerLabel = formatLineDateLabel(msg.date, todayDate);
@@ -529,7 +526,7 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
   const isConnecting = phase === "connecting";
 
   return (
-    <div className="absolute inset-0 z-[60] flex h-full w-full flex-col items-center justify-center overflow-hidden px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity }}>
+    <div className="fixed inset-0 z-[70] flex h-[100dvh] w-screen max-w-none flex-col items-center justify-center overflow-hidden overscroll-none px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity, touchAction: "none" }}>
       <div className="mb-6">
         {avatarImage ? <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" /> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold ring-4 ring-white/10">{avatarLabel}</div>}
       </div>
@@ -1171,9 +1168,9 @@ export default function LineMockChatCreator() {
 
   return (
     <div className={cn("flex flex-col", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
-      <div ref={scrollRef} className={cn("flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
+      <div ref={scrollRef} className={cn("flex-1 overflow-y-auto min-h-0", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
         <div
-          className={cn("h-full min-h-0", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl")}
+          className={cn("h-full", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl", fullScreenMode && "h-screen")}
           style={deviceFrameMode ? undefined : (unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle)}
         >
           <PhoneMockup
