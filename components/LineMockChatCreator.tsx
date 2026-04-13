@@ -449,7 +449,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
 
   return (
     <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: unifyWallpaper && wallpaper ? "transparent" : theme.appBg }}>
-      <div className="sticky top-0 z-10 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
+      <div className="sticky top-0 z-20 shrink-0 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
         {showStatusBar && (
           <ChatStatusBar time={deviceTime} className="mb-1" />
         )}
@@ -624,6 +624,7 @@ export default function LineMockChatCreator() {
   const [isTyping, setIsTyping] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [composerFocused, setComposerFocused] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const outgoingImageInputRef = useRef<HTMLInputElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
@@ -702,10 +703,12 @@ export default function LineMockChatCreator() {
     const updateKeyboardInset = () => {
       const vv = window.visualViewport;
       if (!vv) {
+        setViewportHeight(window.innerHeight || null);
         setKeyboardInset(0);
         return;
       }
 
+      setViewportHeight(Math.round(vv.height));
       const baseHeight = viewportBaseHeightRef.current || window.innerHeight || vv.height;
       const occupiedBottom = vv.height + vv.offsetTop;
       const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
@@ -719,16 +722,19 @@ export default function LineMockChatCreator() {
     };
 
     viewportBaseHeightRef.current = window.innerHeight || window.visualViewport?.height || 0;
+    setViewportHeight(Math.round(window.visualViewport?.height || window.innerHeight || 0));
     updateKeyboardInset();
 
     const vv = window.visualViewport;
     vv?.addEventListener("resize", updateKeyboardInset);
     vv?.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("resize", updateKeyboardInset);
     window.addEventListener("orientationchange", updateKeyboardInset);
 
     return () => {
       vv?.removeEventListener("resize", updateKeyboardInset);
       vv?.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("resize", updateKeyboardInset);
       window.removeEventListener("orientationchange", updateKeyboardInset);
     };
   }, []);
@@ -740,9 +746,11 @@ export default function LineMockChatCreator() {
       window.setTimeout(() => {
         const vv = window.visualViewport;
         if (!vv) {
+          setViewportHeight(window.innerHeight || null);
           setKeyboardInset(0);
           return;
         }
+        setViewportHeight(Math.round(vv.height));
         const baseHeight = Math.max(window.innerHeight || 0, viewportBaseHeightRef.current || 0, Math.round(vv.height + vv.offsetTop));
         const occupiedBottom = vv.height + vv.offsetTop;
         const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
@@ -1244,6 +1252,8 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
+  const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 32) : 24;
+
   const controlsContent = showControls ? (
     <>
       {showNotificationModeButton && (
@@ -1276,24 +1286,22 @@ export default function LineMockChatCreator() {
     </>
   ) : null;
 
-  const messageListBottomPadding = keyboardOpen ? 124 : (showControls ? 32 : 24);
-
   const controlsPanel = controlsContent ? (
     <div
-      className="border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
+      className="w-full border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
       style={{
         backgroundColor: theme.toolbarBg,
         paddingBottom: keyboardOpen ? 0 : (deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))"),
-        ...(keyboardOpen ? {
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: "100vw",
-          maxWidth: "100vw",
-          zIndex: 45,
-          boxSizing: "border-box",
-        } : {}),
+        ...(keyboardOpen
+          ? {
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: `${Math.max(0, keyboardInset)}px`,
+              width: "100vw",
+              zIndex: 80,
+            }
+          : {}),
       }}
     >
       {controlsContent}
@@ -1301,7 +1309,14 @@ export default function LineMockChatCreator() {
   ) : null;
 
   return (
-    <div className={cn("flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
+    <div
+      className={cn("flex min-h-0 flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")}
+      style={{
+        ...stageContainerStyle,
+        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
+        minHeight: viewportHeight ? `${viewportHeight}px` : "100dvh",
+      }}
+    >
       {deviceFrameMode ? (
         <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
           <div className="absolute inset-0 flex items-center justify-center p-2">
@@ -1309,7 +1324,7 @@ export default function LineMockChatCreator() {
               <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
               <div
                 ref={frameScreenRef}
-                className="absolute inset-[8px] flex min-h-0 flex-col overflow-hidden rounded-[30px]"
+                className="absolute inset-[8px] relative flex min-h-0 flex-col overflow-hidden rounded-[30px]"
                 style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
               >
                 <div className="min-h-0 flex-1 overflow-hidden">
@@ -1334,9 +1349,11 @@ export default function LineMockChatCreator() {
                   />
                 </div>
                 {controlsPanel && (
-                  <div className="shrink-0">
-                    {controlsPanel}
-                  </div>
+                  keyboardOpen ? controlsPanel : (
+                    <div className="relative shrink-0">
+                      {controlsPanel}
+                    </div>
+                  )
                 )}
               </div>
             </div>
@@ -1346,7 +1363,7 @@ export default function LineMockChatCreator() {
         <>
           <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", "pb-0")}>
             <div
-              className="flex h-full min-h-0 flex-col overflow-hidden"
+              className="relative flex h-full min-h-0 flex-col overflow-hidden"
               style={unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle}
             >
               <div className="min-h-0 flex-1 overflow-hidden">
@@ -1371,9 +1388,11 @@ export default function LineMockChatCreator() {
                 />
               </div>
               {controlsPanel && (
-                <div className="shrink-0">
-                  {controlsPanel}
-                </div>
+                keyboardOpen ? controlsPanel : (
+                  <div className="relative shrink-0">
+                    {controlsPanel}
+                  </div>
+                )
               )}
             </div>
           </div>
