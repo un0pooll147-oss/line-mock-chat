@@ -24,6 +24,7 @@ type OSType = "iphone" | "android";
 type SettingsTab = "appearance" | "notifications" | "screen";
 type NotificationDirection = "top" | "bottom";
 type SoundPreset = "classic" | "digital" | "soft" | "upload";
+type OutgoingToneType = "iphone" | "line" | "custom";
 
 type Message = {
   id: number;
@@ -59,9 +60,24 @@ type NotificationSettings = {
   uploadedSoundName: string;
   fullScreenMode: boolean;
   deviceFrameMode: boolean;
+  showCallButton: boolean;
+  quickCallMode: "voice" | "video";
+  quickCallStartDelaySeconds: number;
+  quickCallConnectSeconds: number;
+  quickCallTitle: string;
+  quickCallAvatarLabel: string;
+  quickCallAvatarImage: string | null;
+  incomingCallBgColor: string;
+  incomingCallBgOpacity: number;
+  outgoingCallBgColor: string;
+  outgoingCallBgOpacity: number;
+  outgoingToneEnabled: boolean;
+  outgoingToneType: OutgoingToneType;
+  customOutgoingToneName: string;
+  customOutgoingToneUrl: string | null;
 };
 
-const STORAGE_KEY = "notification-mock-settings-v4";
+const STORAGE_KEY = "notification-mock-settings-v5";
 
 const getToastMeta = (message: string) => {
   if (message.includes("失敗")) {
@@ -198,6 +214,21 @@ const defaultSettings: NotificationSettings = {
   uploadedSoundName: "",
   fullScreenMode: false,
   deviceFrameMode: false,
+  showCallButton: true,
+  quickCallMode: "voice",
+  quickCallStartDelaySeconds: 0,
+  quickCallConnectSeconds: 2.5,
+  quickCallTitle: "美咲",
+  quickCallAvatarLabel: "美",
+  quickCallAvatarImage: null,
+  incomingCallBgColor: "#000000",
+  incomingCallBgOpacity: 1,
+  outgoingCallBgColor: "#000000",
+  outgoingCallBgOpacity: 1,
+  outgoingToneEnabled: true,
+  outgoingToneType: "line",
+  customOutgoingToneName: "",
+  customOutgoingToneUrl: null,
 };
 
 
@@ -222,6 +253,26 @@ function exitDocumentFullscreen() {
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
+}
+
+function toRgba(color: string, alpha: number) {
+  const safeAlpha = Math.max(0, Math.min(1, alpha));
+  const hex = color.trim();
+  if (/^#([0-9a-fA-F]{6})$/.test(hex)) {
+    const value = hex.slice(1);
+    const r = Number.parseInt(value.slice(0, 2), 16);
+    const g = Number.parseInt(value.slice(2, 4), 16);
+    const b = Number.parseInt(value.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  if (/^#([0-9a-fA-F]{3})$/.test(hex)) {
+    const value = hex.slice(1);
+    const r = Number.parseInt(value[0] + value[0], 16);
+    const g = Number.parseInt(value[1] + value[1], 16);
+    const b = Number.parseInt(value[2] + value[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  return color;
 }
 
 function StatusPin({ className = "" }: { className?: string }) {
@@ -323,6 +374,8 @@ function NotificationCallOverlay({
   title,
   avatarImage,
   avatarLabel,
+  backgroundColor,
+  backgroundOpacity,
   onAccept,
   onDecline,
   onEnd,
@@ -333,6 +386,8 @@ function NotificationCallOverlay({
   title: string;
   avatarImage?: string;
   avatarLabel: string;
+  backgroundColor: string;
+  backgroundOpacity: number;
   onAccept: () => void;
   onDecline: () => void;
   onEnd: () => void;
@@ -343,7 +398,7 @@ function NotificationCallOverlay({
   const isConnecting = phase === "connecting";
 
   return (
-    <div className="absolute inset-0 z-[70] flex h-full w-full flex-col items-center justify-center overflow-hidden bg-black px-6 text-white">
+    <div className="absolute inset-0 z-[70] flex h-full w-full flex-col items-center justify-center overflow-hidden px-6 text-white" style={{ backgroundColor: toRgba(backgroundColor, backgroundOpacity) }}>
       <div className="mb-6">
         {avatarImage ? (
           <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" />
@@ -479,6 +534,15 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+function ColorSwatch({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-3 py-2">
+      <input type="color" value={value} onChange={onChange} className="h-10 w-12 cursor-pointer rounded-xl border border-black/10 bg-transparent p-0" />
+      <Input value={value} onChange={onChange} className="h-10" />
+    </div>
+  );
+}
+
 function FileInputRow({
   label,
   description,
@@ -526,7 +590,7 @@ function normalizeMessages(messages: any[] | undefined): Message[] {
 function readStoredSettings(): NotificationSettings {
   if (typeof window === "undefined") return defaultSettings;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("notification-mock-settings-v2");
+    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("notification-mock-settings-v4") || window.localStorage.getItem("notification-mock-settings-v2");
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw) as Partial<NotificationSettings> & { messages?: any[] };
     return {
@@ -546,6 +610,21 @@ function readStoredSettings(): NotificationSettings {
           : defaultSettings.notificationSoundPreset,
       uploadedSound: typeof parsed.uploadedSound === "string" ? parsed.uploadedSound : defaultSettings.uploadedSound,
       uploadedSoundName: typeof parsed.uploadedSoundName === "string" ? parsed.uploadedSoundName : defaultSettings.uploadedSoundName,
+      showCallButton: typeof parsed.showCallButton === "boolean" ? parsed.showCallButton : defaultSettings.showCallButton,
+      quickCallMode: parsed.quickCallMode === "video" ? "video" : defaultSettings.quickCallMode,
+      quickCallStartDelaySeconds: Number.isFinite(Number(parsed.quickCallStartDelaySeconds)) ? Number(parsed.quickCallStartDelaySeconds) : defaultSettings.quickCallStartDelaySeconds,
+      quickCallConnectSeconds: Number.isFinite(Number(parsed.quickCallConnectSeconds)) ? Number(parsed.quickCallConnectSeconds) : defaultSettings.quickCallConnectSeconds,
+      quickCallTitle: typeof parsed.quickCallTitle === "string" ? parsed.quickCallTitle : defaultSettings.quickCallTitle,
+      quickCallAvatarLabel: typeof parsed.quickCallAvatarLabel === "string" ? parsed.quickCallAvatarLabel : defaultSettings.quickCallAvatarLabel,
+      quickCallAvatarImage: typeof parsed.quickCallAvatarImage === "string" ? parsed.quickCallAvatarImage : defaultSettings.quickCallAvatarImage,
+      incomingCallBgColor: typeof parsed.incomingCallBgColor === "string" ? parsed.incomingCallBgColor : defaultSettings.incomingCallBgColor,
+      incomingCallBgOpacity: Number.isFinite(Number(parsed.incomingCallBgOpacity)) ? Number(parsed.incomingCallBgOpacity) : defaultSettings.incomingCallBgOpacity,
+      outgoingCallBgColor: typeof parsed.outgoingCallBgColor === "string" ? parsed.outgoingCallBgColor : defaultSettings.outgoingCallBgColor,
+      outgoingCallBgOpacity: Number.isFinite(Number(parsed.outgoingCallBgOpacity)) ? Number(parsed.outgoingCallBgOpacity) : defaultSettings.outgoingCallBgOpacity,
+      outgoingToneEnabled: typeof parsed.outgoingToneEnabled === "boolean" ? parsed.outgoingToneEnabled : defaultSettings.outgoingToneEnabled,
+      outgoingToneType: parsed.outgoingToneType === "iphone" || parsed.outgoingToneType === "custom" || parsed.outgoingToneType === "line" ? parsed.outgoingToneType : defaultSettings.outgoingToneType,
+      customOutgoingToneName: typeof parsed.customOutgoingToneName === "string" ? parsed.customOutgoingToneName : defaultSettings.customOutgoingToneName,
+      customOutgoingToneUrl: typeof parsed.customOutgoingToneUrl === "string" ? parsed.customOutgoingToneUrl : defaultSettings.customOutgoingToneUrl,
     };
   } catch {
     return defaultSettings;
@@ -576,6 +655,21 @@ export default function NotificationCreator() {
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
   const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
+  const [showCallButton, setShowCallButton] = useState(defaultSettings.showCallButton);
+  const [quickCallMode, setQuickCallMode] = useState<"voice" | "video">(defaultSettings.quickCallMode);
+  const [quickCallStartDelaySeconds, setQuickCallStartDelaySeconds] = useState(String(defaultSettings.quickCallStartDelaySeconds));
+  const [quickCallConnectSeconds, setQuickCallConnectSeconds] = useState(String(defaultSettings.quickCallConnectSeconds));
+  const [quickCallTitle, setQuickCallTitle] = useState(defaultSettings.quickCallTitle);
+  const [quickCallAvatarLabel, setQuickCallAvatarLabel] = useState(defaultSettings.quickCallAvatarLabel);
+  const [quickCallAvatarImage, setQuickCallAvatarImage] = useState<string | null>(defaultSettings.quickCallAvatarImage);
+  const [incomingCallBgColor, setIncomingCallBgColor] = useState(defaultSettings.incomingCallBgColor);
+  const [incomingCallBgOpacity, setIncomingCallBgOpacity] = useState(defaultSettings.incomingCallBgOpacity);
+  const [outgoingCallBgColor, setOutgoingCallBgColor] = useState(defaultSettings.outgoingCallBgColor);
+  const [outgoingCallBgOpacity, setOutgoingCallBgOpacity] = useState(defaultSettings.outgoingCallBgOpacity);
+  const [outgoingToneEnabled, setOutgoingToneEnabled] = useState(defaultSettings.outgoingToneEnabled);
+  const [outgoingToneType, setOutgoingToneType] = useState<OutgoingToneType>(defaultSettings.outgoingToneType);
+  const [customOutgoingToneName, setCustomOutgoingToneName] = useState(defaultSettings.customOutgoingToneName);
+  const [customOutgoingToneUrl, setCustomOutgoingToneUrl] = useState<string | null>(defaultSettings.customOutgoingToneUrl);
   const [toastMessage, setToastMessage] = useState("");
   const [callMode, setCallMode] = useState<"voice" | "video" | null>(null);
   const [callPhase, setCallPhase] = useState<"idle" | "incoming" | "calling" | "connecting" | "connected">("idle");
@@ -586,8 +680,11 @@ export default function NotificationCreator() {
 
   const playTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const customAudioRef = useRef<HTMLAudioElement | null>(null);
+  const ringtoneIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const callTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callConnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = readStoredSettings();
@@ -609,6 +706,21 @@ export default function NotificationCreator() {
     setUploadedSoundName(stored.uploadedSoundName);
     setFullScreenMode(stored.fullScreenMode);
     setDeviceFrameMode(stored.deviceFrameMode);
+    setShowCallButton(stored.showCallButton);
+    setQuickCallMode(stored.quickCallMode);
+    setQuickCallStartDelaySeconds(String(stored.quickCallStartDelaySeconds));
+    setQuickCallConnectSeconds(String(stored.quickCallConnectSeconds));
+    setQuickCallTitle(stored.quickCallTitle);
+    setQuickCallAvatarLabel(stored.quickCallAvatarLabel);
+    setQuickCallAvatarImage(stored.quickCallAvatarImage);
+    setIncomingCallBgColor(stored.incomingCallBgColor);
+    setIncomingCallBgOpacity(stored.incomingCallBgOpacity);
+    setOutgoingCallBgColor(stored.outgoingCallBgColor);
+    setOutgoingCallBgOpacity(stored.outgoingCallBgOpacity);
+    setOutgoingToneEnabled(stored.outgoingToneEnabled);
+    setOutgoingToneType(stored.outgoingToneType);
+    setCustomOutgoingToneName(stored.customOutgoingToneName);
+    setCustomOutgoingToneUrl(stored.customOutgoingToneUrl);
     setHydrated(true);
   }, []);
 
@@ -633,6 +745,21 @@ export default function NotificationCreator() {
       uploadedSoundName,
       fullScreenMode,
       deviceFrameMode,
+      showCallButton,
+      quickCallMode,
+      quickCallStartDelaySeconds: Number.isFinite(Number(quickCallStartDelaySeconds)) ? Number(quickCallStartDelaySeconds) : 0,
+      quickCallConnectSeconds: Number.isFinite(Number(quickCallConnectSeconds)) ? Number(quickCallConnectSeconds) : 0,
+      quickCallTitle,
+      quickCallAvatarLabel,
+      quickCallAvatarImage,
+      incomingCallBgColor,
+      incomingCallBgOpacity,
+      outgoingCallBgColor,
+      outgoingCallBgOpacity,
+      outgoingToneEnabled,
+      outgoingToneType,
+      customOutgoingToneName,
+      customOutgoingToneUrl,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [
@@ -655,6 +782,21 @@ export default function NotificationCreator() {
     uploadedSoundName,
     fullScreenMode,
     deviceFrameMode,
+    showCallButton,
+    quickCallMode,
+    quickCallStartDelaySeconds,
+    quickCallConnectSeconds,
+    quickCallTitle,
+    quickCallAvatarLabel,
+    quickCallAvatarImage,
+    incomingCallBgColor,
+    incomingCallBgOpacity,
+    outgoingCallBgColor,
+    outgoingCallBgOpacity,
+    outgoingToneEnabled,
+    outgoingToneType,
+    customOutgoingToneName,
+    customOutgoingToneUrl,
   ]);
 
   useEffect(() => {
@@ -662,7 +804,13 @@ export default function NotificationCreator() {
       playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
       playTimeoutsRef.current = [];
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      if (callTimerRef.current) clearTimeout(callTimerRef.current);
+      if (callStartTimerRef.current) clearTimeout(callStartTimerRef.current);
+      if (callConnectTimerRef.current) clearTimeout(callConnectTimerRef.current);
+      if (ringtoneIntervalRef.current) clearInterval(ringtoneIntervalRef.current);
+      if (customAudioRef.current) {
+        customAudioRef.current.pause();
+        customAudioRef.current.currentTime = 0;
+      }
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
@@ -785,48 +933,143 @@ export default function NotificationCreator() {
     playPresetNotificationSound(notificationSoundPreset);
   };
 
+  const stopOutgoingTone = () => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    if (customAudioRef.current) {
+      customAudioRef.current.pause();
+      customAudioRef.current.currentTime = 0;
+    }
+  };
+
+  const playTone = (frequency = 880, duration = 180, gainValue = 0.05) => {
+    try {
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextClass) return;
+        audioContextRef.current = new AudioContextClass();
+      }
+      const ctx = audioContextRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      gain.gain.value = gainValue;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      window.setTimeout(() => osc.stop(), duration);
+    } catch {}
+  };
+
+  const playIphonePattern = () => {
+    playTone(1046, 160, 0.05);
+    window.setTimeout(() => playTone(1318, 180, 0.05), 180);
+  };
+
+  const playLinePattern = () => {
+    playTone(784, 120, 0.05);
+    window.setTimeout(() => playTone(988, 120, 0.05), 160);
+    window.setTimeout(() => playTone(1174, 180, 0.05), 320);
+  };
+
+  const startCustomOutgoingTone = (url: string) => {
+    if (!url) return;
+    try {
+      if (!customAudioRef.current) customAudioRef.current = new Audio(url);
+      else customAudioRef.current.src = url;
+      customAudioRef.current.loop = true;
+      customAudioRef.current.currentTime = 0;
+      customAudioRef.current.play().catch(() => {});
+    } catch {}
+  };
+
+  const startOutgoingTone = () => {
+    if (!outgoingToneEnabled) return;
+    stopOutgoingTone();
+    if (outgoingToneType === "custom" && customOutgoingToneUrl) {
+      startCustomOutgoingTone(customOutgoingToneUrl);
+      return;
+    }
+    const runPattern = () => {
+      if (outgoingToneType === "iphone") playIphonePattern();
+      else playLinePattern();
+    };
+    runPattern();
+    ringtoneIntervalRef.current = window.setInterval(runPattern, outgoingToneType === "line" ? 1500 : 1800);
+  };
+
   const clearCallTimer = () => {
-    if (callTimerRef.current) {
-      clearTimeout(callTimerRef.current);
-      callTimerRef.current = null;
+    if (callStartTimerRef.current) {
+      clearTimeout(callStartTimerRef.current);
+      callStartTimerRef.current = null;
+    }
+    if (callConnectTimerRef.current) {
+      clearTimeout(callConnectTimerRef.current);
+      callConnectTimerRef.current = null;
     }
   };
 
   const getCallProfile = () => {
     const source = [...messages].filter((msg) => msg.enabled).sort((a, b) => a.id - b.id).at(-1) ?? defaultMessages[0];
+    const fallbackTitle = source?.sender?.trim() || source?.groupName?.trim() || groupName || "着信";
+    const fallbackLabel = (source?.iconText?.trim() || source?.sender?.trim() || groupName || "着").slice(0, 2);
     return {
-      title: source?.sender?.trim() || source?.groupName?.trim() || groupName || "着信",
-      avatarLabel: (source?.iconText?.trim() || source?.sender?.trim() || groupName || "着").slice(0, 2),
-      avatarImage: source?.iconImage || undefined,
+      title: quickCallTitle.trim() || fallbackTitle,
+      avatarLabel: (quickCallAvatarLabel.trim() || fallbackLabel).slice(0, 2),
+      avatarImage: quickCallAvatarImage || source?.iconImage || undefined,
     };
   };
 
-  const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video") => {
+  const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video", startDelaySeconds = 0) => {
     clearCallTimer();
     setSettingsOpen(false);
     if (fullScreenMode) requestDocumentFullscreen();
-    setCallDirection(direction);
-    setCallMode(mode);
-    if (direction === "incoming") {
-      setCallPhase("incoming");
-    } else {
+
+    const bootCall = () => {
+      setCallDirection(direction);
+      setCallMode(mode);
+      if (direction === "incoming") {
+        stopOutgoingTone();
+        setCallPhase("incoming");
+        return;
+      }
       setCallPhase("calling");
-      callTimerRef.current = setTimeout(() => {
+      void ensureAudioContext();
+      startOutgoingTone();
+      callConnectTimerRef.current = setTimeout(() => {
+        stopOutgoingTone();
         setCallPhase("connected");
-      }, 2500);
+      }, Math.max(0, Number(quickCallConnectSeconds) || 0) * 1000);
+    };
+
+    const delay = Math.max(0, Number(startDelaySeconds) || 0);
+    if (delay > 0) {
+      showToast(`${delay}秒後に発信します`);
+      callStartTimerRef.current = setTimeout(bootCall, delay * 1000);
+    } else {
+      bootCall();
     }
+  };
+
+  const startQuickOutgoingCall = () => {
+    startNotificationCall("outgoing", quickCallMode, Number(quickCallStartDelaySeconds) || 0);
   };
 
   const acceptNotificationCall = () => {
     clearCallTimer();
+    stopOutgoingTone();
     setCallPhase("connecting");
-    callTimerRef.current = setTimeout(() => {
+    callConnectTimerRef.current = setTimeout(() => {
       setCallPhase("connected");
     }, 1200);
   };
 
   const endNotificationCall = () => {
     clearCallTimer();
+    stopOutgoingTone();
     setCallPhase("idle");
     setCallMode(null);
     setCallDirection(null);
@@ -877,6 +1120,33 @@ export default function NotificationCreator() {
     e.target.value = "";
   };
 
+  const handleQuickCallAvatarUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setQuickCallAvatarImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleOutgoingToneUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomOutgoingToneUrl(reader.result);
+        setCustomOutgoingToneName(file.name);
+        setOutgoingToneType("custom");
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   const handleExistingIconUpload = (id: number, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -985,6 +1255,21 @@ export default function NotificationCreator() {
       uploadedSoundName,
       fullScreenMode,
       deviceFrameMode,
+      showCallButton,
+      quickCallMode,
+      quickCallStartDelaySeconds: Number.isFinite(Number(quickCallStartDelaySeconds)) ? Number(quickCallStartDelaySeconds) : 0,
+      quickCallConnectSeconds: Number.isFinite(Number(quickCallConnectSeconds)) ? Number(quickCallConnectSeconds) : 0,
+      quickCallTitle,
+      quickCallAvatarLabel,
+      quickCallAvatarImage,
+      incomingCallBgColor,
+      incomingCallBgOpacity,
+      outgoingCallBgColor,
+      outgoingCallBgOpacity,
+      outgoingToneEnabled,
+      outgoingToneType,
+      customOutgoingToneName,
+      customOutgoingToneUrl,
     };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -1014,12 +1299,30 @@ export default function NotificationCreator() {
     setUploadedSoundName(defaultSettings.uploadedSoundName);
     setFullScreenMode(defaultSettings.fullScreenMode);
     setDeviceFrameMode(defaultSettings.deviceFrameMode);
+    setShowCallButton(defaultSettings.showCallButton);
+    setQuickCallMode(defaultSettings.quickCallMode);
+    setQuickCallStartDelaySeconds(String(defaultSettings.quickCallStartDelaySeconds));
+    setQuickCallConnectSeconds(String(defaultSettings.quickCallConnectSeconds));
+    setQuickCallTitle(defaultSettings.quickCallTitle);
+    setQuickCallAvatarLabel(defaultSettings.quickCallAvatarLabel);
+    setQuickCallAvatarImage(defaultSettings.quickCallAvatarImage);
+    setIncomingCallBgColor(defaultSettings.incomingCallBgColor);
+    setIncomingCallBgOpacity(defaultSettings.incomingCallBgOpacity);
+    setOutgoingCallBgColor(defaultSettings.outgoingCallBgColor);
+    setOutgoingCallBgOpacity(defaultSettings.outgoingCallBgOpacity);
+    setOutgoingToneEnabled(defaultSettings.outgoingToneEnabled);
+    setOutgoingToneType(defaultSettings.outgoingToneType);
+    setCustomOutgoingToneName(defaultSettings.customOutgoingToneName);
+    setCustomOutgoingToneUrl(defaultSettings.customOutgoingToneUrl);
     showToast("初期設定に戻しました");
   };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
   const topStackClass = showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock;
+
+  const callOverlayBgColor = callDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
+  const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
 
   const stageContainerStyle: React.CSSProperties = {
     height: fullScreenMode ? "100dvh" : undefined,
@@ -1033,6 +1336,9 @@ export default function NotificationCreator() {
   const settingsButtonClassName = deviceFrameMode
     ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
     : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
+  const phoneButtonClassName = deviceFrameMode
+    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[#06C755]/90 text-white shadow-2xl backdrop-blur-md transition hover:brightness-95 active:scale-95"
+    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[#06C755]/90 text-white shadow-2xl backdrop-blur-md transition hover:brightness-95 active:scale-95";
   const hiddenSettingsButtonClassName = deviceFrameMode
     ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
     : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
@@ -1140,6 +1446,17 @@ export default function NotificationCreator() {
           style={{ backgroundColor: "rgba(255,255,255,0.75)" }}
         />
       )}
+
+          {showSettingsButton && showCallButton && (
+            <button
+              type="button"
+              onClick={startQuickOutgoingCall}
+              className={phoneButtonClassName}
+              aria-label="通話発信"
+            >
+              {quickCallMode === "video" ? <Video className="h-6 w-6" /> : <Phone className="h-6 w-6" />}
+            </button>
+          )}
 
           {showSettingsButton && (
             <button
@@ -1414,16 +1731,71 @@ export default function NotificationCreator() {
                   <Button onClick={() => router.push("/")} variant="outline" className="w-full"><span className="mr-2">←</span>チャット画面へ戻る</Button>
                 </SectionCard>
 
-                <SectionCard icon={Phone} title="通話画面">
-                  <div className="text-sm text-black/60">通知画面モードから、そのまま通話画面も出せます。</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => startNotificationCall("incoming", "voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声着信</Button>
-                    <Button onClick={() => startNotificationCall("incoming", "video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ着信</Button>
-                    <Button onClick={() => startNotificationCall("outgoing", "voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声発信</Button>
-                    <Button onClick={() => startNotificationCall("outgoing", "video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ発信</Button>
+                <SectionCard icon={Phone} title="通話設定">
+                  <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 text-xs text-black/60">
+                    右下の電話ボタンから、今の設定でそのまま発信できます。名前・アイコン・秒数を決めておくと撮影で使いやすいです。
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                    <div>
+                      <div className="text-sm font-medium">電話ボタンを表示</div>
+                      <div className="text-xs text-black/50">画面左下に通話ボタンを表示します。</div>
+                    </div>
+                    <Switch checked={showCallButton} onCheckedChange={setShowCallButton} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>通話の種類</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={() => setQuickCallMode("voice")} variant={quickCallMode === "voice" ? "default" : "outline"} className="w-full">音声発信</Button>
+                      <Button onClick={() => setQuickCallMode("video")} variant={quickCallMode === "video" ? "default" : "outline"} className="w-full">ビデオ発信</Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label>発信開始までの秒数</Label><Input type="number" min="0" step="0.1" value={quickCallStartDelaySeconds} onChange={(e) => setQuickCallStartDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">電話ボタンを押してから発信画面が出るまで</div></div>
+                    <div className="space-y-2"><Label>通話中になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={quickCallConnectSeconds} onChange={(e) => setQuickCallConnectSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中から通話中に切り替わるまで</div></div>
+                  </div>
+                  <div className="space-y-2"><Label>発信画面 背景色</Label><ColorSwatch value={outgoingCallBgColor} onChange={(e) => setOutgoingCallBgColor(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>発信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={outgoingCallBgOpacity} onChange={(e) => setOutgoingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(outgoingCallBgOpacity * 100)}%</div></div>
+                  <div className="space-y-2"><Label>着信画面 背景色</Label><ColorSwatch value={incomingCallBgColor} onChange={(e) => setIncomingCallBgColor(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>着信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={incomingCallBgOpacity} onChange={(e) => setIncomingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(incomingCallBgOpacity * 100)}%</div></div>
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">発信音（ダミー）</div><div className="text-xs text-black/50">発信中に音を鳴らす</div></div><Switch checked={outgoingToneEnabled} onCheckedChange={setOutgoingToneEnabled} /></div>
+                  <div className="space-y-2"><Label>発信音の種類</Label><select value={outgoingToneType} onChange={(e) => setOutgoingToneType(e.target.value as OutgoingToneType)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
+                  {outgoingToneType === "custom" && (
+                    <div className="space-y-2">
+                      <Label>発信音ファイル</Label>
+                      <label className="block rounded-2xl border border-black/10 bg-white px-3 py-3 text-sm text-black/70">
+                        <div className="mb-2 flex items-center gap-2 text-black/80"><MessageSquareMore className="h-4 w-4" />音源をアップロード</div>
+                        <input type="file" accept="audio/*" onChange={handleOutgoingToneUpload} className="block w-full text-sm text-black/70" />
+                      </label>
+                      <div className="text-xs text-black/50">{customOutgoingToneName || "mp3 / wav / m4a などが使えます"}</div>
+                      {customOutgoingToneUrl && <Button onClick={() => { setCustomOutgoingToneUrl(null); setCustomOutgoingToneName(""); if (outgoingToneType === "custom") setOutgoingToneType("line"); }} variant="outline" className="w-full">発信音を解除</Button>}
+                    </div>
+                  )}
+                  <div className="space-y-2"><Label>相手の名前</Label><Input value={quickCallTitle} onChange={(e) => setQuickCallTitle(e.target.value)} placeholder="美咲" /></div>
+                  <div className="space-y-2"><Label>相手のアイコン文字</Label><Input value={quickCallAvatarLabel} onChange={(e) => setQuickCallAvatarLabel(e.target.value.slice(0, 2))} placeholder="美" /></div>
+                  <div className="space-y-2">
+                    <Label>相手のアイコン画像</Label>
+                    <label className="block rounded-2xl border border-black/10 bg-white px-3 py-3 text-sm text-black/70">
+                      <div className="mb-2 flex items-center gap-2 text-black/80">
+                        <ImageIcon className="h-4 w-4" />
+                        画像を選択して変更
+                      </div>
+                      <input type="file" accept="image/*" onChange={handleQuickCallAvatarUpload} className="block w-full text-sm text-black/70" />
+                    </label>
+                    {quickCallAvatarImage ? (
+                      <div className="space-y-2">
+                        <img src={quickCallAvatarImage} alt="通話アイコン" className="h-16 w-16 rounded-2xl border border-black/10 object-cover" />
+                        <Button onClick={() => setQuickCallAvatarImage(null)} variant="outline" className="w-full">アイコン画像を解除</Button>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-black/50">画像を設定しない場合は文字アイコンを使います</div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Button onClick={startQuickOutgoingCall} className="w-full justify-center">{quickCallMode === "video" ? <Video className="mr-2 h-4 w-4" /> : <Phone className="mr-2 h-4 w-4" />}今の設定で発信</Button>
+                    <Button onClick={() => startNotificationCall("incoming", quickCallMode)} variant="outline" className="w-full justify-center">{quickCallMode === "video" ? <Video className="mr-2 h-4 w-4" /> : <Phone className="mr-2 h-4 w-4" />}今の設定で着信</Button>
                   </div>
                   <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
-                    通知画面のまま出す方法と、チャット画面側の通話演出設定を使う方法の両方を選べます。
+                    チャット画面側の通話演出を使いたいときは、下のボタンから連携できます。
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button onClick={() => handleOpenChatCallScreen("incoming", "voice")} variant="outline" className="w-full">チャット側で音声着信</Button>
@@ -1448,6 +1820,8 @@ export default function NotificationCreator() {
         title={getCallProfile().title}
         avatarImage={getCallProfile().avatarImage}
         avatarLabel={getCallProfile().avatarLabel}
+        backgroundColor={callOverlayBgColor}
+        backgroundOpacity={callOverlayBgOpacity}
         onAccept={acceptNotificationCall}
         onDecline={endNotificationCall}
         onEnd={endNotificationCall}
