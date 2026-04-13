@@ -1244,10 +1244,7 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const messageListBottomPadding = showControls ? (keyboardOpen ? 156 : 108) : 24;
-
-  const showFloatingComposer = showControls && keyboardOpen;
-  const frameComposerBottom = Math.max(0, keyboardInset - (frameScreenBounds?.bottomGap || 0));
+  const messageListBottomPadding = showControls ? 32 : 24;
 
   const controlsContent = showControls ? (
     <>
@@ -1330,10 +1327,7 @@ export default function LineMockChatCreator() {
                   />
                 </div>
                 {controlsPanel && (
-                  <div
-                    className={cn(showFloatingComposer ? "absolute inset-x-0 z-[60]" : "shrink-0")}
-                    style={showFloatingComposer ? { bottom: frameComposerBottom } : undefined}
-                  >
+                  <div className="shrink-0">
                     {controlsPanel}
                   </div>
                 )}
@@ -1370,10 +1364,7 @@ export default function LineMockChatCreator() {
                 />
               </div>
               {controlsPanel && (
-                <div
-                  className={cn(showFloatingComposer ? "fixed z-[60]" : "shrink-0")}
-                  style={showFloatingComposer ? { left: 0, right: 0, bottom: keyboardInset, width: "100vw", maxWidth: "100vw" } : undefined}
-                >
+                <div className="shrink-0">
                   {controlsPanel}
                 </div>
               )}
