@@ -147,6 +147,10 @@ const defaultSettings = {
   customHeaderIconColor: "",
   customToolbarColor: "",
   customOuterBgColor: "",
+  customSelfBubbleColor: "",
+  customSelfTextColor: "",
+  customOtherBubbleColor: "",
+  customOtherTextColor: "",
   unifyChatBackground: true,
   chatTitle: "美咲",
   incomingCallTitle: "母",
@@ -405,6 +409,8 @@ interface Theme {
   toolbarBg: string;
   headerIconColor: string;
   outerBg: string;
+  selfTextColor: string;
+  otherTextColor: string;
 }
 
 const PhoneMockup = React.forwardRef<HTMLDivElement, {
@@ -424,7 +430,6 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   wallpaper: string;
   unifyWallpaper?: boolean;
 }>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false }, ref) {
-  const textColor = theme.name === "ダーク" ? "text-white" : "text-black";
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
@@ -481,9 +486,11 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
                           "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
                           msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
                           msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
-                          msg.side === "left" && theme.name === "ダーク" ? "text-white" : textColor,
                         )}
-                        style={{ backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble }}
+                        style={{
+                          backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble,
+                          color: msg.type === "image" ? undefined : (msg.side === "right" ? theme.selfTextColor : theme.otherTextColor),
+                        }}
                       >
                         {msg.type === "image" && msg.image ? (
                           <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" />
@@ -501,7 +508,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
             {isTyping && (
               <div className="flex justify-end">
                 <div className="max-w-[78%]">
-                  <div className={cn("rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]", theme.name === "ダーク" ? "text-white" : "text-black")} style={{ backgroundColor: theme.selfBubble }}>
+                  <div className="rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.selfBubble, color: theme.selfTextColor }}>
                     <span className="whitespace-pre-wrap break-words">{typingText}</span>
                     <span className="animate-pulse">|</span>
                   </div>
@@ -574,6 +581,10 @@ export default function LineMockChatCreator() {
   const [customHeaderIconColor, setCustomHeaderIconColor] = useState(initialUiSettings.customHeaderIconColor || "");
   const [customToolbarColor, setCustomToolbarColor] = useState(initialUiSettings.customToolbarColor || "");
   const [customOuterBgColor, setCustomOuterBgColor] = useState(initialUiSettings.customOuterBgColor || "");
+  const [customSelfBubbleColor, setCustomSelfBubbleColor] = useState(initialUiSettings.customSelfBubbleColor || "");
+  const [customSelfTextColor, setCustomSelfTextColor] = useState(initialUiSettings.customSelfTextColor || "");
+  const [customOtherBubbleColor, setCustomOtherBubbleColor] = useState(initialUiSettings.customOtherBubbleColor || "");
+  const [customOtherTextColor, setCustomOtherTextColor] = useState(initialUiSettings.customOtherTextColor || "");
   const [unifyChatBackground, setUnifyChatBackground] = useState(initialUiSettings.unifyChatBackground ?? true);
   const [showStatusBar, setShowStatusBar] = useState(initialUiSettings.showStatusBar);
   const [fullScreenMode, setFullScreenMode] = useState(initialUiSettings.fullScreenMode);
@@ -630,8 +641,12 @@ export default function LineMockChatCreator() {
       toolbarBg: customToolbarColor || base.toolbarBg,
       headerIconColor: customHeaderIconColor || "#ffffff",
       outerBg: unifyChatBackground ? appBg : (customOuterBgColor || appBg),
+      selfBubble: customSelfBubbleColor || base.selfBubble,
+      otherBubble: customOtherBubbleColor || base.otherBubble,
+      selfTextColor: customSelfTextColor || (base.name === "ダーク" ? "#ffffff" : "#111111"),
+      otherTextColor: customOtherTextColor || (base.name === "ダーク" ? "#ffffff" : "#111111"),
     };
-  }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, unifyChatBackground]);
+  }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, customSelfBubbleColor, customSelfTextColor, customOtherBubbleColor, customOtherTextColor, unifyChatBackground]);
 
   useEffect(() => {
     const headerColor = customHeaderColor || (themePresets[themeKey] || themePresets.line).headerBg;
@@ -972,7 +987,8 @@ export default function LineMockChatCreator() {
   };
 
   const buildCurrentSettings = () => ({
-    todayDate, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, unifyChatBackground,
+    todayDate, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor,
+    customSelfBubbleColor, customSelfTextColor, customOtherBubbleColor, customOtherTextColor, unifyChatBackground,
     chatTitle, incomingCallTitle, incomingCallAvatarLabel, incomingCallAvatarImage, avatarLabel, avatarImage,
     deviceTime, messageTime, outgoingMessageTime, incomingMessageTime, outgoingMessageDate, incomingMessageDate,
     incomingSender, incomingText, themeKey, showStatusBar, fullScreenMode, deviceFrameMode, showMessageTime,
@@ -1000,7 +1016,9 @@ export default function LineMockChatCreator() {
   const applySettings = (settings: typeof defaultSettings & { messages?: any[]; timedMsgs?: any[] }) => {
     setCustomBgColor(settings.customBgColor || ""); setCustomHeaderColor(settings.customHeaderColor || "");
     setCustomHeaderIconColor(settings.customHeaderIconColor || ""); setCustomToolbarColor(settings.customToolbarColor || "");
-    setCustomOuterBgColor(settings.customOuterBgColor || ""); setUnifyChatBackground(settings.unifyChatBackground ?? true); setChatTitle(settings.chatTitle);
+    setCustomOuterBgColor(settings.customOuterBgColor || ""); setCustomSelfBubbleColor(settings.customSelfBubbleColor || "");
+    setCustomSelfTextColor(settings.customSelfTextColor || ""); setCustomOtherBubbleColor(settings.customOtherBubbleColor || "");
+    setCustomOtherTextColor(settings.customOtherTextColor || ""); setUnifyChatBackground(settings.unifyChatBackground ?? true); setChatTitle(settings.chatTitle);
     setIncomingCallTitle(settings.incomingCallTitle); setIncomingCallAvatarLabel(settings.incomingCallAvatarLabel);
     setIncomingCallAvatarImage(settings.incomingCallAvatarImage); setAvatarLabel(settings.avatarLabel);
     setAvatarImage(settings.avatarImage); setDeviceTime(settings.deviceTime); setMessageTime(settings.messageTime);
@@ -1154,95 +1172,121 @@ export default function LineMockChatCreator() {
     position: "relative",
     ...(unifiedStageStyle || {}),
   };
-  const controlsInsideFrame = deviceFrameMode;
-  const controlsWrapperClassName = controlsInsideFrame
-    ? "absolute bottom-4 left-4 right-4 z-40"
-    : "fixed bottom-0 left-0 right-0 z-40 w-full";
-  const controlsInnerStyle = controlsInsideFrame
-    ? { left: 8, right: 8, position: "relative" as const }
-    : undefined;
-  const keyboardAwareBottom = !controlsInsideFrame && fullScreenMode && keyboardInset > 0 ? keyboardInset : undefined;
-  const controlsWrapperStyle: React.CSSProperties | undefined = keyboardAwareBottom !== undefined
+  const keyboardAwareBottom = !deviceFrameMode && fullScreenMode && keyboardInset > 0 ? keyboardInset : undefined;
+  const floatingControlsWrapperStyle: React.CSSProperties | undefined = keyboardAwareBottom !== undefined
     ? { bottom: keyboardAwareBottom }
     : undefined;
 
+  const controlsContent = showControls ? (
+    <>
+      {showNotificationModeButton && (
+        <div className="mb-1 flex justify-end">
+          <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 transition hover:bg-black/12">
+            通知画面モードへ →
+          </button>
+        </div>
+      )}
+      <div className="flex items-end gap-2">
+        <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
+        <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
+          <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
+          <Textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => window.setTimeout(() => setComposerFocused(false), 120)}
+            placeholder={inputPlaceholder}
+            rows={1}
+            className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
+          />
+          <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
+            <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
+            <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
+          </div>
+        </div>
+        {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
+      </div>
+    </>
+  ) : null;
+
+  const controlsPanel = controlsContent ? (
+    <div
+      className={cn(
+        "border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
+        deviceFrameMode ? "w-full" : "w-full"
+      )}
+      style={{
+        backgroundColor: theme.toolbarBg,
+        paddingBottom: deviceFrameMode ? 8 : (keyboardInset > 0 ? 0 : "max(8px,env(safe-area-inset-bottom))"),
+      }}
+    >
+      {controlsContent}
+    </div>
+  ) : null;
+
   return (
     <div className={cn("flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")} style={stageContainerStyle}>
-      <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", deviceFrameMode ? "p-4 pb-32" : "pb-0") }>
-        <div
-          className={cn("h-full min-h-0 overflow-hidden", deviceFrameMode && "rounded-[32px] bg-black p-2 shadow-2xl")}
-          style={deviceFrameMode ? undefined : (unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle)}
-        >
-          <PhoneMockup
-            ref={previewRef}
-            onStartCall={startCall}
-            onOpenSettings={openSettings}
-            title={chatTitle}
-            messages={messages}
-            typingText={typingText}
-            isTyping={isTyping}
-            theme={theme}
-            avatarImage={avatarImage}
-            avatarLabel={avatarLabel}
-            deviceTime={deviceTime}
-            showStatusBar={showStatusBar}
-            showMessageTime={showMessageTime}
-            todayDate={todayDate}
-            wallpaper={wallpaper}
-            unifyWallpaper={unifyChatBackground}
-          />
-        </div>
-      </div>
-
-      <div className={controlsWrapperClassName} style={controlsWrapperStyle}>
-        <div
-          className={cn(
-            "border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
-            controlsInsideFrame
-              ? "overflow-hidden rounded-[28px] border border-black/10"
-              : "w-full"
-          )}
-          style={{
-            backgroundColor: theme.toolbarBg,
-            paddingBottom: controlsInsideFrame ? 8 : (keyboardInset > 0 ? 0 : "max(8px,env(safe-area-inset-bottom))"),
-            ...(controlsInnerStyle || {}),
-          }}
-        >
-
-
-        {showControls && (
-          <>
-            {showNotificationModeButton && (
-              <div className="mb-1 flex justify-end">
-                <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 hover:bg-black/12 transition">
-                  通知画面モードへ →
-                </button>
-              </div>
-            )}
-            <div className="flex items-end gap-2">
-              <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
-              <div className={cn("flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 shadow-sm", keyboardInset > 0 ? "py-2" : "py-2")}>
-                <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
-                <Textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onFocus={() => setComposerFocused(true)}
-                  onBlur={() => window.setTimeout(() => setComposerFocused(false), 120)}
-                  placeholder={inputPlaceholder}
-                  rows={1}
-                  className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
-                />
-                <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
-                  <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
-                  <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
-                </div>
-              </div>
-              {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
+      {deviceFrameMode ? (
+        <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden p-4">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[32px] bg-black p-2 shadow-2xl">
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <PhoneMockup
+                ref={previewRef}
+                onStartCall={startCall}
+                onOpenSettings={openSettings}
+                title={chatTitle}
+                messages={messages}
+                typingText={typingText}
+                isTyping={isTyping}
+                theme={theme}
+                avatarImage={avatarImage}
+                avatarLabel={avatarLabel}
+                deviceTime={deviceTime}
+                showStatusBar={showStatusBar}
+                showMessageTime={showMessageTime}
+                todayDate={todayDate}
+                wallpaper={wallpaper}
+                unifyWallpaper={unifyChatBackground}
+              />
             </div>
-          </>
-        )}
+            {controlsPanel}
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", "pb-0")}>
+            <div
+              className="h-full min-h-0 overflow-hidden"
+              style={unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle}
+            >
+              <PhoneMockup
+                ref={previewRef}
+                onStartCall={startCall}
+                onOpenSettings={openSettings}
+                title={chatTitle}
+                messages={messages}
+                typingText={typingText}
+                isTyping={isTyping}
+                theme={theme}
+                avatarImage={avatarImage}
+                avatarLabel={avatarLabel}
+                deviceTime={deviceTime}
+                showStatusBar={showStatusBar}
+                showMessageTime={showMessageTime}
+                todayDate={todayDate}
+                wallpaper={wallpaper}
+                unifyWallpaper={unifyChatBackground}
+              />
+            </div>
+          </div>
+
+          {controlsPanel && (
+            <div className="fixed bottom-0 left-0 right-0 z-40 w-full" style={floatingControlsWrapperStyle}>
+              {controlsPanel}
+            </div>
+          )}
+        </>
+      )}
 
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
 
@@ -1274,10 +1318,14 @@ export default function LineMockChatCreator() {
                         setCustomHeaderIconColor("");
                         setCustomToolbarColor("");
                         setCustomOuterBgColor("");
+                        setCustomSelfBubbleColor("");
+                        setCustomSelfTextColor("");
+                        setCustomOtherBubbleColor("");
+                        setCustomOtherTextColor("");
                       }} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
                         {Object.entries(themePresets).map(([key, preset]) => <option key={key} value={key}>{preset.name}</option>)}
                       </select>
-                      <button type="button" onClick={() => { setCustomBgColor(""); setCustomHeaderColor(""); setCustomHeaderIconColor(""); setCustomToolbarColor(""); setCustomOuterBgColor(""); }} className="text-xs text-black/40 underline">カスタム色をリセット</button>
+                      <button type="button" onClick={() => { setCustomBgColor(""); setCustomHeaderColor(""); setCustomHeaderIconColor(""); setCustomToolbarColor(""); setCustomOuterBgColor(""); setCustomSelfBubbleColor(""); setCustomSelfTextColor(""); setCustomOtherBubbleColor(""); setCustomOtherTextColor(""); }} className="text-xs text-black/40 underline">カスタム色をリセット</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>背景色</Label><ColorSwatch value={customBgColor || theme.appBg} onChange={(e) => setCustomBgColor(e.target.value)} /></div>
@@ -1303,6 +1351,14 @@ export default function LineMockChatCreator() {
                       <div className="space-y-2"><Label>ヘッダーアイコン色</Label><ColorSwatch value={customHeaderIconColor || theme.headerIconColor} onChange={(e) => setCustomHeaderIconColor(e.target.value)} /></div>
                     </div>
                     <div className="space-y-2"><Label>操作バー背景色</Label><ColorSwatch value={customToolbarColor || theme.toolbarBg} onChange={(e) => setCustomToolbarColor(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>自分のメッセージ背景色</Label><ColorSwatch value={customSelfBubbleColor || theme.selfBubble} onChange={(e) => setCustomSelfBubbleColor(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>自分の文字色</Label><ColorSwatch value={customSelfTextColor || theme.selfTextColor} onChange={(e) => setCustomSelfTextColor(e.target.value)} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>相手のメッセージ背景色</Label><ColorSwatch value={customOtherBubbleColor || theme.otherBubble} onChange={(e) => setCustomOtherBubbleColor(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>相手の文字色</Label><ColorSwatch value={customOtherTextColor || theme.otherTextColor} onChange={(e) => setCustomOtherTextColor(e.target.value)} /></div>
+                    </div>
                     <div className="space-y-2">
                       <Label>背景画像</Label>
                       <div className="flex flex-col gap-2 sm:flex-row">
