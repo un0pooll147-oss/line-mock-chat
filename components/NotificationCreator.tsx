@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Clock3,
@@ -159,6 +160,26 @@ const defaultSettings: NotificationSettings = {
   fullScreenMode: false,
   deviceFrameMode: false,
 };
+
+
+
+function requestDocumentFullscreen() {
+  if (typeof document === "undefined") return;
+  const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
+  if (document.fullscreenElement) return;
+  if (el.requestFullscreen) {
+    el.requestFullscreen().catch(() => {});
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
+  }
+}
+
+function exitDocumentFullscreen() {
+  if (typeof document === "undefined") return;
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -543,6 +564,18 @@ export default function NotificationCreator() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!hydrated || typeof document === "undefined") return;
+    if (fullScreenMode) {
+      const handlePointer = () => {
+        requestDocumentFullscreen();
+      };
+      document.addEventListener("pointerdown", handlePointer, { once: true });
+      return () => document.removeEventListener("pointerdown", handlePointer);
+    }
+    exitDocumentFullscreen();
+  }, [hydrated, fullScreenMode]);
+
   const theme = osThemes[osType];
 
   const bgStyle = useMemo<React.CSSProperties>(() => {
@@ -737,6 +770,7 @@ export default function NotificationCreator() {
   const playNotifications = () => {
     clearTimers();
     setSettingsOpen(false);
+    if (fullScreenMode) requestDocumentFullscreen();
     void ensureAudioContext();
     setMessages((prev) => prev.map((m) => ({ ...m, displayed: false, animatedAt: null })));
     const enabledMessages = [...messages]
@@ -1191,7 +1225,7 @@ export default function NotificationCreator() {
                       <div className="text-sm font-medium">フルスクリーンモード</div>
                       <div className="text-xs text-black/50">余白や中央寄せを解除して、画面いっぱいに表示します。</div>
                     </div>
-                    <Switch checked={fullScreenMode} onCheckedChange={setFullScreenMode} />
+                    <Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) requestDocumentFullscreen(); else exitDocumentFullscreen(); }} />
                   </div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
@@ -1221,13 +1255,16 @@ export default function NotificationCreator() {
         </div>
       )}
 
-      {toastMessage ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
-          <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
-            {toastMessage}
-          </div>
-        </div>
-      ) : null}
+      {toastMessage && typeof document !== "undefined"
+        ? createPortal(
+            <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[9999] flex justify-center px-4">
+              <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
+                {toastMessage}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

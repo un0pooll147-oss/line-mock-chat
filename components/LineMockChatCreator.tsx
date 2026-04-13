@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   PlusCircle,
@@ -1332,13 +1333,16 @@ export default function LineMockChatCreator() {
         </div>
       )}
 
-      {toastMessage ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[90] flex justify-center px-4">
-          <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
-            {toastMessage}
-          </div>
-        </div>
-      ) : null}
+      {toastMessage && typeof document !== "undefined"
+        ? createPortal(
+            <div className="pointer-events-none fixed inset-x-0 bottom-[max(20px,env(safe-area-inset-bottom))] z-[9999] flex justify-center px-4">
+              <div className="rounded-full bg-black/78 px-4 py-2 text-sm font-medium text-white shadow-2xl backdrop-blur-md">
+                {toastMessage}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
