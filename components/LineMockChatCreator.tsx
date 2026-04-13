@@ -458,56 +458,58 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
         </div>
       </div>
 
-      <div ref={messageScrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-24" style={chatAreaStyle}>
-        <div className="flex flex-col gap-3">
-          {sortedMessages.map((msg, index) => {
-            const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
-            const dividerLabel = formatLineDateLabel(msg.date, todayDate);
-            return (
-              <React.Fragment key={msg.id}>
-                {showDateDivider && (
-                  <div className="my-2 flex items-center gap-3 px-1">
-                    <div className="h-px flex-1 bg-black/10" />
-                    <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-medium text-black/55 shadow-sm">{dividerLabel}</div>
-                    <div className="h-px flex-1 bg-black/10" />
-                  </div>
-                )}
-                <div className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
-                  <div className="max-w-[78%]">
-                    {msg.side === "left" && <div className={`mb-1 px-1 text-[11px] ${mutedColor}`}>{msg.sender}</div>}
-                    <div
-                      className={cn(
-                        "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
-                        msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
-                        msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
-                        msg.side === "left" && theme.name === "ダーク" ? "text-white" : textColor,
-                      )}
-                      style={{ backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble }}
-                    >
-                      {msg.type === "image" && msg.image ? (
-                        <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" />
-                      ) : (
-                        <div className="whitespace-pre-wrap break-words">{msg.text}</div>
-                      )}
+      <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
+        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4 pb-24">
+          <div className="flex flex-col gap-3">
+            {sortedMessages.map((msg, index) => {
+              const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
+              const dividerLabel = formatLineDateLabel(msg.date, todayDate);
+              return (
+                <React.Fragment key={msg.id}>
+                  {showDateDivider && (
+                    <div className="my-2 flex items-center gap-3 px-1">
+                      <div className="h-px flex-1 bg-black/10" />
+                      <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-medium text-black/55 shadow-sm">{dividerLabel}</div>
+                      <div className="h-px flex-1 bg-black/10" />
                     </div>
-                    {showMessageTime && <div className={cn("mt-1 px-1 text-[10px]", timeColor, msg.side === "right" ? "text-right" : "text-left")}>{msg.time}</div>}
+                  )}
+                  <div className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
+                    <div className="max-w-[78%]">
+                      {msg.side === "left" && <div className={`mb-1 px-1 text-[11px] ${mutedColor}`}>{msg.sender}</div>}
+                      <div
+                        className={cn(
+                          "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
+                          msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
+                          msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
+                          msg.side === "left" && theme.name === "ダーク" ? "text-white" : textColor,
+                        )}
+                        style={{ backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble }}
+                      >
+                        {msg.type === "image" && msg.image ? (
+                          <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" />
+                        ) : (
+                          <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                        )}
+                      </div>
+                      {showMessageTime && <div className={cn("mt-1 px-1 text-[10px]", timeColor, msg.side === "right" ? "text-right" : "text-left")}>{msg.time}</div>}
+                    </div>
                   </div>
-                </div>
-              </React.Fragment>
-            );
-          })}
+                </React.Fragment>
+              );
+            })}
 
-          {isTyping && (
-            <div className="flex justify-end">
-              <div className="max-w-[78%]">
-                <div className={cn("rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]", theme.name === "ダーク" ? "text-white" : "text-black")} style={{ backgroundColor: theme.selfBubble }}>
-                  <span className="whitespace-pre-wrap break-words">{typingText}</span>
-                  <span className="animate-pulse">|</span>
+            {isTyping && (
+              <div className="flex justify-end">
+                <div className="max-w-[78%]">
+                  <div className={cn("rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]", theme.name === "ダーク" ? "text-white" : "text-black")} style={{ backgroundColor: theme.selfBubble }}>
+                    <span className="whitespace-pre-wrap break-words">{typingText}</span>
+                    <span className="animate-pulse">|</span>
+                  </div>
+                  {showMessageTime && <div className={cn("mt-1 px-1 text-right text-[10px]", timeColor)}>入力中</div>}
                 </div>
-                {showMessageTime && <div className={cn("mt-1 px-1 text-right text-[10px]", timeColor)}>入力中</div>}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -524,7 +526,7 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
   const isConnecting = phase === "connecting";
 
   return (
-    <div className="absolute inset-0 z-[60] flex h-full w-full flex-col items-center justify-center overflow-hidden px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity }}>
+    <div className="fixed inset-0 z-[70] flex h-[100dvh] w-screen max-w-none flex-col items-center justify-center overflow-hidden overscroll-none px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity, touchAction: "none" }}>
       <div className="mb-6">
         {avatarImage ? <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" /> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold ring-4 ring-white/10">{avatarLabel}</div>}
       </div>
