@@ -206,7 +206,7 @@ const defaultSettings = {
 const initialTimedMessages = [{ id: 1, sender: defaultSettings.incomingSender, text: "", delay: 3, countdown: 0, pending: false }];
 
 function normalizeStoredMessages(messages: any[] | undefined) {
-  if (!Array.isArray(messages) || messages.length === 0) return initialMessages;
+  if (!Array.isArray(messages)) return initialMessages;
   return messages.map((msg, index) => ({
     id: typeof msg?.id === "number" ? msg.id : Date.now() + index,
     side: msg?.side === "right" ? "right" : "left",
@@ -221,7 +221,7 @@ function normalizeStoredMessages(messages: any[] | undefined) {
 }
 
 function normalizeStoredTimedMessages(items: any[] | undefined, fallbackSender = defaultSettings.incomingSender) {
-  if (!Array.isArray(items) || items.length === 0) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
+  if (!Array.isArray(items)) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
   return items.map((item, index) => ({
     id: typeof item?.id === "number" ? item.id : Date.now() + index,
     sender: String(item?.sender ?? fallbackSender),
