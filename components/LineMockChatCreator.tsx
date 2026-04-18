@@ -740,6 +740,10 @@ export default function LineMockChatCreator() {
   }, []);
 
   useEffect(() => {
+    setSavedChats(readStoredSavedChatPresets());
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const updateKeyboardInset = () => {
