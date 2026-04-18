@@ -54,6 +54,14 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
 };
 
 const STORAGE_KEY = "line-mock-chat-default-settings-v5";
+const SAVED_CHATS_STORAGE_KEY = "line-mock-chat-saved-chats-v1";
+
+interface SavedChatPreset {
+  id: number;
+  name: string;
+  updatedAt: number;
+  snapshot: any;
+}
 
 const getToastMeta = (message: string) => {
   if (message.includes("失敗")) {
@@ -222,6 +230,38 @@ function normalizeStoredTimedMessages(items: any[] | undefined, fallbackSender =
     countdown: Number.isFinite(Number(item?.countdown)) ? Number(item.countdown) : 0,
     pending: typeof item?.pending === "boolean" ? item.pending : false,
   }));
+}
+
+function normalizeSavedChatPresets(items: any[] | undefined): SavedChatPreset[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item, index) => {
+      const snapshot = item?.snapshot && typeof item.snapshot === "object" ? item.snapshot : null;
+      if (!snapshot) return null;
+      const mergedSnapshot = { ...defaultSettings, ...snapshot };
+      return {
+        id: typeof item?.id === "number" ? item.id : Date.now() + index,
+        name: String(item?.name ?? `保存チャット ${index + 1}`),
+        updatedAt: Number.isFinite(Number(item?.updatedAt)) ? Number(item.updatedAt) : Date.now(),
+        snapshot: {
+          ...mergedSnapshot,
+          messages: normalizeStoredMessages(snapshot?.messages),
+          timedMsgs: normalizeStoredTimedMessages(snapshot?.timedMsgs, String(snapshot?.incomingSender ?? mergedSnapshot.incomingSender ?? defaultSettings.incomingSender)),
+        },
+      } as SavedChatPreset;
+    })
+    .filter(Boolean) as SavedChatPreset[];
+}
+
+function readStoredSavedChatPresets(): SavedChatPreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_CHATS_STORAGE_KEY);
+    if (!raw) return [];
+    return normalizeSavedChatPresets(JSON.parse(raw));
+  } catch {
+    return [];
+  }
 }
 
 function readStoredDefaultSettings() {
@@ -629,6 +669,8 @@ export default function LineMockChatCreator() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
   const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>(initialUiSettings.timedMsgs || initialTimedMessages);
+  const [savedChats, setSavedChats] = useState<SavedChatPreset[]>([]);
+  const [chatSaveName, setChatSaveName] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const timedMsgTimers = useRef<Record<number, { timeout: ReturnType<typeof setTimeout>; interval: ReturnType<typeof setInterval> }>>({});
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1093,6 +1135,16 @@ export default function LineMockChatCreator() {
     })),
   });
 
+  const persistSavedChats = (items: SavedChatPreset[]) => {
+    setSavedChats(items);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(SAVED_CHATS_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      showToast("保存に失敗しました");
+    }
+  };
+
   const applySettings = (settings: typeof defaultSettings & { messages?: any[]; timedMsgs?: any[] }) => {
     setCustomBgColor(settings.customBgColor || ""); setCustomHeaderColor(settings.customHeaderColor || "");
     setCustomHeaderIconColor(settings.customHeaderIconColor || ""); setCustomToolbarColor(settings.customToolbarColor || "");
@@ -1151,7 +1203,70 @@ export default function LineMockChatCreator() {
     }
   };
 
+  const saveChatPresetAsNew = () => {
+    const trimmedName = chatSaveName.trim();
+    if (!trimmedName) {
+      showToast("保存名を入力してください");
+      return;
+    }
+    const nextItems = [
+      {
+        id: Date.now(),
+        name: trimmedName,
+        updatedAt: Date.now(),
+        snapshot: buildCurrentDefaultSnapshot(),
+      },
+      ...savedChats,
+    ];
+    persistSavedChats(nextItems);
+    showToast("チャットを保存しました");
+  };
 
+  const overwriteChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const nextItems = savedChats.map((item) =>
+      item.id === id
+        ? { ...item, name: chatSaveName.trim() || item.name, updatedAt: Date.now(), snapshot: buildCurrentDefaultSnapshot() }
+        : item,
+    );
+    persistSavedChats(nextItems);
+    setChatSaveName(chatSaveName.trim() || target.name);
+    showToast("保存チャットを上書きしました");
+  };
+
+  const loadChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    applySettings(target.snapshot);
+    setChatSaveName(target.name);
+    showToast("保存チャットを読み込みました");
+  };
+
+  const deleteChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const confirmed = window.confirm(`「${target.name}」を削除しますか？`);
+    if (!confirmed) return;
+    persistSavedChats(savedChats.filter((item) => item.id !== id));
+    showToast("保存チャットを削除しました");
+  };
+
+  const duplicateChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const nextItems = [
+      {
+        id: Date.now(),
+        name: `${target.name} のコピー`,
+        updatedAt: Date.now(),
+        snapshot: target.snapshot,
+      },
+      ...savedChats,
+    ];
+    persistSavedChats(nextItems);
+    showToast("保存チャットを複製しました");
+  };
 
   const startCall = (type: string) => {
     clearCallTimer();
@@ -1403,11 +1518,12 @@ export default function LineMockChatCreator() {
               </button>
             </div>
 
-            <div className="grid grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "chat"} onClick={() => setActiveTab("chat")}>会話</TabButton>
               <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")}>履歴</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
             </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
@@ -1606,6 +1722,65 @@ export default function LineMockChatCreator() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {activeTab === "saved" && (
+                <div className="space-y-4">
+                  <SectionCard icon={MessageSquareMore} title="保存チャット">
+                    <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
+                      作成したチャット画面一式を名前付きで保存して、いつでも切り替えられます。
+                    </div>
+                    <div className="space-y-2">
+                      <Label>保存名</Label>
+                      <Input value={chatSaveName} onChange={(e) => setChatSaveName(e.target.value)} placeholder="例：Aシーン_玄関前" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={saveChatPresetAsNew} className="w-full justify-center">新規保存</Button>
+                      <Button
+                        onClick={() => {
+                          const latest = savedChats[0];
+                          if (!latest) {
+                            showToast("保存チャットがありません");
+                            return;
+                          }
+                          overwriteChatPreset(latest.id);
+                        }}
+                        variant="outline"
+                        className="w-full justify-center"
+                      >
+                        最新を上書き
+                      </Button>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard icon={Clock3} title={`保存一覧 (${savedChats.length})`}>
+                    {savedChats.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-4 text-sm text-black/45">
+                        まだ保存チャットはありません。まずは上の「新規保存」から保存してください。
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {savedChats.map((item) => (
+                          <div key={item.id} className="rounded-2xl border border-black/10 bg-white p-3 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-black/85">{item.name}</div>
+                                <div className="mt-1 text-[11px] text-black/45">最終更新: {new Date(item.updatedAt).toLocaleString("ja-JP")}</div>
+                              </div>
+                              <div className="shrink-0 rounded-full bg-black/[0.04] px-2 py-1 text-[10px] text-black/55">{item.snapshot.messages?.length || 0}件</div>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <Button onClick={() => loadChatPreset(item.id)} variant="outline" className="w-full justify-center">読み込む</Button>
+                              <Button onClick={() => overwriteChatPreset(item.id)} variant="outline" className="w-full justify-center">今ので上書き</Button>
+                              <Button onClick={() => { setChatSaveName(item.name); duplicateChatPreset(item.id); }} variant="outline" className="w-full justify-center">複製</Button>
+                              <Button onClick={() => deleteChatPreset(item.id)} variant="outline" className="w-full justify-center">削除</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </SectionCard>
                 </div>
               )}
 
