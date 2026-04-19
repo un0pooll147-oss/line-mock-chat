@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LINE風チャット作成",
-  description: "LINE風のチャット画面を作成・演出できるツール",
+  title: "擬似スマホ画面メーカー",
+  description: "撮影用の擬似スマホ画面を作成・演出できるツール",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "LINEチャット",
+    title: "擬似スマホ",
   },
 };
 

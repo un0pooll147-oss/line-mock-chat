@@ -1,7 +1,7 @@
 {
-  "name": "LINE風チャット作成",
-  "short_name": "LINEチャット",
-  "description": "LINE風のチャット画面を作成・演出できるツール",
+  "name": "擬似スマホ画面メーカー",
+  "short_name": "擬似スマホ",
+  "description": "撮影用の擬似スマホ画面を作成・演出できるツール",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#bfe7d8",

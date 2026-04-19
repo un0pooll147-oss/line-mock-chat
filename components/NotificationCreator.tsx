@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 type OSType = "iphone" | "android";
-type SettingsTab = "appearance" | "notifications" | "screen";
+type SettingsTab = "appearance" | "notifications" | "saved" | "screen" | "modes";
 type NotificationDirection = "top" | "bottom";
 type SoundPreset = "classic" | "digital" | "soft" | "upload";
 type OutgoingToneType = "iphone" | "line" | "custom";
@@ -44,6 +44,7 @@ type Message = {
 type NotificationSettings = {
   osType: OSType;
   phoneTime: string;
+  showStatusBar: boolean;
   lockscreenTime: string;
   lockscreenDate: string;
   showLargeClock: boolean;
@@ -78,6 +79,14 @@ type NotificationSettings = {
 };
 
 const STORAGE_KEY = "notification-mock-settings-v5";
+const SAVED_NOTIFICATION_STORAGE_KEY = "notification-mock-saved-presets-v1";
+
+type SavedNotificationPreset = {
+  id: string;
+  name: string;
+  updatedAt: number;
+  settings: NotificationSettings;
+};
 
 const getToastMeta = (message: string) => {
   if (message.includes("失敗")) {
@@ -198,6 +207,7 @@ const defaultMessages: Message[] = [
 const defaultSettings: NotificationSettings = {
   osType: "iphone",
   phoneTime: "22:18",
+  showStatusBar: true,
   lockscreenTime: "22:18",
   lockscreenDate: "4月23日 木曜日",
   showLargeClock: true,
@@ -339,29 +349,16 @@ function StatusCellDots({ className = "" }: { className?: string }) {
   );
 }
 
-function PhoneStatusBar({ osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
-  if (osType === "iphone") {
-    return (
-      <div className={cn("flex items-center justify-between px-6 text-[13px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_2px_rgba(0,0,0,0.22)]", className)}>
-        <div className="min-w-[52px] pl-1 tabular-nums">{time}</div>
-        <div className="flex items-center gap-1.5">
-          <StatusCellDots className="h-[11px] w-[18px]" />
-          <StatusWifi className="h-[11px] w-[17px]" />
-          <StatusBattery className="h-[12px] w-[25px]" level={level} />
-        </div>
-      </div>
-    );
-  }
-
+function PhoneStatusBar({ osType: _osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
   return (
-    <div className={cn("flex items-center justify-between px-4 text-[13px] font-semibold tracking-[-0.015em] [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]", className)}>
-      <div className="flex items-center gap-2.5">
+    <div className={cn("px-5 pt-0.5", className)}>
+      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <StatusSignal className="h-[12px] w-[18px] opacity-95" />
-        <StatusWifi className="h-[12px] w-[18px] opacity-95" />
-        <StatusBattery className="h-[12px] w-[26px] opacity-95" level={level} />
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[10px] w-[17px]" />
+          <StatusWifi className="h-[10px] w-[16px]" />
+          <StatusBattery className="h-[11px] w-[24px]" level={level} />
+        </div>
       </div>
     </div>
   );
@@ -587,6 +584,32 @@ function normalizeMessages(messages: any[] | undefined): Message[] {
   }));
 }
 
+
+
+function readSavedNotificationPresets(): SavedNotificationPreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_NOTIFICATION_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item, index) => ({
+        id: String(item?.id ?? `notification-preset-${index}`),
+        name: String(item?.name ?? `保存通知 ${index + 1}`),
+        updatedAt: Number.isFinite(Number(item?.updatedAt)) ? Number(item.updatedAt) : Date.now(),
+        settings: {
+          ...defaultSettings,
+          ...(item?.settings || {}),
+          messages: normalizeMessages(item?.settings?.messages),
+        } as NotificationSettings,
+      }))
+      .filter((item) => item.name.trim());
+  } catch {
+    return [];
+  }
+}
+
 function readStoredSettings(): NotificationSettings {
   if (typeof window === "undefined") return defaultSettings;
   try {
@@ -636,9 +659,12 @@ export default function NotificationCreator() {
   const [hydrated, setHydrated] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
+  const [savedPresets, setSavedPresets] = useState<SavedNotificationPreset[]>([]);
+  const [saveName, setSaveName] = useState("通知撮影セット");
 
   const [osType, setOsType] = useState<OSType>(defaultSettings.osType);
   const [phoneTime, setPhoneTime] = useState(defaultSettings.phoneTime);
+  const [showStatusBar, setShowStatusBar] = useState(defaultSettings.showStatusBar);
   const [lockscreenTime, setLockscreenTime] = useState(defaultSettings.lockscreenTime);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
@@ -690,6 +716,7 @@ export default function NotificationCreator() {
     const stored = readStoredSettings();
     setOsType(stored.osType);
     setPhoneTime(stored.phoneTime);
+    setShowStatusBar(stored.showStatusBar);
     setLockscreenTime(stored.lockscreenTime);
     setLockscreenDate(stored.lockscreenDate);
     setShowLargeClock(stored.showLargeClock);
@@ -721,6 +748,7 @@ export default function NotificationCreator() {
     setOutgoingToneType(stored.outgoingToneType);
     setCustomOutgoingToneName(stored.customOutgoingToneName);
     setCustomOutgoingToneUrl(stored.customOutgoingToneUrl);
+    setSavedPresets(readSavedNotificationPresets());
     setHydrated(true);
   }, []);
 
@@ -729,6 +757,7 @@ export default function NotificationCreator() {
     const payload: NotificationSettings = {
       osType,
       phoneTime,
+      showStatusBar,
       lockscreenTime,
       lockscreenDate,
       showLargeClock,
@@ -766,6 +795,7 @@ export default function NotificationCreator() {
     hydrated,
     osType,
     phoneTime,
+    showStatusBar,
     lockscreenTime,
     lockscreenDate,
     showLargeClock,
@@ -1206,6 +1236,129 @@ export default function NotificationCreator() {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: value } : m)));
   };
 
+  const buildCurrentNotificationSettings = (): NotificationSettings => ({
+    osType,
+    phoneTime,
+    showStatusBar,
+    lockscreenTime,
+    lockscreenDate,
+    showLargeClock,
+    groupName,
+    selectedWallpaper,
+    uploadedWallpaper,
+    messages,
+    showSettingsButton,
+    notificationDirection,
+    vibrateOnNotify,
+    soundOnNotify,
+    notificationSoundPreset,
+    uploadedSound,
+    uploadedSoundName,
+    fullScreenMode,
+    deviceFrameMode,
+    showCallButton,
+    quickCallMode,
+    quickCallStartDelaySeconds: Number.isFinite(Number(quickCallStartDelaySeconds)) ? Number(quickCallStartDelaySeconds) : 0,
+    quickCallConnectSeconds: Number.isFinite(Number(quickCallConnectSeconds)) ? Number(quickCallConnectSeconds) : 0,
+    quickCallTitle,
+    quickCallAvatarLabel,
+    quickCallAvatarImage,
+    incomingCallBgColor,
+    incomingCallBgOpacity,
+    outgoingCallBgColor,
+    outgoingCallBgOpacity,
+    outgoingToneEnabled,
+    outgoingToneType,
+    customOutgoingToneName,
+    customOutgoingToneUrl,
+  });
+
+  const applyNotificationSettings = (next: NotificationSettings) => {
+    setOsType(next.osType);
+    setPhoneTime(next.phoneTime);
+    setLockscreenTime(next.lockscreenTime);
+    setLockscreenDate(next.lockscreenDate);
+    setShowLargeClock(next.showLargeClock);
+    setGroupName(next.groupName);
+    setSelectedWallpaper(next.selectedWallpaper);
+    setUploadedWallpaper(next.uploadedWallpaper);
+    setMessages(normalizeMessages(next.messages));
+    setShowSettingsButton(next.showSettingsButton);
+    setNotificationDirection(next.notificationDirection);
+    setVibrateOnNotify(next.vibrateOnNotify);
+    setSoundOnNotify(next.soundOnNotify);
+    setNotificationSoundPreset(next.notificationSoundPreset);
+    setUploadedSound(next.uploadedSound);
+    setUploadedSoundName(next.uploadedSoundName);
+    setFullScreenMode(next.fullScreenMode);
+    setDeviceFrameMode(next.deviceFrameMode);
+    setShowCallButton(next.showCallButton);
+    setQuickCallMode(next.quickCallMode);
+    setQuickCallStartDelaySeconds(String(next.quickCallStartDelaySeconds));
+    setQuickCallConnectSeconds(String(next.quickCallConnectSeconds));
+    setQuickCallTitle(next.quickCallTitle);
+    setQuickCallAvatarLabel(next.quickCallAvatarLabel);
+    setQuickCallAvatarImage(next.quickCallAvatarImage);
+    setIncomingCallBgColor(next.incomingCallBgColor);
+    setIncomingCallBgOpacity(next.incomingCallBgOpacity);
+    setOutgoingCallBgColor(next.outgoingCallBgColor);
+    setOutgoingCallBgOpacity(next.outgoingCallBgOpacity);
+    setOutgoingToneEnabled(next.outgoingToneEnabled);
+    setOutgoingToneType(next.outgoingToneType);
+    setCustomOutgoingToneName(next.customOutgoingToneName);
+    setCustomOutgoingToneUrl(next.customOutgoingToneUrl);
+  };
+
+  const persistSavedPresets = (items: SavedNotificationPreset[]) => {
+    setSavedPresets(items);
+    try {
+      window.localStorage.setItem(SAVED_NOTIFICATION_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      showToast("保存に失敗しました");
+    }
+  };
+
+  const saveNotificationPresetAsNew = () => {
+    const name = saveName.trim();
+    if (!name) {
+      showToast("保存名を入力してください");
+      return;
+    }
+    const item: SavedNotificationPreset = {
+      id: `notification-saved-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      updatedAt: Date.now(),
+      settings: buildCurrentNotificationSettings(),
+    };
+    persistSavedPresets([item, ...savedPresets]);
+    showToast("通知画面を保存しました");
+  };
+
+  const overwriteNotificationPreset = (id: string) => {
+    persistSavedPresets(savedPresets.map((item) => item.id === id ? { ...item, updatedAt: Date.now(), settings: buildCurrentNotificationSettings() } : item));
+    showToast("保存通知を上書きしました");
+  };
+
+  const loadNotificationPreset = (id: string) => {
+    const item = savedPresets.find((preset) => preset.id === id);
+    if (!item) return;
+    applyNotificationSettings({ ...defaultSettings, ...item.settings, messages: normalizeMessages(item.settings.messages) });
+    setSettingsOpen(false);
+    showToast("保存通知を読み込みました");
+  };
+
+  const deleteNotificationPreset = (id: string) => {
+    persistSavedPresets(savedPresets.filter((item) => item.id !== id));
+    showToast("保存通知を削除しました");
+  };
+
+  const duplicateNotificationPreset = (id: string) => {
+    const item = savedPresets.find((preset) => preset.id === id);
+    if (!item) return;
+    persistSavedPresets([{ ...item, id: `notification-saved-${Date.now()}-${Math.random().toString(16).slice(2)}`, name: `${item.name} コピー`, updatedAt: Date.now() }, ...savedPresets]);
+    showToast("保存通知を複製しました");
+  };
+
   const playNotifications = () => {
     clearTimers();
     setSettingsOpen(false);
@@ -1239,6 +1392,7 @@ export default function NotificationCreator() {
     const payload: NotificationSettings = {
       osType,
       phoneTime,
+      showStatusBar,
       lockscreenTime,
       lockscreenDate,
       showLargeClock,
@@ -1283,6 +1437,7 @@ export default function NotificationCreator() {
     clearTimers();
     setOsType(defaultSettings.osType);
     setPhoneTime(defaultSettings.phoneTime);
+    setShowStatusBar(defaultSettings.showStatusBar);
     setLockscreenTime(defaultSettings.lockscreenTime);
     setLockscreenDate(defaultSettings.lockscreenDate);
     setShowLargeClock(defaultSettings.showLargeClock);
@@ -1352,11 +1507,13 @@ export default function NotificationCreator() {
 
       {theme.showNotch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
-      <PhoneStatusBar
-        osType={osType}
-        time={phoneTime}
-        className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
-      />
+      {showStatusBar && (
+        <PhoneStatusBar
+          osType={osType}
+          time={phoneTime}
+          className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
+        />
+      )}
 
       {showLargeClock && (
         <div className="absolute inset-x-0 top-0 z-10 pt-[92px] text-center">
@@ -1486,9 +1643,9 @@ export default function NotificationCreator() {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-40 flex min-h-[100dvh] flex-col overflow-hidden bg-[#f5f5f5] text-black">
-          <div className="shrink-0 border-b border-black/10 bg-[#f5f5f5]/95 px-4 pb-3 pt-[max(14px,env(safe-area-inset-top))] backdrop-blur">
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-black/35">
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black">
+            <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setSettingsOpen(false)}
@@ -1497,25 +1654,18 @@ export default function NotificationCreator() {
               >
                 <X className="h-5 w-5" />
               </button>
-              <div className="text-sm font-semibold text-black/75">通知画面設定</div>
-              <button
-                type="button"
-                onClick={() => router.push("/")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.07] whitespace-nowrap"
-                aria-label="チャット画面に戻る"
-              >
-                <span className="text-base">←</span>
-                <span>チャット画面に戻る</span>
-              </button>
+              <div className="text-lg font-semibold">設定</div>
+              <div className="h-10 w-10" aria-hidden="true" />
             </div>
-            <div className="grid grid-cols-3 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid shrink-0 grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
+              <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
-          </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))] overscroll-contain">
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1 overscroll-contain">
             {activeTab === "appearance" && (
               <div className="space-y-4">
                 <SectionCard icon={Palette} title="端末・見た目">
@@ -1523,7 +1673,6 @@ export default function NotificationCreator() {
                     <Button onClick={() => setOsType("iphone")} variant={osType === "iphone" ? "default" : "outline"} className="w-full">iPhone風</Button>
                     <Button onClick={() => setOsType("android")} variant={osType === "android" ? "default" : "outline"} className="w-full">Android風</Button>
                   </div>
-                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">大きい時計を表示</div>
@@ -1703,13 +1852,72 @@ export default function NotificationCreator() {
               </div>
             )}
 
+            {activeTab === "saved" && (
+              <div className="space-y-4">
+                <SectionCard icon={MessageSquareMore} title="通知画面を保存">
+                  <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
+                    通知内容・壁紙・ロック画面・通話設定を名前付きで保存できます。撮影カットごとに切り替えられます。
+                  </div>
+                  <div className="space-y-2"><Label>保存名</Label><Input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="例：森田家_通知_夜" /></div>
+                  <Button onClick={saveNotificationPresetAsNew} className="w-full justify-center">新規保存</Button>
+                </SectionCard>
+
+                <SectionCard icon={Clock3} title={`保存一覧 (${savedPresets.length})`}>
+                  {savedPresets.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-black/45">保存済みの通知画面はありません</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {savedPresets.map((item) => (
+                        <div key={item.id} className="rounded-2xl border border-black/10 bg-[#fafafa] p-3">
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-black/80">{item.name}</div>
+                              <div className="mt-1 text-xs text-black/45">{new Date(item.updatedAt).toLocaleString("ja-JP")}</div>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button onClick={() => loadNotificationPreset(item.id)} className="justify-center">読み込み</Button>
+                            <Button onClick={() => overwriteNotificationPreset(item.id)} variant="outline" className="justify-center">上書き</Button>
+                            <Button onClick={() => duplicateNotificationPreset(item.id)} variant="outline" className="justify-center">複製</Button>
+                            <Button onClick={() => deleteNotificationPreset(item.id)} variant="outline" className="justify-center text-red-600">削除</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </SectionCard>
+              </div>
+            )}
+
+            {activeTab === "modes" && (
+              <div className="space-y-4">
+                <SectionCard icon={Settings2} title="モード切り替え">
+                  <div className="text-sm text-black/55">
+                    各画面作成モードへ切り替えます。通知内容を保存してから切り替えると安心です。
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button onClick={() => router.push("/")} variant="outline" className="w-full justify-center">チャットモードへ</Button>
+                    <Button className="w-full justify-center">通知画面モード</Button>
+                    <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
+                    <Button onClick={() => router.push("/x")} variant="outline" className="w-full justify-center">Xモードへ</Button>
+                    <Button onClick={() => router.push("/tiktok")} variant="outline" className="w-full justify-center">TikTokモードへ</Button>
+                  </div>
+                </SectionCard>
+              </div>
+            )}
+
+
+
             {activeTab === "screen" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
-                  <Button onClick={saveCurrentAsDefault} variant="outline" className="w-full justify-center">今の設定を既定にする</Button>
+                  <Button onClick={saveCurrentAsDefault} variant="outline" className="w-full justify-center">規定の設定にする</Button>
+                  <Button onClick={resetToDefault} variant="outline" className="w-full justify-center">初期設定に戻す</Button>
                 </div>
 
                 <SectionCard icon={Settings2} title="画面操作">
+                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">フルスクリーンモード</div>
@@ -1732,7 +1940,6 @@ export default function NotificationCreator() {
                     <Switch checked={showSettingsButton} onCheckedChange={setShowSettingsButton} />
                   </div>
                   <Button onClick={() => setSettingsOpen(false)} className="w-full">設定を閉じて撮影画面に戻る</Button>
-                  <Button onClick={() => router.push("/")} variant="outline" className="w-full"><span className="mr-2">←</span>チャット画面へ戻る</Button>
                 </SectionCard>
 
                 <SectionCard icon={Phone} title="通話設定">
@@ -1807,12 +2014,10 @@ export default function NotificationCreator() {
                   </div>
                 </SectionCard>
 
-                <SectionCard icon={UserCircle2} title="リセット">
-                  <div className="text-sm text-black/60">通知画面の見た目や通知内容を初期状態に戻します。</div>
-                  <Button onClick={resetToDefault} variant="outline" className="w-full">通知画面を初期設定に戻す</Button>
-                </SectionCard>
+
               </div>
             )}
+          </div>
           </div>
         </div>
       )}

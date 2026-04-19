@@ -1374,15 +1374,7 @@ export default function LineMockChatCreator() {
   const messageListBottomPadding = showControls ? 32 : 24;
 
   const controlsContent = showControls ? (
-    <>
-      {showNotificationModeButton && (
-        <div className="mb-1 flex justify-end">
-          <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 transition hover:bg-black/12">
-            通知画面モードへ →
-          </button>
-        </div>
-      )}
-      <div className="flex items-end gap-2">
+    <div className="flex w-full items-end gap-2">
         <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
         <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
           <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
@@ -1402,7 +1394,6 @@ export default function LineMockChatCreator() {
         </div>
         {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
       </div>
-    </>
   ) : null;
 
   const controlsPanel = controlsContent ? (
@@ -1511,23 +1502,16 @@ export default function LineMockChatCreator() {
                 <X className="h-5 w-5" />
               </button>
               <div className="text-lg font-semibold">設定</div>
-              <button
-                type="button"
-                onClick={() => router.push("/notification")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.07] whitespace-nowrap"
-                aria-label="通知画面モードへ"
-              >
-                <span>通知画面モードへ</span>
-                <span className="text-base">→</span>
-              </button>
+              <div className="h-10 w-10" aria-hidden="true" />
             </div>
 
-            <div className="grid grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid grid-cols-6 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "chat"} onClick={() => setActiveTab("chat")}>会話</TabButton>
               <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")}>履歴</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
+              <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
@@ -1613,7 +1597,6 @@ export default function LineMockChatCreator() {
                 <div className="space-y-4">
                   <SectionCard icon={Clock3} title="時刻と表示">
                     <div className="space-y-2"><Label>今日の日付</Label><Input value={todayDate} onChange={(e) => setTodayDate(e.target.value)} placeholder="2026/04/04" /></div>
-                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>自分の送信日</Label><Input value={outgoingMessageDate} onChange={(e) => setOutgoingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
                       <div className="space-y-2"><Label>相手の送信日</Label><Input value={incomingMessageDate} onChange={(e) => setIncomingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
@@ -1787,6 +1770,24 @@ export default function LineMockChatCreator() {
                   </SectionCard>
                 </div>
               )}
+              {activeTab === "modes" && (
+                <div className="space-y-4">
+                  <SectionCard icon={Settings2} title="モード切り替え">
+                    <div className="text-sm text-black/55">
+                      各画面作成モードへ切り替えます。現在のチャット内容は保存してから切り替えると安心です。
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button className="w-full justify-center">チャットモード</Button>
+                      <Button onClick={() => router.push("/notification")} variant="outline" className="w-full justify-center">通知画面モードへ</Button>
+                      <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
+                      <Button onClick={() => router.push("/x")} variant="outline" className="w-full justify-center">Xモードへ</Button>
+                      <Button onClick={() => router.push("/tiktok")} variant="outline" className="w-full justify-center">TikTokモードへ</Button>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+
 
               {activeTab === "screen" && (
                 <div className="space-y-4">
@@ -1797,6 +1798,7 @@ export default function LineMockChatCreator() {
                   </div>
 
                   <SectionCard icon={Settings2} title="操作表示">
+                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">上部の時刻や電波表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>
@@ -1804,7 +1806,6 @@ export default function LineMockChatCreator() {
 
 
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">通知画面モードボタン表示</div><div className="text-xs text-black/50">下部バーの通知画面への切り替えボタン</div></div><Switch checked={showNotificationModeButton} onCheckedChange={setShowNotificationModeButton} /></div>
 
                   </SectionCard>
 
