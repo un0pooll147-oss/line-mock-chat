@@ -17,6 +17,7 @@ declare namespace JSX {
 }
 declare module 'react' {
   export = React;
+  export function useCallback<T extends (...args: any[]) => any>(callback: T, deps?: any): T;
   export function useEffect(effect: any, deps?: any): any;
   export function useMemo<T = any>(factory: () => T, deps?: any): T;
   export function useRef<T = any>(initialValue?: T): any;
@@ -34,6 +35,7 @@ declare module 'next' {
 }
 declare module 'next/navigation' { export const useRouter: any; }
 declare module 'lucide-react' {
+  export type LucideIcon = any;
   export const ArrowLeft:any;
   export const BarChart3:any;
   export const Bell:any;
