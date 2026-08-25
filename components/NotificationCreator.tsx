@@ -341,7 +341,7 @@ function StatusCellDots({ className = "" }: { className?: string }) {
 
 function PhoneStatusBar({ osType: _osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
   return (
-    <div className={cn("px-5", className)}>
+    <div className={cn("pl-[max(24px,calc(env(safe-area-inset-left)+12px))] pr-[max(24px,calc(env(safe-area-inset-right)+12px))]", className)}>
       <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
@@ -1511,11 +1511,11 @@ export default function NotificationCreator() {
   };
   const previewShellClassName = deviceFrameMode ? "p-4" : "p-0";
   const settingsButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
-    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
+    ? "absolute bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] right-[max(24px,calc(env(safe-area-inset-right)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
+    : "fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] right-[max(24px,calc(env(safe-area-inset-right)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
   const phoneButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
-    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
+    ? "absolute bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] left-[max(24px,calc(env(safe-area-inset-left)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
+    : "fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] left-[max(24px,calc(env(safe-area-inset-left)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
   const hiddenSettingsButtonClassName = deviceFrameMode
     ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
     : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
@@ -1527,13 +1527,13 @@ export default function NotificationCreator() {
           <div className="absolute inset-0" style={bgStyle} />
           <div className="absolute inset-0 bg-black/15" />
 
-      {theme.showNotch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
+      {theme.showNotch && <div className="absolute left-1/2 top-[max(12px,env(safe-area-inset-top))] z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
       {showStatusBar && (
         <PhoneStatusBar
           osType={osType}
           time={phoneTime}
-          className={cn("absolute inset-x-0 top-0 z-20 text-white", theme.topInset)}
+          className={cn("absolute inset-x-0 top-[max(6px,env(safe-area-inset-top))] z-20 text-white", theme.topInset)}
         />
       )}
 
@@ -1550,7 +1550,7 @@ export default function NotificationCreator() {
       {notificationDirection === "top" ? (
         <div
           className={cn(
-            "absolute inset-x-0 top-0 z-10 h-full overflow-hidden px-4 pb-[max(18px,env(safe-area-inset-bottom))]",
+            "absolute inset-x-0 top-0 z-10 h-full overflow-hidden pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))] pl-[max(16px,calc(env(safe-area-inset-left)+12px))] pr-[max(16px,calc(env(safe-area-inset-right)+12px))]",
             topStackClass,
           )}
           style={{ paddingTop: notificationTopPadding ? `${notificationTopPadding}px` : undefined }}
@@ -1588,7 +1588,7 @@ export default function NotificationCreator() {
           </div>
         </div>
       ) : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 pb-[max(32px,calc(env(safe-area-inset-bottom)+24px))] pl-[max(16px,calc(env(safe-area-inset-left)+12px))] pr-[max(16px,calc(env(safe-area-inset-right)+12px))]">
           <div className="flex max-h-[48dvh] flex-col-reverse gap-3 overflow-hidden">
             {renderedNotifications.map((msg) => (
               <div
@@ -1625,7 +1625,7 @@ export default function NotificationCreator() {
 
       {theme.showHomeBar && (
         <div
-          className="pointer-events-none absolute bottom-2 left-1/2 z-20 h-[5px] w-[140px] -translate-x-1/2 rounded-full"
+          className="pointer-events-none absolute bottom-[max(8px,env(safe-area-inset-bottom))] left-1/2 z-20 h-[5px] w-[140px] -translate-x-1/2 rounded-full"
           style={{ backgroundColor: "rgba(255,255,255,0.75)" }}
         />
       )}
