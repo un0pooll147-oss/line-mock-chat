@@ -1474,6 +1474,18 @@ export default function NotificationCreator() {
     showToast("初期設定に戻しました");
   };
 
+  const handleFullScreenModeChange = async (enabled: boolean) => {
+    if (enabled) {
+      setFullScreenMode(true);
+      const success = await changeNativeFullscreen(true);
+      if (!success) setFullScreenMode(false);
+      return;
+    }
+
+    const success = await changeNativeFullscreen(false);
+    if (success) setFullScreenMode(false);
+  };
+
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
   const topStackClass = showLargeClock ? "" : theme.notificationsTopWithoutClock;
@@ -1489,9 +1501,9 @@ export default function NotificationCreator() {
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
 
   const stageContainerStyle: React.CSSProperties = {
-    height: fullScreenMode ? visualViewportHeight : undefined,
-    minHeight: fullScreenMode ? undefined : visualViewportHeight,
-    maxHeight: fullScreenMode ? visualViewportHeight : undefined,
+    height: visualViewportHeight,
+    minHeight: visualViewportHeight,
+    maxHeight: visualViewportHeight,
     width: "100%",
     maxWidth: "100vw",
     overflow: fullScreenMode ? "hidden" : undefined,
@@ -1978,7 +1990,7 @@ export default function NotificationCreator() {
                       <div className="text-sm font-medium">フルスクリーンモード</div>
                       <div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div>
                     </div>
-                    <Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); void changeNativeFullscreen(value).then((success) => { if (!success) setFullScreenMode(false); }); }} />
+                    <Switch checked={fullScreenMode} onCheckedChange={(value) => { void handleFullScreenModeChange(value); }} />
                   </div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>

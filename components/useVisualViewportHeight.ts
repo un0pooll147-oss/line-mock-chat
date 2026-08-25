@@ -21,6 +21,8 @@ export function useVisualViewportHeight() {
     window.addEventListener("orientationchange", updateViewportHeight);
     window.visualViewport?.addEventListener("resize", updateViewportHeight);
     window.visualViewport?.addEventListener("scroll", updateViewportHeight);
+    document.addEventListener("fullscreenchange", updateViewportHeight);
+    document.addEventListener("webkitfullscreenchange", updateViewportHeight);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
@@ -28,6 +30,8 @@ export function useVisualViewportHeight() {
       window.removeEventListener("orientationchange", updateViewportHeight);
       window.visualViewport?.removeEventListener("resize", updateViewportHeight);
       window.visualViewport?.removeEventListener("scroll", updateViewportHeight);
+      document.removeEventListener("fullscreenchange", updateViewportHeight);
+      document.removeEventListener("webkitfullscreenchange", updateViewportHeight);
     };
   }, []);
 
