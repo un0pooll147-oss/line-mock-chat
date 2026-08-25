@@ -3,7 +3,9 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
+import { useNativeFullscreen } from "./useNativeFullscreen";
 import {
+  type LucideIcon,
   Bell,
   Bookmark,
   Heart,
@@ -284,7 +286,7 @@ function MultiFileButton({ children, accept, onFiles }: { children: React.ReactN
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
@@ -565,6 +567,7 @@ export default function TikTokMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<TikTokSettings>(defaultSettings);
+  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [isHydrated, setIsHydrated] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
@@ -626,8 +629,10 @@ export default function TikTokMockCreator() {
   };
 
   const setFullScreenMode = (value: boolean) => {
-    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", value);
+    void changeNativeFullscreen(value).then((success) => {
+      if (!success) update("fullScreenMode", false);
+    });
   };
 
   const readFile = (file: File, callback: (url: string) => void) => {
@@ -843,7 +848,7 @@ export default function TikTokMockCreator() {
                       </div>
                     </SectionCard>
                     <SectionCard icon={Settings2} title="画面表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
                     <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>

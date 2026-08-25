@@ -3,7 +3,9 @@
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
+import { useNativeFullscreen } from "./useNativeFullscreen";
 import {
+  type LucideIcon,
   ArrowLeft,
   BarChart3,
   Bell,
@@ -399,7 +401,7 @@ function TextArea({ label, value, onChange, rows = 4 }: { label: string; value: 
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
     <section className="min-w-0 overflow-hidden rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-black/75"><Icon className="h-4 w-4" />{title}</div>
@@ -420,7 +422,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (value: boo
   );
 }
 
-function ActionStat({ icon: Icon, value, active, activeClass, onClick }: { icon: React.ElementType; value: string | number; active?: boolean; activeClass?: string; onClick?: () => void }) {
+function ActionStat({ icon: Icon, value, active, activeClass, onClick }: { icon: LucideIcon; value: string | number; active?: boolean; activeClass?: string; onClick?: () => void }) {
   return (
     <button type="button" onClick={onClick} className={cls("flex items-center gap-1.5 text-xs transition", active ? activeClass : "text-current opacity-70 hover:opacity-100")}>
       <Icon className={cls("h-[18px] w-[18px]", active ? "fill-current" : "")} />
@@ -478,6 +480,7 @@ export default function XMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<XSettings>(initialSettings);
+  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyPanelOpen, setReplyPanelOpen] = useState(false);
@@ -684,8 +687,10 @@ export default function XMockCreator() {
   };
 
   const setFullscreenMode = (enabled: boolean) => {
-    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", enabled);
+    void changeNativeFullscreen(enabled).then((success) => {
+      if (!success) update("fullScreenMode", false);
+    });
   };
 
   const header = (
@@ -1251,7 +1256,7 @@ export default function XMockCreator() {
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>
               )}

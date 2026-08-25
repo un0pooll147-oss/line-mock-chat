@@ -4,7 +4,9 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
+import { useNativeFullscreen } from "./useNativeFullscreen";
 import {
+  type LucideIcon,
   Clock3,
   Image as ImageIcon,
   MessageSquareMore,
@@ -487,7 +489,7 @@ function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
@@ -664,6 +666,7 @@ export default function NotificationCreator() {
   const [uploadedSound, setUploadedSound] = useState<string | null>(defaultSettings.uploadedSound);
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
   const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
+  const changeNativeFullscreen = useNativeFullscreen(() => setFullScreenMode(false));
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
   const [showCallButton, setShowCallButton] = useState(defaultSettings.showCallButton);
   const [quickCallMode, setQuickCallMode] = useState<"voice" | "video">(defaultSettings.quickCallMode);
@@ -1892,9 +1895,9 @@ export default function NotificationCreator() {
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">フルスクリーンモード</div>
-                      <div className="text-xs text-black/50">余白や中央寄せを解除して、画面いっぱいに表示します。</div>
+                      <div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div>
                     </div>
-                    <Switch checked={fullScreenMode} onCheckedChange={setFullScreenMode} />
+                    <Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); void changeNativeFullscreen(value).then((success) => { if (!success) setFullScreenMode(false); }); }} />
                   </div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>

@@ -3,7 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useNativeFullscreen } from "./useNativeFullscreen";
 import {
+  type LucideIcon,
   PlusCircle,
   Image as ImageIcon,
   Smile,
@@ -396,7 +398,7 @@ function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChang
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
@@ -690,6 +692,7 @@ export default function LineMockChatCreator() {
   const [unifyChatBackground, setUnifyChatBackground] = useState(initialUiSettings.unifyChatBackground ?? true);
   const [showStatusBar, setShowStatusBar] = useState(initialUiSettings.showStatusBar);
   const [fullScreenMode, setFullScreenMode] = useState(initialUiSettings.fullScreenMode);
+  const changeNativeFullscreen = useNativeFullscreen(() => setFullScreenMode(false));
   const [deviceFrameMode, setDeviceFrameMode] = useState(initialUiSettings.deviceFrameMode);
   const [showMessageTime, setShowMessageTime] = useState(initialUiSettings.showMessageTime);
   const [inputPlaceholder, setInputPlaceholder] = useState(initialUiSettings.inputPlaceholder);
@@ -1877,7 +1880,7 @@ export default function LineMockChatCreator() {
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">上部の時刻や電波表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); void changeNativeFullscreen(value).then((success) => { if (!success) setFullScreenMode(false); }); }} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
 
 

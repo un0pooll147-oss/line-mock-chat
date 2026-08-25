@@ -3,7 +3,9 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
+import { useNativeFullscreen } from "./useNativeFullscreen";
 import {
+  type LucideIcon,
   Bookmark,
   Heart,
   Home,
@@ -302,7 +304,7 @@ function MultiFileButton({ children, accept, onFiles }: { children: React.ReactN
   );
 }
 
-function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+function SectionCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
@@ -803,6 +805,7 @@ export default function InstagramMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<InstagramSettings>(defaultSettings);
+  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
   const [savedPresets, setSavedPresets] = useState<SavedInstagramPreset[]>([]);
@@ -973,8 +976,10 @@ export default function InstagramMockCreator() {
   };
 
   const enterFullscreenIfNeeded = (enabled: boolean) => {
-    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", enabled);
+    void changeNativeFullscreen(enabled).then((success) => {
+      if (!success) update("fullScreenMode", false);
+    });
   };
 
   const screen = (
@@ -1176,7 +1181,7 @@ export default function InstagramMockCreator() {
               {activeTab === "screen" && (
                 <div className="space-y-4">
                   <SectionCard icon={Settings2} title="撮影表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ画面として表示</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(v) => update("showStatusBar", v)} /></div>
