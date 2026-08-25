@@ -1,0 +1,22 @@
+{
+  "name": "擬似スマホ画面メーカー",
+  "short_name": "擬似スマホ",
+  "description": "撮影用の擬似スマホ画面を作成・演出できるツール",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#bfe7d8",
+  "theme_color": "#06C755",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
