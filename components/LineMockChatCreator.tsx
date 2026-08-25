@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useNativeFullscreen } from "./useNativeFullscreen";
+import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import {
   type LucideIcon,
   PlusCircle,
@@ -660,6 +661,7 @@ function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, on
 interface TimedMsg { id: number; sender: string; text: string; delay: number; countdown: number; pending: boolean; }
 
 export default function LineMockChatCreator() {
+  useKeyboardSafeInputs();
   const router = useRouter();
   const initialUiSettings = useMemo(() => readStoredDefaultSettings(), []);
   const processedBridgeRef = useRef(false);
@@ -1553,8 +1555,8 @@ export default function LineMockChatCreator() {
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/35">
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
+        <div className="fixed inset-x-0 top-0 z-50 bg-black/35" style={{ height: viewportHeight ? `${viewportHeight}px` : "100dvh" }}>
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl" style={{ maxHeight: viewportHeight ? `${viewportHeight}px` : "100dvh" }}>
             <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
               <button
                 type="button"

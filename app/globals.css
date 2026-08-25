@@ -29,6 +29,7 @@ input,
 textarea,
 select {
   font-size: 16px;
+  scroll-margin-block: 76px;
 }
 
 .notification-enter-top {

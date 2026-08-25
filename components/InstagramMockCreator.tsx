@@ -4,6 +4,7 @@ import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
+import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import {
   type LucideIcon,
   Bookmark,
@@ -802,6 +803,7 @@ function InstagramStoryPreview({ settings, setSettings, onOpenSettings }: { sett
 }
 
 export default function InstagramMockCreator() {
+  useKeyboardSafeInputs();
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<InstagramSettings>(defaultSettings);
@@ -1018,8 +1020,8 @@ export default function InstagramMockCreator() {
       )}
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/35">
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
+        <div className="fixed inset-x-0 top-0 z-50 bg-black/35" style={{ height: visualViewportHeight }}>
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl" style={{ maxHeight: visualViewportHeight }}>
             <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
               <button type="button" onClick={() => setSettingsOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]" aria-label="閉じる"><X className="h-5 w-5" /></button>
               <div className="text-lg font-semibold">設定</div>

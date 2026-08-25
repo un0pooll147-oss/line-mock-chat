@@ -4,6 +4,7 @@ import React, { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
+import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import {
   type LucideIcon,
   Bell,
@@ -564,6 +565,7 @@ function CommentsSheet({ settings, setSettings, onClose }: { settings: TikTokSet
 }
 
 export default function TikTokMockCreator() {
+  useKeyboardSafeInputs();
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<TikTokSettings>(defaultSettings);
@@ -716,8 +718,8 @@ export default function TikTokMockCreator() {
         )}
 
         {settingsOpen && (
-          <div className="fixed inset-0 z-[70] flex items-end bg-black/35 md:items-center md:justify-center">
-            <div className="max-h-[88vh] w-full overflow-hidden rounded-t-[28px] bg-[#f6f6f6] shadow-2xl md:max-w-[520px] md:rounded-[28px]">
+          <div className="fixed inset-x-0 top-0 z-[70] flex items-end bg-black/35 md:items-center md:justify-center" style={{ height: visualViewportHeight }}>
+            <div className="flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[#f6f6f6] shadow-2xl md:max-w-[520px] md:rounded-[28px]" style={{ maxHeight: visualViewportHeight }}>
               <div className="flex items-center justify-between border-b border-black/10 bg-white px-4 py-3">
                 <div className="w-10" />
                 <div className="text-base font-bold">設定</div>
@@ -734,7 +736,7 @@ export default function TikTokMockCreator() {
                 </div>
               </div>
 
-              <div className="max-h-[68vh] space-y-4 overflow-y-auto overflow-x-hidden p-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-4 pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))]">
                 {activeTab === "create" && (
                   <>
                     <SectionCard icon={Palette} title="基本設定">

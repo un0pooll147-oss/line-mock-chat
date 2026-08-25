@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
+import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import {
   type LucideIcon,
   Clock3,
@@ -640,6 +641,7 @@ function readStoredSettings(): NotificationSettings {
 }
 
 export default function NotificationCreator() {
+  useKeyboardSafeInputs();
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -1617,8 +1619,8 @@ export default function NotificationCreator() {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/35">
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black">
+        <div className="fixed inset-x-0 top-0 z-50 bg-black/35" style={{ height: visualViewportHeight }}>
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col overflow-hidden rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black" style={{ maxHeight: visualViewportHeight }}>
             <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
               <button
                 type="button"
