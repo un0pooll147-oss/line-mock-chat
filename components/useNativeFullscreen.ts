@@ -11,10 +11,24 @@ type WebkitElement = HTMLElement & {
   webkitRequestFullscreen?: () => Promise<void> | void;
 };
 
+type StandaloneNavigator = Navigator & {
+  standalone?: boolean;
+};
+
 function hasFullscreenElement() {
   if (typeof document === "undefined") return false;
   const webkitDocument = document as WebkitDocument;
   return Boolean(document.fullscreenElement || webkitDocument.webkitFullscreenElement);
+}
+
+function isInstalledAppMode() {
+  if (typeof window === "undefined") return false;
+  const navigatorWithStandalone = window.navigator as StandaloneNavigator;
+  return (
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    navigatorWithStandalone.standalone === true
+  );
 }
 
 export function useNativeFullscreen(onExit: () => void) {
@@ -46,6 +60,10 @@ export function useNativeFullscreen(onExit: () => void) {
     const target = document.documentElement as WebkitElement;
 
     try {
+      // Installed PWAs get their browser-free window from manifest.json.
+      // Calling the Fullscreen API again would only trigger Chrome's exit hint.
+      if (isInstalledAppMode()) return true;
+
       if (enabled) {
         if (hasFullscreenElement()) return true;
 
