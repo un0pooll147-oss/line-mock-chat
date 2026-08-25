@@ -50,6 +50,7 @@ type NotificationSettings = {
   phoneTime: string;
   showStatusBar: boolean;
   lockscreenTime: string;
+  lockscreenTimeSize: number;
   lockscreenDate: string;
   showLargeClock: boolean;
   groupName: string;
@@ -167,7 +168,7 @@ const osThemes: Record<
     bodyText: "text-[14px] text-white/95",
     timeText: "text-[11px] text-white/55",
     topInset: "pt-0",
-    largeClockTime: "text-[52px] font-semibold text-white tracking-[-0.03em]",
+    largeClockTime: "font-semibold text-white tracking-[-0.03em]",
     largeClockDate: "mt-1 text-[15px] text-white/80",
     notificationsTopWithClock: "pt-[230px]",
     notificationsTopWithoutClock: "pt-[108px]",
@@ -183,7 +184,7 @@ const osThemes: Record<
     bodyText: "text-[14px] text-white/90",
     timeText: "text-[11px] text-white/50",
     topInset: "pt-0",
-    largeClockTime: "text-[46px] font-medium text-white tracking-[-0.02em]",
+    largeClockTime: "font-medium text-white tracking-[-0.02em]",
     largeClockDate: "mt-1 text-[14px] text-white/75",
     notificationsTopWithClock: "pt-[205px]",
     notificationsTopWithoutClock: "pt-[88px]",
@@ -213,6 +214,7 @@ const defaultSettings: NotificationSettings = {
   phoneTime: "22:18",
   showStatusBar: true,
   lockscreenTime: "22:18",
+  lockscreenTimeSize: 72,
   lockscreenDate: "4月23日 木曜日",
   showLargeClock: true,
   groupName: "森田家",
@@ -606,6 +608,9 @@ function readStoredSettings(): NotificationSettings {
       ...defaultSettings,
       ...parsed,
       messages: normalizeMessages(parsed.messages),
+      lockscreenTimeSize: Number.isFinite(Number(parsed.lockscreenTimeSize))
+        ? Math.max(40, Math.min(108, Number(parsed.lockscreenTimeSize)))
+        : defaultSettings.lockscreenTimeSize,
       notificationDirection:
         parsed.notificationDirection === "bottom" || parsed.notificationDirection === "top"
           ? parsed.notificationDirection
@@ -654,6 +659,7 @@ export default function NotificationCreator() {
   const [phoneTime, setPhoneTime] = useState(defaultSettings.phoneTime);
   const [showStatusBar, setShowStatusBar] = useState(defaultSettings.showStatusBar);
   const [lockscreenTime, setLockscreenTime] = useState(defaultSettings.lockscreenTime);
+  const [lockscreenTimeSize, setLockscreenTimeSize] = useState(defaultSettings.lockscreenTimeSize);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
@@ -707,6 +713,7 @@ export default function NotificationCreator() {
     setPhoneTime(stored.phoneTime);
     setShowStatusBar(stored.showStatusBar);
     setLockscreenTime(stored.lockscreenTime);
+    setLockscreenTimeSize(stored.lockscreenTimeSize);
     setLockscreenDate(stored.lockscreenDate);
     setShowLargeClock(stored.showLargeClock);
     setGroupName(stored.groupName);
@@ -748,6 +755,7 @@ export default function NotificationCreator() {
       phoneTime,
       showStatusBar,
       lockscreenTime,
+      lockscreenTimeSize,
       lockscreenDate,
       showLargeClock,
       groupName,
@@ -786,6 +794,7 @@ export default function NotificationCreator() {
     phoneTime,
     showStatusBar,
     lockscreenTime,
+    lockscreenTimeSize,
     lockscreenDate,
     showLargeClock,
     groupName,
@@ -1217,6 +1226,7 @@ export default function NotificationCreator() {
     phoneTime,
     showStatusBar,
     lockscreenTime,
+    lockscreenTimeSize,
     lockscreenDate,
     showLargeClock,
     groupName,
@@ -1253,6 +1263,7 @@ export default function NotificationCreator() {
     setOsType(next.osType);
     setPhoneTime(next.phoneTime);
     setLockscreenTime(next.lockscreenTime);
+    setLockscreenTimeSize(next.lockscreenTimeSize);
     setLockscreenDate(next.lockscreenDate);
     setShowLargeClock(next.showLargeClock);
     setGroupName(next.groupName);
@@ -1369,6 +1380,7 @@ export default function NotificationCreator() {
       phoneTime,
       showStatusBar,
       lockscreenTime,
+      lockscreenTimeSize,
       lockscreenDate,
       showLargeClock,
       groupName,
@@ -1414,6 +1426,7 @@ export default function NotificationCreator() {
     setPhoneTime(defaultSettings.phoneTime);
     setShowStatusBar(defaultSettings.showStatusBar);
     setLockscreenTime(defaultSettings.lockscreenTime);
+    setLockscreenTimeSize(defaultSettings.lockscreenTimeSize);
     setLockscreenDate(defaultSettings.lockscreenDate);
     setShowLargeClock(defaultSettings.showLargeClock);
     setGroupName(defaultSettings.groupName);
@@ -1450,6 +1463,7 @@ export default function NotificationCreator() {
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
   const topStackClass = showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock;
+  const safeLockscreenTimeSize = Math.max(40, Math.min(108, Number(lockscreenTimeSize) || defaultSettings.lockscreenTimeSize));
 
   const callOverlayBgColor = callDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
@@ -1493,7 +1507,7 @@ export default function NotificationCreator() {
 
       {showLargeClock && (
         <div className="absolute inset-x-0 top-0 z-10 pt-[92px] text-center">
-          <div className={theme.largeClockTime}>{lockscreenTime}</div>
+          <div className={theme.largeClockTime} style={{ fontSize: `${safeLockscreenTimeSize}px`, lineHeight: 1 }}>{lockscreenTime}</div>
           <div className={theme.largeClockDate}>{lockscreenDate}</div>
         </div>
       )}
@@ -1659,6 +1673,26 @@ export default function NotificationCreator() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2"><Label>大きい時計</Label><Input value={lockscreenTime} onChange={(e) => setLockscreenTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
                     <div className="space-y-2"><Label>日付表示</Label><Input value={lockscreenDate} onChange={(e) => setLockscreenDate(e.target.value)} placeholder="4月5日 日曜日" /></div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>時間表示サイズ</Label>
+                      <span className="text-xs font-medium text-black/50">{safeLockscreenTimeSize}px</span>
+                    </div>
+                    <Input
+                      type="range"
+                      min="40"
+                      max="108"
+                      step="1"
+                      value={safeLockscreenTimeSize}
+                      onChange={(e) => setLockscreenTimeSize(Number(e.target.value))}
+                      aria-label="時間表示サイズ"
+                      className="cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[11px] text-black/40">
+                      <span>小さめ</span>
+                      <span>大きめ</span>
+                    </div>
                   </div>
                 </SectionCard>
 

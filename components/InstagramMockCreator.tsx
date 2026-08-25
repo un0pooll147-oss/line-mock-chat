@@ -48,6 +48,8 @@ type InstagramSettings = {
   displayName: string;
   avatarLabel: string;
   avatarImage: string | null;
+  navAvatarLabel: string;
+  navAvatarImage: string | null;
   postImage: string | null;
   postImages: string[];
   caption: string;
@@ -116,6 +118,8 @@ const defaultSettings: InstagramSettings = {
   displayName: "美咲",
   avatarLabel: "美",
   avatarImage: null,
+  navAvatarLabel: "美",
+  navAvatarImage: null,
   postImage: null,
   postImages: [],
   caption: "今日の撮影、少しだけ特別な時間だった。",
@@ -175,7 +179,14 @@ const isVideoUrl = (url: string | null | undefined) => Boolean(url && (url.start
 
 
 const normalizeInstagramSettings = (value: Partial<InstagramSettings> | null | undefined): InstagramSettings => {
-  const merged = { ...defaultSettings, ...(value || {}) } as InstagramSettings;
+  const source = value || {};
+  const merged = { ...defaultSettings, ...source } as InstagramSettings;
+  if (typeof source.navAvatarLabel !== "string") {
+    merged.navAvatarLabel = typeof source.avatarLabel === "string" ? source.avatarLabel : defaultSettings.navAvatarLabel;
+  }
+  if (!("navAvatarImage" in source)) {
+    merged.navAvatarImage = typeof source.avatarImage === "string" ? source.avatarImage : null;
+  }
   if (merged.themeKey !== "dark") merged.themeKey = "instagram";
   if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) merged.postImages = [merged.postImage];
   if ((!merged.storyImages || merged.storyImages.length === 0) && merged.storyImage) merged.storyImages = [merged.storyImage];
@@ -202,7 +213,7 @@ const readStoredSettings = (): InstagramSettings => {
     const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("instagram-mock-settings-v1");
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw);
-    const merged = { ...defaultSettings, ...parsed } as InstagramSettings;
+    const merged = normalizeInstagramSettings(parsed);
     if (merged.themeKey !== "dark") merged.themeKey = "instagram";
     if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) {
       merged.postImages = [merged.postImage];
@@ -241,7 +252,7 @@ const readSavedInstagramPresets = (): SavedInstagramPreset[] => {
         id: String(item?.id ?? `instagram-preset-${index}`),
         name: String(item?.name ?? `保存Instagram ${index + 1}`),
         updatedAt: Number.isFinite(Number(item?.updatedAt)) ? Number(item.updatedAt) : Date.now(),
-        settings: { ...defaultSettings, ...(item?.settings || {}) } as InstagramSettings,
+        settings: normalizeInstagramSettings(item?.settings || {}),
       }))
       .filter((item) => item.name.trim());
   } catch {
@@ -394,10 +405,6 @@ function adjustCountText(value: string, delta: number) {
   return String(Math.max(0, number + delta));
 }
 
-function visibleCommentCount(comments: InstagramComment[]) {
-  return (comments || []).filter((comment) => comment.visible !== false).length;
-}
-
 function EmptyImage({ label, themeKey = "instagram" }: { label: string; themeKey?: InstagramThemeKey }) {
   const theme = instagramThemes[themeKey] || instagramThemes.instagram;
   return (
@@ -419,7 +426,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
   const postImages = settings.postImages?.length ? settings.postImages : settings.postImage ? [settings.postImage] : [];
   const safeImageIndex = postImages.length ? Math.min(activeImageIndex, postImages.length - 1) : 0;
   const currentPostImage = postImages[safeImageIndex] || null;
-  const commentCountLabel = String(visibleCommentCount(settings.comments || []));
+  const commentCountLabel = settings.commentCount || "0";
 
   const togglePostLike = () => {
     setSettings((prev) => ({
@@ -442,14 +449,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
       likeCount: "0",
       visible: true,
     };
-    setSettings((prev) => {
-      const nextComments = [...(prev.comments || []), nextComment];
-      return {
-        ...prev,
-        comments: nextComments,
-        commentCount: String(visibleCommentCount(nextComments)),
-      };
-    });
+    setSettings((prev) => ({ ...prev, comments: [...(prev.comments || []), nextComment] }));
     setCommentDraft("");
     setCommentsOpen(true);
   };
@@ -553,7 +553,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
       </div>
 
       <div className={cn("flex h-12 items-center justify-around border-t", theme.border, theme.surface, theme.icon)}>
-        <Home className="h-6 w-6" /><Search className="h-6 w-6" /><Plus className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Avatar label={settings.avatarLabel} image={settings.avatarImage} size="h-6 w-6" themeKey={settings.themeKey} />
+        <Home className="h-6 w-6" /><Search className="h-6 w-6" /><Plus className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Avatar label={settings.navAvatarLabel} image={settings.navAvatarImage} size="h-6 w-6" themeKey={settings.themeKey} />
       </div>
 
       {commentsOpen && (
@@ -563,7 +563,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
             <div className={cn("flex shrink-0 items-center justify-between border-b px-4 py-3", theme.border)}>
               <div>
                 <div className="text-sm font-semibold">コメント</div>
-                <div className={cn("text-xs", theme.muted)}>{commentCountLabel}件</div>
+                <div className={cn("text-xs", theme.muted)}>表示中 {visibleComments.length}件</div>
               </div>
               <button type="button" onClick={() => setCommentsOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06]">
                 <X className="h-4 w-4" />
@@ -830,7 +830,7 @@ export default function InstagramMockCreator() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>, key: "avatarImage" | "postImage" | "storyImage" | "runtimeCommentAvatarImage") => {
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>, key: "avatarImage" | "navAvatarImage" | "postImage" | "storyImage" | "runtimeCommentAvatarImage") => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1046,20 +1046,32 @@ export default function InstagramMockCreator() {
                     </div>
                   </SectionCard>
 
-                  <SectionCard icon={UserCircle2} title="アカウント / アプリ名">
+                  <SectionCard icon={UserCircle2} title="投稿者アカウント / アプリ名">
                     <div className="space-y-2"><Label>アプリ名（架空名に変更できます）</Label><Input value={settings.appName} onChange={(e) => update("appName", e.target.value)} placeholder="Picgram" /></div>
                     <div className="space-y-2"><Label>テーマ</Label><select value={settings.themeKey} onChange={(e) => update("themeKey", e.target.value as InstagramThemeKey)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5">{(Object.keys(instagramThemes) as InstagramThemeKey[]).map((key) => <option key={key} value={key}>{instagramThemes[key].label}</option>)}</select></div>
-                    <div className="space-y-2"><Label>ユーザー名</Label><Input value={settings.username} onChange={(e) => update("username", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>表示名</Label><Input value={settings.displayName} onChange={(e) => update("displayName", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>アイコン文字</Label><Input value={settings.avatarLabel} onChange={(e) => update("avatarLabel", e.target.value.slice(0, 2))} /></div>
-                    <div className="flex items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "avatarImage")}>アイコン画像</FileButton><Button variant="outline" onClick={() => update("avatarImage", null)}>解除</Button></div>
+                    <div className="space-y-2"><Label>投稿者ユーザー名</Label><Input value={settings.username} onChange={(e) => update("username", e.target.value)} /></div>
+                    <div className="space-y-2"><Label>投稿者表示名</Label><Input value={settings.displayName} onChange={(e) => update("displayName", e.target.value)} /></div>
+                    <div className="space-y-2"><Label>投稿者アイコン文字</Label><Input value={settings.avatarLabel} onChange={(e) => update("avatarLabel", e.target.value.slice(0, 2))} /></div>
+                    <div className="flex items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "avatarImage")}>投稿者アイコン画像</FileButton><Button variant="outline" onClick={() => update("avatarImage", null)}>解除</Button></div>
                   </SectionCard>
+
+                  {settings.screenType === "post" && (
+                    <SectionCard icon={UserCircle2} title="下部バーの自分プロフィール">
+                      <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">他アカウントの投稿を見ている設定にできます。投稿者アイコンとは別に保存されます。</div>
+                      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                        <div className="space-y-2"><Label>下部バーのアイコン文字</Label><Input value={settings.navAvatarLabel} onChange={(e) => update("navAvatarLabel", e.target.value.slice(0, 2))} /></div>
+                        <Avatar label={settings.navAvatarLabel} image={settings.navAvatarImage} size="h-11 w-11" themeKey={settings.themeKey} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "navAvatarImage")}>下部バーのアイコン画像</FileButton><Button variant="outline" onClick={() => update("navAvatarImage", null)}>解除</Button></div>
+                    </SectionCard>
+                  )}
 
                   {settings.screenType === "post" ? (
                     <SectionCard icon={ImageIcon} title="投稿内容">
                       <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿メディア</FileButton><MultiFileButton accept="image/*,video/*" onFiles={handlePostImagesUpload}>複数メディア</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">画像・動画を複数選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
                       <div className="space-y-2"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
-                      <div className="grid grid-cols-3 gap-3"><div className="space-y-2"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div><div className="space-y-2"><Label>コメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div><div className="space-y-2"><Label>リポスト数</Label><Input value={settings.repostCount} onChange={(e) => update("repostCount", e.target.value)} /></div></div>
+                      <div className="grid grid-cols-3 gap-3"><div className="space-y-2"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div><div className="space-y-2"><Label>表示するコメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div><div className="space-y-2"><Label>リポスト数</Label><Input value={settings.repostCount} onChange={(e) => update("repostCount", e.target.value)} /></div></div>
+                      <div className="text-xs text-black/50">この数字は投稿画面専用です。コメント一覧の登録数とは連動しません。</div>
                       <div className="space-y-2"><Label>投稿時刻</Label><Input value={settings.postTime} onChange={(e) => update("postTime", e.target.value)} /></div>
                     </SectionCard>
                   ) : (
@@ -1088,7 +1100,7 @@ export default function InstagramMockCreator() {
                 <div className="space-y-4">
                   <SectionCard icon={MessageCircle} title="コメント欄">
                     <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
-                      投稿画面のコメントアイコンを押すと、画面下部にコメント欄が表示されます。コメント数の表示は「作成」タブで変更できます。
+                      投稿画面のコメントアイコンを押すと、ここで登録したコメントだけが表示されます。コメントの追加・削除は「作成」タブの表示数へ影響しません。
                     </div>
                     <div className="space-y-3 rounded-2xl border border-black/10 bg-white p-3">
                       <div className="text-sm font-semibold text-black/80">撮影中に送信するコメントのユーザー</div>
