@@ -139,7 +139,7 @@ function StatusBattery({ className = "", level = 100 }: { className?: string; le
 function ChatStatusBar({ time, className = "" }: { time: string; className?: string }) {
   return (
     <div className={className}>
-      <div className="flex items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+      <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
           <StatusCellDots className="h-[10px] w-[17px]" />
@@ -527,7 +527,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
 
   return (
     <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: unifyWallpaper && wallpaper ? "transparent" : theme.appBg }}>
-      <div className="sticky top-0 z-20 shrink-0 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
+      <div className={cn("sticky top-0 z-20 shrink-0 border-b border-black/5 px-4 pb-2 text-white shadow-sm", showStatusBar ? "pt-0" : "pt-3")} style={{ backgroundColor: theme.headerBg }}>
         {showStatusBar && (
           <ChatStatusBar time={deviceTime} className="mb-1" />
         )}

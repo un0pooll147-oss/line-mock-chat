@@ -329,7 +329,7 @@ function StatusBattery({ className = "", level = 100 }: { className?: string; le
 function ChatStatusBar({ time, className = "" }: { time: string; className?: string }) {
   return (
     <div className={className}>
-      <div className="flex items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+      <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
           <StatusCellDots className="h-[10px] w-[17px]" />
@@ -697,7 +697,7 @@ export default function XMockCreator() {
 
   const header = (
     <>
-      {statusBarVisible && <ChatStatusBar time={settings.deviceTime} className="px-5 pb-2 pt-3" />}
+      {statusBarVisible && <ChatStatusBar time={settings.deviceTime} className="px-5" />}
       <div className={cls("relative flex h-[54px] items-center justify-center border-b px-4", theme.border)}>
         <button type="button" className="absolute left-4 grid h-9 w-9 place-items-center rounded-full active:bg-current/5" aria-label="戻る">
           <ArrowLeft className="h-5 w-5" />
@@ -925,7 +925,7 @@ export default function XMockCreator() {
   const phoneContent = (
     <div className={cls("relative h-full overflow-hidden", theme.phone, theme.text)}>
       {header}
-      <div className={cls(statusBarVisible ? "h-[calc(100%-86px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
+      <div className={cls(statusBarVisible ? "h-[calc(100%-78px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
         {settings.screenType === "profile" ? profileScreen : settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "post" ? (
           <>
             {postBlock(false)}

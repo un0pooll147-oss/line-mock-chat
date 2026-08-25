@@ -166,7 +166,7 @@ const osThemes: Record<
     senderText: "text-[13px] text-white/75",
     bodyText: "text-[14px] text-white/95",
     timeText: "text-[11px] text-white/55",
-    topInset: "pt-[max(18px,env(safe-area-inset-top))]",
+    topInset: "pt-0",
     largeClockTime: "text-[52px] font-semibold text-white tracking-[-0.03em]",
     largeClockDate: "mt-1 text-[15px] text-white/80",
     notificationsTopWithClock: "pt-[230px]",
@@ -182,7 +182,7 @@ const osThemes: Record<
     senderText: "text-[13px] text-white/70",
     bodyText: "text-[14px] text-white/90",
     timeText: "text-[11px] text-white/50",
-    topInset: "pt-[max(14px,env(safe-area-inset-top))]",
+    topInset: "pt-0",
     largeClockTime: "text-[46px] font-medium text-white tracking-[-0.02em]",
     largeClockDate: "mt-1 text-[14px] text-white/75",
     notificationsTopWithClock: "pt-[205px]",
@@ -337,8 +337,8 @@ function StatusCellDots({ className = "" }: { className?: string }) {
 
 function PhoneStatusBar({ osType: _osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
   return (
-    <div className={cn("px-5 pt-0.5", className)}>
-      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+    <div className={cn("px-5", className)}>
+      <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
           <StatusCellDots className="h-[10px] w-[17px]" />
@@ -1487,7 +1487,7 @@ export default function NotificationCreator() {
         <PhoneStatusBar
           osType={osType}
           time={phoneTime}
-          className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
+          className={cn("absolute inset-x-0 top-0 z-20 text-white", theme.topInset)}
         />
       )}
 

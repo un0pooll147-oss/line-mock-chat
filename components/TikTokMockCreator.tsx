@@ -351,8 +351,8 @@ function StatusBattery({ className = "", level = 100 }: { className?: string; le
 
 function StatusBar({ time, className = "text-white" }: { time: string; className?: string }) {
   return (
-    <div className={cn("px-5 pt-0.5", className)}>
-      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.4)]">
+    <div className={cn("px-5", className)}>
+      <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.4)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
           <StatusCellDots className="h-[10px] w-[17px]" />
@@ -435,7 +435,7 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
 
       {settings.showStatusBar && <div className="absolute left-0 right-0 top-0 z-20"><StatusBar time={settings.deviceTime} /></div>}
 
-      <header className={cn("absolute left-0 right-0 z-20 px-3", settings.showStatusBar ? "top-9" : "top-3")}>
+      <header className={cn("absolute left-0 right-0 z-20 px-3", settings.showStatusBar ? "top-7" : "top-3")}>
         <div className="grid grid-cols-[54px_1fr_88px] items-center gap-1 text-white drop-shadow">
           <div className="flex items-center">
             <span className="rounded-full border border-white/70 px-2 py-0.5 text-[11px] font-extrabold leading-none tracking-tight">LIVE</span>
@@ -463,7 +463,7 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
         <>
           <button type="button" onClick={() => goMedia(-1)} className="absolute left-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="前のメディア" />
           <button type="button" onClick={() => goMedia(1)} className="absolute right-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="次のメディア" />
-          <div className={cn("absolute right-4 z-20 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur", settings.showStatusBar ? "top-[88px]" : "top-[52px]")}>
+          <div className={cn("absolute right-4 z-20 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur", settings.showStatusBar ? "top-[80px]" : "top-[52px]")}>
             {settings.currentMediaIndex + 1}/{media.length}
           </div>
           <div className="absolute left-1/2 top-20 z-20 flex -translate-x-1/2 gap-1">

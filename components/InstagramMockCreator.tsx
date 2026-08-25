@@ -374,8 +374,8 @@ function StatusBattery({ className = "", level = 100 }: { className?: string; le
 
 function StatusBar({ time, className = "text-black" }: { time: string; className?: string }) {
   return (
-    <div className={cn("px-5 pt-0.5", className)}>
-      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+    <div className={cn("px-5", className)}>
+      <div className="flex h-6 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
         <div className="flex items-center gap-1.5">
           <StatusCellDots className="h-[10px] w-[17px]" />
