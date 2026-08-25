@@ -1,0 +1,1959 @@
+"use client";
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import {
+  PlusCircle,
+  Image as ImageIcon,
+  Smile,
+  Mic,
+  SendHorizontal,
+  Settings2,
+  Palette,
+  Clock3,
+  UserCircle2,
+  MessageSquareMore,
+  Trash2,
+  X,
+  Phone,
+  Video,
+  PhoneOff,
+} from "lucide-react";
+
+const initialMessages = [
+  { id: 1, side: "left", type: "text", sender: "美咲", text: "ちゃんと帰れた？", date: "2026/04/22", time: "21:08", visible: true },
+  { id: 2, side: "right", type: "text", sender: "あなた", text: "うん、今着いた。ちょっと疲れたけど大丈夫", date: "2026/04/22", time: "21:10", visible: true },
+  { id: 3, side: "left", type: "text", sender: "美咲", text: "よかった。今日はほんとに無理してる感じしたから心配だった", date: "2026/04/22", time: "21:12", visible: true },
+  { id: 4, side: "right", type: "text", sender: "あなた", text: "ごめんね、ちょっと考えすぎてたかも", date: "2026/04/22", time: "21:15", visible: true },
+  { id: 5, side: "left", type: "text", sender: "美咲", text: "全然いいよ。そういう時くらい頼って", date: "2026/04/22", time: "21:16", visible: true },
+  { id: 6, side: "right", type: "text", sender: "あなた", text: "ありがとう。そう言ってもらえると安心する", date: "2026/04/22", time: "21:18", visible: true },
+  { id: 7, side: "left", type: "text", sender: "美咲", text: "ならよかった。帰ってから何か食べた？", date: "2026/04/22", time: "21:20", visible: true },
+  { id: 8, side: "right", type: "text", sender: "あなた", text: "まだ。お風呂入ってから軽く食べようかなって", date: "2026/04/22", time: "21:22", visible: true },
+  { id: 9, side: "left", type: "text", sender: "美咲", text: "そっか。あったかいもの飲んで、ちゃんと休みなね", date: "2026/04/22", time: "21:23", visible: true },
+  { id: 10, side: "right", type: "text", sender: "あなた", text: "うん。なんか今日、少しだけ救われた気がする", date: "2026/04/22", time: "21:25", visible: true },
+  { id: 11, side: "left", type: "text", sender: "美咲", text: "大げさじゃない？", date: "2026/04/22", time: "21:26", visible: true },
+  { id: 12, side: "right", type: "text", sender: "あなた", text: "でもほんと。いてくれてよかったって思った", date: "2026/04/22", time: "21:28", visible: true },
+  { id: 13, side: "left", type: "text", sender: "美咲", text: "…それ言われると嬉しい", date: "2026/04/22", time: "21:29", visible: true },
+  { id: 14, side: "right", type: "text", sender: "あなた", text: "ほんとだよ", date: "2026/04/22", time: "21:31", visible: true },
+  { id: 15, side: "left", type: "text", sender: "美咲", text: "明日も早いし、ゆっくり休んで", date: "2026/04/22", time: "21:34", visible: true },
+  { id: 16, side: "right", type: "text", sender: "あなた", text: "ありがと。おやすみなさい。また明日ね", date: "2026/04/22", time: "21:35", visible: true },
+  { id: 17, side: "left", type: "text", sender: "美咲", text: "おやすみ。いい夢見てね。", date: "2026/04/22", time: "21:36", visible: true },
+  { id: 18, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:15", visible: true },
+  { id: 19, side: "left", type: "text", sender: "美咲", text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね", date: "2026/04/23", time: "22:16", visible: true },
+];
+
+const themePresets: Record<string, { name: string; appBg: string; headerBg: string; selfBubble: string; otherBubble: string; toolbarBg: string }> = {
+  line: { name: "LINE風", appBg: "#bfe7d8", headerBg: "#06C755", selfBubble: "#95ec69", otherBubble: "#ffffff", toolbarBg: "#f5f5f5" },
+  dark: { name: "ダーク", appBg: "#101313", headerBg: "#1f2a2a", selfBubble: "#2d8f5d", otherBubble: "#202728", toolbarBg: "#171c1d" },
+  soft: { name: "ソフト", appBg: "#f2eadf", headerBg: "#8c745d", selfBubble: "#f0d07c", otherBubble: "#fffaf3", toolbarBg: "#f7f1e9" },
+  red: { name: "レッド", appBg: "#ffe5e5", headerBg: "#e53935", selfBubble: "#ff8a80", otherBubble: "#ffffff", toolbarBg: "#fff1f1" },
+  blue: { name: "ブルー", appBg: "#e3f2fd", headerBg: "#1e88e5", selfBubble: "#90caf9", otherBubble: "#ffffff", toolbarBg: "#f1f8ff" },
+  yellow: { name: "イエロー", appBg: "#fff9e0", headerBg: "#fbc02d", selfBubble: "#fff176", otherBubble: "#ffffff", toolbarBg: "#fffde7" },
+  purple: { name: "パープル", appBg: "#f3e5f5", headerBg: "#8e24aa", selfBubble: "#ce93d8", otherBubble: "#ffffff", toolbarBg: "#faf5ff" },
+};
+
+const STORAGE_KEY = "line-mock-chat-default-settings-v5";
+const SAVED_CHATS_STORAGE_KEY = "line-mock-chat-saved-chats-v1";
+
+interface SavedChatPreset {
+  id: number;
+  name: string;
+  updatedAt: number;
+  snapshot: any;
+}
+
+const getToastMeta = (message: string) => {
+  if (message.includes("失敗")) {
+    return {
+      icon: "!",
+      iconClassName: "bg-red-50 text-red-600 ring-1 ring-red-100",
+      borderClassName: "border-red-100",
+      subtitle: "保存できなかったため、もう一度お試しください。",
+    };
+  }
+
+  if (message.includes("ありません")) {
+    return {
+      icon: "i",
+      iconClassName: "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
+      borderClassName: "border-amber-100",
+      subtitle: "操作できる項目がない状態です。",
+    };
+  }
+
+  if (message.includes("削除")) {
+    return {
+      icon: "✓",
+      iconClassName: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+      borderClassName: "border-slate-200",
+      subtitle: "画面の内容を更新しました。",
+    };
+  }
+
+  return {
+    icon: "✓",
+    iconClassName: "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100",
+    borderClassName: "border-emerald-100",
+    subtitle: "現在の設定をこの端末に反映しました。",
+  };
+};
+
+function StatusCellDots({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 18 14" className={className} fill="currentColor" aria-hidden="true">
+      <circle cx="3" cy="10.7" r="1.2" opacity="0.55" />
+      <circle cx="7" cy="8.8" r="1.45" opacity="0.72" />
+      <circle cx="11" cy="6.7" r="1.7" opacity="0.85" />
+      <circle cx="15" cy="4.4" r="1.95" />
+    </svg>
+  );
+}
+
+function StatusWifi({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 14" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.3 5.2A12.2 12.2 0 0 1 10 2.5a12.2 12.2 0 0 1 7.7 2.7" strokeWidth="1.7" opacity="0.6" />
+      <path d="M4.8 7.8A8.2 8.2 0 0 1 10 5.9a8.2 8.2 0 0 1 5.2 1.9" strokeWidth="1.7" opacity="0.82" />
+      <path d="M7.4 10.2A4.4 4.4 0 0 1 10 9.3a4.4 4.4 0 0 1 2.6.9" strokeWidth="1.7" />
+      <circle cx="10" cy="12" r="1.05" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StatusBattery({ className = "", level = 100 }: { className?: string; level?: number }) {
+  const safeLevel = Math.max(0, Math.min(100, level));
+  const fillWidth = 16 * (safeLevel / 100);
+  return (
+    <svg viewBox="0 0 30 14" className={className} fill="none" aria-hidden="true">
+      <rect x="1" y="1.5" width="24" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <rect x="26.2" y="4.2" width="2.3" height="5.6" rx="1.1" fill="currentColor" />
+      <rect x="3.2" y="3.6" width={fillWidth} height="6.8" rx="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ChatStatusBar({ time, className = "" }: { time: string; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+        <span className="tabular-nums">{time}</span>
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[10px] w-[17px]" />
+          <StatusWifi className="h-[10px] w-[16px]" />
+          <StatusBattery className="h-[11px] w-[24px]" level={100} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const defaultSettings = {
+  todayDate: "2026/04/23",
+  customBgColor: "",
+  customHeaderColor: "",
+  customHeaderIconColor: "",
+  customToolbarColor: "",
+  customOuterBgColor: "",
+  customSelfBubbleColor: "",
+  customSelfTextColor: "",
+  customOtherBubbleColor: "",
+  customOtherTextColor: "",
+  unifyChatBackground: true,
+  chatTitle: "美咲",
+  incomingCallTitle: "母",
+  incomingCallAvatarLabel: "母",
+  incomingCallAvatarImage: "",
+  avatarLabel: "美",
+  avatarImage: "",
+  deviceTime: "22:18",
+  messageTime: "22:18",
+  incomingSender: "美咲",
+  incomingText: "",
+  outgoingMessageTime: "22:18",
+  incomingMessageTime: "22:18",
+  outgoingMessageDate: "2026/04/23",
+  incomingMessageDate: "2026/04/23",
+  themeKey: "line",
+  showStatusBar: true,
+  fullScreenMode: false,
+  deviceFrameMode: false,
+  showMessageTime: true,
+  inputPlaceholder: "メッセージを入力",
+  wallpaper: "",
+  showControls: true,
+  showNotificationModeButton: true,
+  showTopActions: true,
+  showActionButtons: true,
+  showEditorAccess: true,
+  soundEnabled: true,
+  ringtoneType: "line",
+  customRingtoneName: "",
+  customRingtoneUrl: "",
+  outgoingToneEnabled: true,
+  outgoingToneType: "line",
+  customOutgoingToneName: "",
+  customOutgoingToneUrl: "",
+  callAutoSeconds: 5,
+  incomingCallAutoSeconds: 1.5,
+  incomingDelaySeconds: 5,
+  incomingCallBgColor: "#000000",
+  incomingCallBgOpacity: 1,
+  outgoingCallBgColor: "#000000",
+  outgoingCallBgOpacity: 1,
+};
+
+const initialTimedMessages = [{ id: 1, sender: defaultSettings.incomingSender, text: "", delay: 3, countdown: 0, pending: false }];
+
+function normalizeStoredMessages(messages: any[] | undefined) {
+  if (!Array.isArray(messages)) return initialMessages;
+  return messages.map((msg, index) => ({
+    id: typeof msg?.id === "number" ? msg.id : Date.now() + index,
+    side: msg?.side === "right" ? "right" : "left",
+    type: msg?.type === "image" ? "image" : "text",
+    sender: String(msg?.sender ?? ""),
+    text: String(msg?.text ?? ""),
+    image: typeof msg?.image === "string" ? msg.image : "",
+    date: String(msg?.date ?? ""),
+    time: String(msg?.time ?? ""),
+    visible: typeof msg?.visible === "boolean" ? msg.visible : true,
+    canceled: typeof msg?.canceled === "boolean" ? msg.canceled : false,
+    originalText: typeof msg?.originalText === "string" ? msg.originalText : "",
+    originalType: typeof msg?.originalType === "string" ? msg.originalType : "",
+    originalImage: typeof msg?.originalImage === "string" ? msg.originalImage : "",
+  }));
+}
+
+function normalizeStoredTimedMessages(items: any[] | undefined, fallbackSender = defaultSettings.incomingSender) {
+  if (!Array.isArray(items)) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
+  return items.map((item, index) => ({
+    id: typeof item?.id === "number" ? item.id : Date.now() + index,
+    sender: String(item?.sender ?? fallbackSender),
+    text: String(item?.text ?? ""),
+    delay: Number.isFinite(Number(item?.delay)) ? Number(item.delay) : 0,
+    countdown: Number.isFinite(Number(item?.countdown)) ? Number(item.countdown) : 0,
+    pending: typeof item?.pending === "boolean" ? item.pending : false,
+  }));
+}
+
+function normalizeSavedChatPresets(items: any[] | undefined): SavedChatPreset[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item, index) => {
+      const snapshot = item?.snapshot && typeof item.snapshot === "object" ? item.snapshot : null;
+      if (!snapshot) return null;
+      const mergedSnapshot = { ...defaultSettings, ...snapshot };
+      return {
+        id: typeof item?.id === "number" ? item.id : Date.now() + index,
+        name: String(item?.name ?? `保存チャット ${index + 1}`),
+        updatedAt: Number.isFinite(Number(item?.updatedAt)) ? Number(item.updatedAt) : Date.now(),
+        snapshot: {
+          ...mergedSnapshot,
+          messages: normalizeStoredMessages(snapshot?.messages),
+          timedMsgs: normalizeStoredTimedMessages(snapshot?.timedMsgs, String(snapshot?.incomingSender ?? mergedSnapshot.incomingSender ?? defaultSettings.incomingSender)),
+        },
+      } as SavedChatPreset;
+    })
+    .filter(Boolean) as SavedChatPreset[];
+}
+
+function readStoredSavedChatPresets(): SavedChatPreset[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_CHATS_STORAGE_KEY);
+    if (!raw) return [];
+    return normalizeSavedChatPresets(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+function readStoredDefaultSettings() {
+  const fallback = { ...defaultSettings, messages: initialMessages, timedMsgs: initialTimedMessages };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    const merged = { ...defaultSettings, ...parsed };
+    return {
+      ...merged,
+      messages: normalizeStoredMessages(parsed?.messages),
+      timedMsgs: normalizeStoredTimedMessages(parsed?.timedMsgs, String(parsed?.incomingSender ?? merged.incomingSender ?? defaultSettings.incomingSender)),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function getCurrentTime() {
+  const now = new Date();
+  return now.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function buildOutgoingMessage(text: string, timeOverride: string, dateOverride = "") {
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
+}
+
+function buildIncomingMessage(text: string, sender: string, timeOverride: string, dateOverride = "") {
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
+}
+
+function buildOutgoingImageMessage(image: string, timeOverride: string, dateOverride = "") {
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
+}
+
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function parseDateParts(dateStr: string) {
+  if (!dateStr) return null;
+  const parts = String(dateStr).trim().split("/");
+  if (parts.length !== 3) return null;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return { year, month, day, date };
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function formatLineDateLabel(dateStr: string, todayStr: string) {
+  const target = parseDateParts(dateStr);
+  if (!target) return dateStr || "";
+  const today = parseDateParts(todayStr);
+  if (today) {
+    if (isSameDay(target.date, today.date)) return "今日";
+    const yesterday = new Date(today.date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (isSameDay(target.date, yesterday)) return "昨日";
+  }
+  return `${target.month}/${target.day}`;
+}
+
+function toMinutes(timeStr: string) {
+  const [h = "0", m = "0"] = String(timeStr || "00:00").split(":");
+  return Number(h) * 60 + Number(m);
+}
+
+interface Message {
+  id: number;
+  side: string;
+  type: string;
+  sender: string;
+  text: string;
+  image?: string;
+  date: string;
+  time: string;
+  visible?: boolean;
+  canceled?: boolean;
+  originalText?: string;
+  originalType?: string;
+  originalImage?: string;
+}
+
+function compareMessagesAsc(a: Message, b: Message) {
+  const da = parseDateParts(a.date)?.date || new Date(0);
+  const db = parseDateParts(b.date)?.date || new Date(0);
+  if (da.getTime() !== db.getTime()) return da.getTime() - db.getTime();
+  const diff = toMinutes(a.time) - toMinutes(b.time);
+  if (diff !== 0) return diff;
+  return a.id - b.id;
+}
+
+function Button({ children, className = "", variant = "default", type = "button", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) {
+  const base = "inline-flex items-center justify-center rounded-2xl px-4 py-2 text-sm font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
+  const styles = variant === "outline" ? "border border-black/10 bg-white text-black hover:bg-black/[0.03]" : "bg-[#06C755] text-white hover:brightness-95";
+  return (
+    <button type={type as "button" | "submit" | "reset"} className={cn(base, styles, className)} {...props}>
+      {children}
+    </button>
+  );
+}
+
+function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
+}
+
+function Textarea({ className = "", ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
+}
+
+function Label({ children, className = "", ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
+  return <label {...props} className={cn("text-sm font-medium text-black/80", className)}>{children}</label>;
+}
+
+function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (v: boolean) => void }) {
+  return (
+    <button type="button" onClick={() => onCheckedChange(!checked)} className={cn("relative h-7 w-12 rounded-full transition", checked ? "bg-[#06C755]" : "bg-black/15")} aria-pressed={checked}>
+      <span className={cn("absolute top-1 h-5 w-5 rounded-full bg-white shadow transition", checked ? "left-6" : "left-1")} />
+    </button>
+  );
+}
+
+function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-black/80">
+        <Icon className="h-4 w-4" />
+        {title}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={cn("rounded-2xl px-2 py-2 text-xs font-medium transition", active ? "bg-white text-black shadow-sm" : "text-black/55")}>{children}</button>;
+}
+
+function CallIconButton({ onClick, label, children, className = "", style }: { onClick?: () => void; label: string; children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition hover:bg-white/30 active:scale-90", className)} aria-label={label} style={style}>
+      {children}
+    </button>
+  );
+}
+
+function ColorSwatch({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="cursor-pointer">
+        <input type="color" className="hidden" value={value} onChange={onChange} />
+        <div className="h-6 w-6 rounded border" style={{ backgroundColor: value }} />
+      </label>
+      <div className="text-xs font-mono">{value}</div>
+    </div>
+  );
+}
+
+function FileButton({ accept, onFile, children }: { accept: string; onFile: (e: React.ChangeEvent<HTMLInputElement>) => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={ref}
+        type="file"
+        accept={accept}
+        style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+        onChange={onFile}
+      />
+      <Button variant="outline" onClick={() => ref.current?.click()}>{children}</Button>
+    </>
+  );
+}
+
+interface Theme {
+  name: string;
+  appBg: string;
+  headerBg: string;
+  selfBubble: string;
+  otherBubble: string;
+  toolbarBg: string;
+  headerIconColor: string;
+  outerBg: string;
+  selfTextColor: string;
+  otherTextColor: string;
+}
+
+const PhoneMockup = React.forwardRef<HTMLDivElement, {
+  onStartCall?: (type: string) => void;
+  onOpenSettings?: () => void;
+  onCancelMessage?: (id: number) => void;
+  title: string;
+  messages: Message[];
+  typingText: string;
+  isTyping: boolean;
+  theme: Theme;
+  avatarImage: string;
+  avatarLabel: string;
+  deviceTime: string;
+  showStatusBar: boolean;
+  showMessageTime: boolean;
+  todayDate: string;
+  wallpaper: string;
+  unifyWallpaper?: boolean;
+  bottomPadding?: number;
+}>(function PhoneMockup({ onStartCall, onOpenSettings, onCancelMessage, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
+  const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
+  const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
+  const headerIconStyle = { color: theme.headerIconColor };
+  const sortedMessages = useMemo(() => [...messages].filter((msg) => msg.visible !== false).sort(compareMessagesAsc), [messages]);
+  const messageScrollRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const [cancelMenuMessageId, setCancelMenuMessageId] = useState<number | null>(null);
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const startCancelLongPress = (msg: Message) => {
+    if (msg.side !== "right" || msg.canceled) return;
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      setCancelMenuMessageId(msg.id);
+      longPressTimerRef.current = null;
+    }, 520);
+  };
+
+  const cancelSentMessage = (id: number) => {
+    clearLongPressTimer();
+    setCancelMenuMessageId(null);
+    onCancelMessage?.(id);
+  };
+
+  useEffect(() => () => clearLongPressTimer(), []);
+
+  useEffect(() => {
+    const el = messageScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, typingText, isTyping]);
+
+  const chatAreaStyle = wallpaper && !unifyWallpaper
+    ? { backgroundImage: `url(${wallpaper})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : undefined;
+
+  return (
+    <div ref={ref} className="flex h-full w-full flex-col" style={{ backgroundColor: unifyWallpaper && wallpaper ? "transparent" : theme.appBg }}>
+      <div className="sticky top-0 z-20 shrink-0 border-b border-black/5 px-4 pb-2 pt-3 text-white shadow-sm" style={{ backgroundColor: theme.headerBg }}>
+        {showStatusBar && (
+          <ChatStatusBar time={deviceTime} className="mb-1" />
+        )}
+        <div className="flex items-center gap-3">
+          {avatarImage ? <img src={avatarImage} alt="avatar" className="h-10 w-10 rounded-full object-cover ring-2 ring-white/20" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-sm font-semibold">{avatarLabel}</div>}
+          <div className="min-w-0 flex-1"><div className="truncate text-[17px] font-bold leading-tight">{title}</div></div>
+          <div className="flex items-center gap-2">
+            <CallIconButton onClick={() => onStartCall?.("voice")} label="音声通話" style={headerIconStyle}><Phone className="h-4 w-4" /></CallIconButton>
+            <CallIconButton onClick={() => onStartCall?.("video")} label="ビデオ通話" style={headerIconStyle}><Video className="h-4 w-4" /></CallIconButton>
+            <CallIconButton onClick={onOpenSettings} label="設定" style={headerIconStyle}><Settings2 className="h-4 w-4" /></CallIconButton>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative flex-1 min-h-0" style={chatAreaStyle} onClick={() => setCancelMenuMessageId(null)}>
+        <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4" style={{ paddingBottom: bottomPadding }}>
+          <div className="flex flex-col gap-3">
+            {sortedMessages.map((msg, index) => {
+              const showDateDivider = Boolean(msg.date) && (index === 0 || sortedMessages[index - 1]?.date !== msg.date);
+              const dividerLabel = formatLineDateLabel(msg.date, todayDate);
+              return (
+                <React.Fragment key={msg.id}>
+                  {showDateDivider && (
+                    <div className="my-2 flex items-center gap-3 px-1">
+                      <div className="h-px flex-1 bg-black/10" />
+                      <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-medium text-black/55 shadow-sm">{dividerLabel}</div>
+                      <div className="h-px flex-1 bg-black/10" />
+                    </div>
+                  )}
+                  <div className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
+                    <div className="max-w-[78%]">
+                      {msg.side === "left" && <div className={`mb-1 px-1 text-[11px] ${mutedColor}`}>{msg.sender}</div>}
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        {cancelMenuMessageId === msg.id && (
+                          <button
+                            type="button"
+                            onClick={() => cancelSentMessage(msg.id)}
+                            className="absolute -top-11 right-0 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/85 px-3 py-2 text-xs font-semibold text-white shadow-lg active:scale-95"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            送信取消
+                          </button>
+                        )}
+                        <div
+                          role={msg.side === "right" && !msg.canceled ? "button" : undefined}
+                          tabIndex={msg.side === "right" && !msg.canceled ? 0 : undefined}
+                          onPointerDown={() => startCancelLongPress(msg)}
+                          onPointerUp={clearLongPressTimer}
+                          onPointerCancel={clearLongPressTimer}
+                          onPointerLeave={clearLongPressTimer}
+                          onContextMenu={(e) => {
+                            if (msg.side === "right" && !msg.canceled) {
+                              e.preventDefault();
+                              setCancelMenuMessageId(msg.id);
+                            }
+                          }}
+                          className={cn(
+                            "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)] select-none",
+                            msg.canceled ? "rounded-[18px] px-4 py-2 text-black/45 shadow-none" : msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
+                            msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
+                          )}
+                          style={{
+                            backgroundColor: msg.canceled ? "rgba(255,255,255,0.62)" : msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble,
+                            color: msg.canceled ? undefined : msg.type === "image" ? undefined : (msg.side === "right" ? theme.selfTextColor : theme.otherTextColor),
+                          }}
+                        >
+                          {msg.canceled ? (
+                            <div className="whitespace-pre-wrap break-words text-[13px]">送信を取り消しました</div>
+                          ) : msg.type === "image" && msg.image ? (
+                            <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" draggable={false} />
+                          ) : (
+                            <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                          )}
+                        </div>
+                      </div>
+                      {showMessageTime && <div className={cn("mt-1 px-1 text-[10px]", timeColor, msg.side === "right" ? "text-right" : "text-left")}>{msg.time}</div>}
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+
+            {isTyping && (
+              <div className="flex justify-end">
+                <div className="max-w-[78%]">
+                  <div className="rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.selfBubble, color: theme.selfTextColor }}>
+                    <span className="whitespace-pre-wrap break-words">{typingText}</span>
+                    <span className="animate-pulse">|</span>
+                  </div>
+                  {showMessageTime && <div className={cn("mt-1 px-1 text-right text-[10px]", timeColor)}>入力中</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+function CallOverlay({ visible, mode, phase, title, avatarImage, avatarLabel, onAccept, onDecline, onEnd, bgColor, bgOpacity }: {
+  visible: boolean; mode: string | null; phase: string; title: string; avatarImage: string; avatarLabel: string;
+  onAccept: () => void; onDecline: () => void; onEnd: () => void; bgColor: string; bgOpacity: number;
+}) {
+  if (!visible) return null;
+  const isIncoming = phase === "incoming";
+  const isCalling = phase === "calling";
+  const isConnecting = phase === "connecting";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex h-[100dvh] w-screen max-w-none flex-col items-center justify-center overflow-hidden overscroll-none px-6 text-white" style={{ backgroundColor: bgColor, opacity: bgOpacity, touchAction: "none" }}>
+      <div className="mb-6">
+        {avatarImage ? <img src={avatarImage} alt="avatar" className="h-24 w-24 rounded-full object-cover ring-4 ring-white/20" /> : <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/15 text-3xl font-semibold ring-4 ring-white/10">{avatarLabel}</div>}
+      </div>
+      <div className="text-2xl font-semibold">{title}</div>
+      <div className="mt-2 text-sm opacity-75">{mode === "video" ? "ビデオ通話" : "音声通話"}</div>
+      <div className="mt-4 text-lg">{isIncoming ? "着信中…" : isCalling ? "発信中…" : isConnecting ? "接続中…" : "通話中"}</div>
+
+      {isIncoming && (
+        <div className="mt-10 flex items-center gap-8">
+          <button type="button" onClick={onDecline} className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500 shadow-lg transition active:scale-95" aria-label="拒否"><PhoneOff className="h-7 w-7" /></button>
+          <button type="button" onClick={onAccept} className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-[#06C755] shadow-lg transition active:scale-95" aria-label="応答">{mode === "video" ? <Video className="h-7 w-7" /> : <Phone className="h-7 w-7" />}</button>
+        </div>
+      )}
+
+      {(isCalling || isConnecting || phase === "connected") && <button type="button" onClick={onEnd} className="mt-10 rounded-full bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg transition active:scale-95">通話終了</button>}
+    </div>
+  );
+}
+
+interface TimedMsg { id: number; sender: string; text: string; delay: number; countdown: number; pending: boolean; }
+
+export default function LineMockChatCreator() {
+  const router = useRouter();
+  const initialUiSettings = useMemo(() => readStoredDefaultSettings(), []);
+  const processedBridgeRef = useRef(false);
+
+  const [chatTitle, setChatTitle] = useState(initialUiSettings.chatTitle);
+  const [incomingCallTitle, setIncomingCallTitle] = useState(initialUiSettings.incomingCallTitle);
+  const [incomingCallAvatarLabel, setIncomingCallAvatarLabel] = useState(initialUiSettings.incomingCallAvatarLabel);
+  const [incomingCallAvatarImage, setIncomingCallAvatarImage] = useState(initialUiSettings.incomingCallAvatarImage);
+  const [avatarLabel, setAvatarLabel] = useState(initialUiSettings.avatarLabel);
+  const [avatarImage, setAvatarImage] = useState(initialUiSettings.avatarImage);
+  const [deviceTime, setDeviceTime] = useState(initialUiSettings.deviceTime);
+  const [messageTime, setMessageTime] = useState(initialUiSettings.messageTime);
+  const [outgoingMessageTime, setOutgoingMessageTime] = useState(initialUiSettings.outgoingMessageTime || initialUiSettings.messageTime || "22:14");
+  const [incomingMessageTime, setIncomingMessageTime] = useState(initialUiSettings.incomingMessageTime || initialUiSettings.messageTime || "22:14");
+  const [outgoingMessageDate, setOutgoingMessageDate] = useState(initialUiSettings.outgoingMessageDate || "2026/04/04");
+  const [incomingMessageDate, setIncomingMessageDate] = useState(initialUiSettings.incomingMessageDate || "2026/04/04");
+  const [todayDate, setTodayDate] = useState(initialUiSettings.todayDate || "2026/04/04");
+  const [incomingSender, setIncomingSender] = useState(initialUiSettings.incomingSender);
+  const [incomingText, setIncomingText] = useState(initialUiSettings.incomingText);
+  const [themeKey, setThemeKey] = useState(initialUiSettings.themeKey);
+  const [customBgColor, setCustomBgColor] = useState(initialUiSettings.customBgColor || "");
+  const [customHeaderColor, setCustomHeaderColor] = useState(initialUiSettings.customHeaderColor || "");
+  const [customHeaderIconColor, setCustomHeaderIconColor] = useState(initialUiSettings.customHeaderIconColor || "");
+  const [customToolbarColor, setCustomToolbarColor] = useState(initialUiSettings.customToolbarColor || "");
+  const [customOuterBgColor, setCustomOuterBgColor] = useState(initialUiSettings.customOuterBgColor || "");
+  const [customSelfBubbleColor, setCustomSelfBubbleColor] = useState(initialUiSettings.customSelfBubbleColor || "");
+  const [customSelfTextColor, setCustomSelfTextColor] = useState(initialUiSettings.customSelfTextColor || "");
+  const [customOtherBubbleColor, setCustomOtherBubbleColor] = useState(initialUiSettings.customOtherBubbleColor || "");
+  const [customOtherTextColor, setCustomOtherTextColor] = useState(initialUiSettings.customOtherTextColor || "");
+  const [unifyChatBackground, setUnifyChatBackground] = useState(initialUiSettings.unifyChatBackground ?? true);
+  const [showStatusBar, setShowStatusBar] = useState(initialUiSettings.showStatusBar);
+  const [fullScreenMode, setFullScreenMode] = useState(initialUiSettings.fullScreenMode);
+  const [deviceFrameMode, setDeviceFrameMode] = useState(initialUiSettings.deviceFrameMode);
+  const [showMessageTime, setShowMessageTime] = useState(initialUiSettings.showMessageTime);
+  const [inputPlaceholder, setInputPlaceholder] = useState(initialUiSettings.inputPlaceholder);
+  const [wallpaper, setWallpaper] = useState(initialUiSettings.wallpaper);
+  const [showControls, setShowControls] = useState(initialUiSettings.showControls);
+  const [showNotificationModeButton, setShowNotificationModeButton] = useState(initialUiSettings.showNotificationModeButton ?? true);
+  const [showTopActions, setShowTopActions] = useState(initialUiSettings.showTopActions);
+  const [showActionButtons, setShowActionButtons] = useState(initialUiSettings.showActionButtons ?? true);
+  const [showEditorAccess, setShowEditorAccess] = useState(initialUiSettings.showEditorAccess);
+  const [soundEnabled, setSoundEnabled] = useState(initialUiSettings.soundEnabled);
+  const [ringtoneType, setRingtoneType] = useState(initialUiSettings.ringtoneType);
+  const [customRingtoneName, setCustomRingtoneName] = useState(initialUiSettings.customRingtoneName);
+  const [customRingtoneUrl, setCustomRingtoneUrl] = useState(initialUiSettings.customRingtoneUrl);
+  const [outgoingToneEnabled, setOutgoingToneEnabled] = useState(initialUiSettings.outgoingToneEnabled ?? true);
+  const [outgoingToneType, setOutgoingToneType] = useState(initialUiSettings.outgoingToneType || "line");
+  const [customOutgoingToneName, setCustomOutgoingToneName] = useState(initialUiSettings.customOutgoingToneName || "");
+  const [customOutgoingToneUrl, setCustomOutgoingToneUrl] = useState(initialUiSettings.customOutgoingToneUrl || "");
+  const [callAutoSeconds, setCallAutoSeconds] = useState(initialUiSettings.callAutoSeconds);
+  const [incomingCallAutoSeconds, setIncomingCallAutoSeconds] = useState(initialUiSettings.incomingCallAutoSeconds || 1.5);
+  const [incomingDelaySeconds, setIncomingDelaySeconds] = useState(initialUiSettings.incomingDelaySeconds || 0);
+  const [incomingCallBgColor, setIncomingCallBgColor] = useState(initialUiSettings.incomingCallBgColor || "#000000");
+  const [incomingCallBgOpacity, setIncomingCallBgOpacity] = useState(initialUiSettings.incomingCallBgOpacity ?? 0.9);
+  const [outgoingCallBgColor, setOutgoingCallBgColor] = useState(initialUiSettings.outgoingCallBgColor || "#000000");
+  const [outgoingCallBgOpacity, setOutgoingCallBgOpacity] = useState(initialUiSettings.outgoingCallBgOpacity ?? 0.9);
+
+  const [callMode, setCallMode] = useState<string | null>(null);
+  const [callPhase, setCallPhase] = useState("idle");
+  const [activeCallProfile, setActiveCallProfile] = useState<{ title: string; avatarImage: string; avatarLabel: string } | null>(null);
+  const [activeCallDirection, setActiveCallDirection] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>(initialUiSettings.messages || initialMessages);
+  const [typingText, setTypingText] = useState("");
+  const [inputText, setInputText] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [composerFocused, setComposerFocused] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const outgoingImageInputRef = useRef<HTMLInputElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("appearance");
+  const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>(initialUiSettings.timedMsgs || initialTimedMessages);
+  const [savedChats, setSavedChats] = useState<SavedChatPreset[]>([]);
+  const [chatSaveName, setChatSaveName] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const timedMsgTimers = useRef<Record<number, { timeout: ReturnType<typeof setTimeout>; interval: ReturnType<typeof setInterval> }>>({});
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const theme = useMemo(() => {
+    const base = themePresets[themeKey] || themePresets.line;
+    const appBg = customBgColor || base.appBg;
+    return {
+      ...base,
+      appBg,
+      headerBg: customHeaderColor || base.headerBg,
+      toolbarBg: customToolbarColor || base.toolbarBg,
+      headerIconColor: customHeaderIconColor || "#ffffff",
+      outerBg: unifyChatBackground ? appBg : (customOuterBgColor || appBg),
+      selfBubble: customSelfBubbleColor || base.selfBubble,
+      otherBubble: customOtherBubbleColor || base.otherBubble,
+      selfTextColor: customSelfTextColor || (base.name === "ダーク" ? "#ffffff" : "#111111"),
+      otherTextColor: customOtherTextColor || (base.name === "ダーク" ? "#ffffff" : "#111111"),
+    };
+  }, [themeKey, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor, customSelfBubbleColor, customSelfTextColor, customOtherBubbleColor, customOtherTextColor, unifyChatBackground]);
+
+  useEffect(() => {
+    const headerColor = customHeaderColor || (themePresets[themeKey] || themePresets.line).headerBg;
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      (meta as HTMLMetaElement).name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    (meta as HTMLMetaElement).content = headerColor;
+  }, [themeKey, customHeaderColor]);
+
+  const unifiedStageStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (unifyChatBackground && wallpaper) {
+      return {
+        backgroundImage: `url(${wallpaper})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    return { backgroundColor: theme.outerBg };
+  }, [unifyChatBackground, wallpaper, theme.outerBg]);
+
+  const previewRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const frameScreenRef = useRef<HTMLDivElement>(null);
+  const viewportBaseHeightRef = useRef(0);
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const ringtoneIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const customAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const openSettings = () => setSettingsOpen(true);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(""), 2200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    setSavedChats(readStoredSavedChatPresets());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateKeyboardInset = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        setViewportHeight(window.innerHeight || null);
+        setKeyboardInset(0);
+        return;
+      }
+
+      setViewportHeight(Math.round(vv.height));
+      const baseHeight = viewportBaseHeightRef.current || window.innerHeight || vv.height;
+      const occupiedBottom = vv.height + vv.offsetTop;
+      const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
+      const keyboardOpen = nextInset > 120;
+
+      if (!keyboardOpen) {
+        viewportBaseHeightRef.current = Math.max(window.innerHeight || 0, Math.round(occupiedBottom));
+      }
+
+      setKeyboardInset(keyboardOpen ? nextInset : 0);
+    };
+
+    viewportBaseHeightRef.current = window.innerHeight || window.visualViewport?.height || 0;
+    setViewportHeight(Math.round(window.visualViewport?.height || window.innerHeight || 0));
+    updateKeyboardInset();
+
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", updateKeyboardInset);
+    vv?.addEventListener("scroll", updateKeyboardInset);
+    window.addEventListener("resize", updateKeyboardInset);
+    window.addEventListener("orientationchange", updateKeyboardInset);
+
+    return () => {
+      vv?.removeEventListener("resize", updateKeyboardInset);
+      vv?.removeEventListener("scroll", updateKeyboardInset);
+      window.removeEventListener("resize", updateKeyboardInset);
+      window.removeEventListener("orientationchange", updateKeyboardInset);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleViewportReset = () => {
+      window.setTimeout(() => {
+        const vv = window.visualViewport;
+        if (!vv) {
+          setViewportHeight(window.innerHeight || null);
+          setKeyboardInset(0);
+          return;
+        }
+        setViewportHeight(Math.round(vv.height));
+        const baseHeight = Math.max(window.innerHeight || 0, viewportBaseHeightRef.current || 0, Math.round(vv.height + vv.offsetTop));
+        const occupiedBottom = vv.height + vv.offsetTop;
+        const nextInset = Math.max(0, Math.round(baseHeight - occupiedBottom));
+        setKeyboardInset(nextInset > 120 ? nextInset : 0);
+      }, 60);
+    };
+
+    window.addEventListener("resize", handleViewportReset);
+    window.addEventListener("orientationchange", handleViewportReset);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportReset);
+      window.removeEventListener("orientationchange", handleViewportReset);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!composerFocused) return;
+    const timer = window.setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [composerFocused, keyboardInset]);
+
+
+  const [frameScreenBounds, setFrameScreenBounds] = useState<{ left: number; width: number; bottomGap: number } | null>(null);
+  const keyboardOpen = keyboardInset > 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateFrameScreenBounds = () => {
+      if (!deviceFrameMode || !frameScreenRef.current) {
+        setFrameScreenBounds(null);
+        return;
+      }
+
+      const rect = frameScreenRef.current.getBoundingClientRect();
+      setFrameScreenBounds({
+        left: Math.round(rect.left),
+        width: Math.round(rect.width),
+        bottomGap: Math.max(0, Math.round(window.innerHeight - rect.bottom)),
+      });
+    };
+
+    updateFrameScreenBounds();
+    window.addEventListener("resize", updateFrameScreenBounds);
+    window.addEventListener("orientationchange", updateFrameScreenBounds);
+    window.visualViewport?.addEventListener("resize", updateFrameScreenBounds);
+    window.visualViewport?.addEventListener("scroll", updateFrameScreenBounds);
+
+    return () => {
+      window.removeEventListener("resize", updateFrameScreenBounds);
+      window.removeEventListener("orientationchange", updateFrameScreenBounds);
+      window.visualViewport?.removeEventListener("resize", updateFrameScreenBounds);
+      window.visualViewport?.removeEventListener("scroll", updateFrameScreenBounds);
+    };
+  }, [deviceFrameMode, keyboardOpen, wallpaper, fullScreenMode]);
+
+  const clearTypingTimers = () => {
+    if (typingIntervalRef.current) { clearInterval(typingIntervalRef.current); typingIntervalRef.current = null; }
+    if (typingTimeoutRef.current) { clearTimeout(typingTimeoutRef.current); typingTimeoutRef.current = null; }
+  };
+
+  const clearCallTimer = () => {
+    if (callTimeoutRef.current) { clearTimeout(callTimeoutRef.current); callTimeoutRef.current = null; }
+  };
+
+  const stopAudioTone = () => {
+    if (ringtoneIntervalRef.current) { clearInterval(ringtoneIntervalRef.current); ringtoneIntervalRef.current = null; }
+    if (customAudioRef.current) { customAudioRef.current.pause(); customAudioRef.current.currentTime = 0; }
+  };
+
+  const playTone = (frequency = 880, duration = 200, gainValue = 0.05) => {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = frequency;
+      gain.gain.value = gainValue;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      window.setTimeout(() => osc.stop(), duration);
+    } catch { /* ignore */ }
+  };
+
+  const playIphonePattern = () => { playTone(1046, 160, 0.05); window.setTimeout(() => playTone(1318, 180, 0.05), 180); };
+  const playLinePattern = () => { playTone(784, 120, 0.05); window.setTimeout(() => playTone(988, 120, 0.05), 160); window.setTimeout(() => playTone(1174, 180, 0.05), 320); };
+
+  const startCustomTone = (url: string) => {
+    if (!url) return;
+    try {
+      if (!customAudioRef.current) customAudioRef.current = new Audio(url);
+      else customAudioRef.current.src = url;
+      customAudioRef.current.loop = true;
+      customAudioRef.current.currentTime = 0;
+      customAudioRef.current.play().catch(() => {});
+    } catch { /* ignore */ }
+  };
+
+  const startIncomingTone = () => {
+    if (!soundEnabled) return;
+    stopAudioTone();
+    if (ringtoneType === "custom" && customRingtoneUrl) { startCustomTone(customRingtoneUrl); return; }
+    const runPattern = () => { if (ringtoneType === "line") playLinePattern(); else playIphonePattern(); };
+    runPattern();
+    ringtoneIntervalRef.current = window.setInterval(runPattern, ringtoneType === "line" ? 1500 : 1800);
+  };
+
+  const startOutgoingTone = () => {
+    if (!outgoingToneEnabled) return;
+    stopAudioTone();
+    if (outgoingToneType === "custom" && customOutgoingToneUrl) { startCustomTone(customOutgoingToneUrl); return; }
+    const runPattern = () => { if (outgoingToneType === "iphone") playIphonePattern(); else playLinePattern(); };
+    runPattern();
+    ringtoneIntervalRef.current = window.setInterval(runPattern, outgoingToneType === "line" ? 1500 : 1800);
+  };
+
+  const scheduleConnect = (seconds?: number) => {
+    clearCallTimer();
+    const delay = seconds !== undefined ? seconds : Number(callAutoSeconds) || 0;
+    callTimeoutRef.current = window.setTimeout(() => { stopAudioTone(); setCallPhase("connected"); }, Math.max(0, delay) * 1000);
+  };
+
+  const simulateTyping = () => {
+    const source = inputText.trim();
+    if (!source || isTyping) return;
+    clearTypingTimers();
+    setIsTyping(true);
+    setTypingText("");
+    let i = 0;
+    typingIntervalRef.current = window.setInterval(() => {
+      i += 1;
+      setTypingText(source.slice(0, i));
+      if (i >= source.length) {
+        clearTypingTimers();
+        typingTimeoutRef.current = window.setTimeout(() => {
+          setMessages((prev) => [...prev, buildOutgoingMessage(source, outgoingMessageTime, outgoingMessageDate)]);
+          setTypingText(""); setInputText(""); setIsTyping(false);
+        }, 450);
+      }
+    }, 70);
+  };
+
+  const sendInstant = () => {
+    const source = inputText.trim();
+    if (!source || isTyping) return;
+    setMessages((prev) => [...prev, buildOutgoingMessage(source, outgoingMessageTime, outgoingMessageDate)]);
+    setInputText("");
+  };
+
+  const sendImageInstant = (imageData: string) => {
+    if (!imageData || isTyping) return;
+    setMessages((prev) => [...prev, buildOutgoingImageMessage(imageData, outgoingMessageTime, outgoingMessageDate)]);
+  };
+
+  const addIncomingMessage = () => {
+    const source = incomingText.trim();
+    if (!source) return;
+    setMessages((prev) => [...prev, buildIncomingMessage(source, incomingSender, incomingMessageTime, incomingMessageDate)]);
+    setIncomingText("");
+  };
+
+  const startTimedMsg = (id: number) => {
+    const msg = timedMsgs.find(m => m.id === id);
+    if (!msg || !msg.text.trim() || msg.pending) return;
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: true, countdown: m.delay } : m));
+    const interval = window.setInterval(() => {
+      setTimedMsgs(prev => prev.map(m => {
+        if (m.id !== id) return m;
+        if (m.countdown <= 1) { clearInterval(interval); return { ...m, countdown: 0 }; }
+        return { ...m, countdown: m.countdown - 1 };
+      }));
+    }, 1000);
+    const timeout = window.setTimeout(() => {
+      setMessages(prev => [...prev, buildIncomingMessage(msg.text.trim(), msg.sender, incomingMessageTime, incomingMessageDate)]);
+      setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: false, countdown: 0, text: "" } : m));
+      delete timedMsgTimers.current[id];
+    }, Math.max(0, msg.delay) * 1000);
+    timedMsgTimers.current[id] = { timeout, interval };
+  };
+
+  const cancelTimedMsg = (id: number) => {
+    const t = timedMsgTimers.current[id];
+    if (t) { clearTimeout(t.timeout); clearInterval(t.interval); delete timedMsgTimers.current[id]; }
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: false, countdown: 0 } : m));
+  };
+
+  const addTimedMsgSlot = () => {
+    const newId = Date.now();
+    setTimedMsgs(prev => [...prev, { id: newId, sender: incomingSender, text: "", delay: 3, countdown: 0, pending: false }]);
+  };
+
+  const removeTimedMsgSlot = (id: number) => {
+    cancelTimedMsg(id);
+    setTimedMsgs(prev => prev.filter(m => m.id !== id));
+  };
+
+  const updateTimedMsg = (id: number, field: string, value: string | number) => {
+    setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
+  const cancelMessageSend = (id: number) => setMessages((prev) => prev.map((msg) => (
+    msg.id === id
+      ? {
+          ...msg,
+          originalText: msg.originalText || msg.text || "",
+          originalType: msg.originalType || msg.type || "text",
+          originalImage: msg.originalImage || msg.image || "",
+          type: "text",
+          text: "送信を取り消しました",
+          image: "",
+          canceled: true,
+          visible: true,
+        }
+      : msg
+  )));
+  const restoreCanceledMessage = (id: number) => setMessages((prev) => prev.map((msg) => (
+    msg.id === id
+      ? {
+          ...msg,
+          type: msg.originalType || "text",
+          text: msg.originalText || "",
+          image: msg.originalImage || "",
+          canceled: false,
+        }
+      : msg
+  )));
+  const clearAllMessages = () => {
+    if (messages.length === 0) {
+      showToast("削除する履歴がありません");
+      return;
+    }
+    const confirmed = window.confirm("チャット履歴をすべて削除しますか？\nこの操作は元に戻せません。");
+    if (!confirmed) return;
+    setMessages([]);
+    showToast("チャット履歴を全削除しました");
+  };
+  const updateMessageField = (id: number, field: keyof Message | string, value: string) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, [field]: value } : msg)));
+  const toggleMessageVisibility = (id: number) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, visible: msg.visible === false ? true : false } : msg)));
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setter(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const handleOutgoingImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        sendImageInstant(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleHistoryImageUpload = (id: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setMessages((prev) =>
+          prev.map((msg) => (msg.id === id ? { ...msg, type: "image", image: reader.result as string, text: msg.text || "" } : msg)),
+        );
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleCustomRingtoneUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomRingtoneUrl(reader.result);
+        setCustomRingtoneName(file.name);
+        setRingtoneType("custom");
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleCustomOutgoingToneUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomOutgoingToneUrl(reader.result);
+        setCustomOutgoingToneName(file.name);
+        setOutgoingToneType("custom");
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const buildCurrentSettings = () => ({
+    todayDate, customBgColor, customHeaderColor, customHeaderIconColor, customToolbarColor, customOuterBgColor,
+    customSelfBubbleColor, customSelfTextColor, customOtherBubbleColor, customOtherTextColor, unifyChatBackground,
+    chatTitle, incomingCallTitle, incomingCallAvatarLabel, incomingCallAvatarImage, avatarLabel, avatarImage,
+    deviceTime, messageTime, outgoingMessageTime, incomingMessageTime, outgoingMessageDate, incomingMessageDate,
+    incomingSender, incomingText, themeKey, showStatusBar, fullScreenMode, deviceFrameMode, showMessageTime,
+    inputPlaceholder, wallpaper, showControls, showNotificationModeButton, showTopActions, showActionButtons, showEditorAccess, soundEnabled,
+    ringtoneType, customRingtoneName, customRingtoneUrl, outgoingToneEnabled, outgoingToneType,
+    customOutgoingToneName, customOutgoingToneUrl, callAutoSeconds: Number(callAutoSeconds) || 0,
+    incomingCallAutoSeconds: Number(incomingCallAutoSeconds) || 1.5,
+    incomingDelaySeconds: Number(incomingDelaySeconds) || 0, incomingCallBgColor, incomingCallBgOpacity,
+    outgoingCallBgColor, outgoingCallBgOpacity,
+  });
+
+  const buildCurrentDefaultSnapshot = () => ({
+    ...buildCurrentSettings(),
+    messages,
+    timedMsgs: timedMsgs.map((item) => ({
+      id: item.id,
+      sender: item.sender,
+      text: item.text,
+      delay: Number(item.delay) || 0,
+      countdown: 0,
+      pending: false,
+    })),
+  });
+
+  const persistSavedChats = (items: SavedChatPreset[]) => {
+    setSavedChats(items);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(SAVED_CHATS_STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      showToast("保存に失敗しました");
+    }
+  };
+
+  const applySettings = (settings: typeof defaultSettings & { messages?: any[]; timedMsgs?: any[] }) => {
+    setCustomBgColor(settings.customBgColor || ""); setCustomHeaderColor(settings.customHeaderColor || "");
+    setCustomHeaderIconColor(settings.customHeaderIconColor || ""); setCustomToolbarColor(settings.customToolbarColor || "");
+    setCustomOuterBgColor(settings.customOuterBgColor || ""); setCustomSelfBubbleColor(settings.customSelfBubbleColor || "");
+    setCustomSelfTextColor(settings.customSelfTextColor || ""); setCustomOtherBubbleColor(settings.customOtherBubbleColor || "");
+    setCustomOtherTextColor(settings.customOtherTextColor || ""); setUnifyChatBackground(settings.unifyChatBackground ?? true); setChatTitle(settings.chatTitle);
+    setIncomingCallTitle(settings.incomingCallTitle); setIncomingCallAvatarLabel(settings.incomingCallAvatarLabel);
+    setIncomingCallAvatarImage(settings.incomingCallAvatarImage); setAvatarLabel(settings.avatarLabel);
+    setAvatarImage(settings.avatarImage); setDeviceTime(settings.deviceTime); setMessageTime(settings.messageTime);
+    setOutgoingMessageTime(settings.outgoingMessageTime || settings.messageTime || "22:14");
+    setIncomingMessageTime(settings.incomingMessageTime || settings.messageTime || "22:14");
+    setOutgoingMessageDate(settings.outgoingMessageDate || "2026/04/04");
+    setIncomingMessageDate(settings.incomingMessageDate || "2026/04/04");
+    setTodayDate(settings.todayDate || "2026/04/04"); setIncomingSender(settings.incomingSender);
+    setIncomingText(settings.incomingText); setThemeKey(settings.themeKey || "line");
+    setShowStatusBar(settings.showStatusBar); setFullScreenMode(settings.fullScreenMode);
+    setDeviceFrameMode(settings.deviceFrameMode); setShowMessageTime(settings.showMessageTime);
+    setInputPlaceholder(settings.inputPlaceholder); setWallpaper(settings.wallpaper);
+    setShowControls(settings.showControls); setShowNotificationModeButton(settings.showNotificationModeButton ?? true); setShowTopActions(settings.showTopActions);
+    setShowActionButtons(settings.showActionButtons ?? true); setShowEditorAccess(settings.showEditorAccess);
+    setSoundEnabled(settings.soundEnabled); setRingtoneType(settings.ringtoneType);
+    setCustomRingtoneName(settings.customRingtoneName); setCustomRingtoneUrl(settings.customRingtoneUrl);
+    setOutgoingToneEnabled(settings.outgoingToneEnabled ?? true); setOutgoingToneType(settings.outgoingToneType || "line");
+    setCustomOutgoingToneName(settings.customOutgoingToneName || ""); setCustomOutgoingToneUrl(settings.customOutgoingToneUrl || "");
+    setCallAutoSeconds(settings.callAutoSeconds || 0); setIncomingCallAutoSeconds(settings.incomingCallAutoSeconds || 1.5); setIncomingDelaySeconds(settings.incomingDelaySeconds || 0);
+    setIncomingCallBgColor(settings.incomingCallBgColor || "#000000"); setIncomingCallBgOpacity(settings.incomingCallBgOpacity ?? 0.9);
+    setOutgoingCallBgColor(settings.outgoingCallBgColor || "#000000"); setOutgoingCallBgOpacity(settings.outgoingCallBgOpacity ?? 0.9);
+    setMessages(normalizeStoredMessages(settings.messages));
+    setTimedMsgs(normalizeStoredTimedMessages(settings.timedMsgs, settings.incomingSender || defaultSettings.incomingSender));
+  };
+
+  const saveCurrentAsDefaultSettings = () => {
+    if (typeof window === "undefined") {
+      showToast("保存に失敗しました");
+      return;
+    }
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(buildCurrentDefaultSnapshot()));
+      showToast("既定の設定を保存しました");
+    } catch {
+      showToast("保存に失敗しました");
+    }
+  };
+
+  const resetToSavedDefaultSettings = () => {
+    applySettings(readStoredDefaultSettings());
+    showToast("既定の設定に戻しました");
+  };
+  const resetSavedDefaultsToAppDefaults = () => {
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem(STORAGE_KEY);
+      applySettings(defaultSettings);
+      showToast("初期設定に戻しました");
+    } catch {
+      showToast("初期設定への復元に失敗しました");
+    }
+  };
+
+  const saveChatPresetAsNew = () => {
+    const trimmedName = chatSaveName.trim();
+    if (!trimmedName) {
+      showToast("保存名を入力してください");
+      return;
+    }
+    const nextItems = [
+      {
+        id: Date.now(),
+        name: trimmedName,
+        updatedAt: Date.now(),
+        snapshot: buildCurrentDefaultSnapshot(),
+      },
+      ...savedChats,
+    ];
+    persistSavedChats(nextItems);
+    showToast("チャットを保存しました");
+  };
+
+  const overwriteChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const nextItems = savedChats.map((item) =>
+      item.id === id
+        ? { ...item, name: chatSaveName.trim() || item.name, updatedAt: Date.now(), snapshot: buildCurrentDefaultSnapshot() }
+        : item,
+    );
+    persistSavedChats(nextItems);
+    setChatSaveName(chatSaveName.trim() || target.name);
+    showToast("保存チャットを上書きしました");
+  };
+
+  const loadChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    applySettings(target.snapshot);
+    setChatSaveName(target.name);
+    showToast("保存チャットを読み込みました");
+  };
+
+  const deleteChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const confirmed = window.confirm(`「${target.name}」を削除しますか？`);
+    if (!confirmed) return;
+    persistSavedChats(savedChats.filter((item) => item.id !== id));
+    showToast("保存チャットを削除しました");
+  };
+
+  const duplicateChatPreset = (id: number) => {
+    const target = savedChats.find((item) => item.id === id);
+    if (!target) return;
+    const nextItems = [
+      {
+        id: Date.now(),
+        name: `${target.name} のコピー`,
+        updatedAt: Date.now(),
+        snapshot: target.snapshot,
+      },
+      ...savedChats,
+    ];
+    persistSavedChats(nextItems);
+    showToast("保存チャットを複製しました");
+  };
+
+  const startCall = (type: string) => {
+    clearCallTimer();
+    setActiveCallProfile({ title: chatTitle, avatarImage, avatarLabel });
+    setActiveCallDirection("outgoing");
+    setCallMode(type); setCallPhase("calling");
+    startOutgoingTone(); scheduleConnect();
+  };
+
+  const startIncomingCall = (type: string) => {
+    clearCallTimer();
+    setActiveCallProfile({ title: incomingCallTitle, avatarImage: incomingCallAvatarImage, avatarLabel: incomingCallAvatarLabel });
+    setActiveCallDirection("incoming");
+    setCallMode(type); setCallPhase("incoming");
+    startIncomingTone();
+  };
+
+  const scheduleIncomingCall = (type: string) => {
+    clearCallTimer();
+    callTimeoutRef.current = window.setTimeout(() => startIncomingCall(type), Math.max(0, Number(incomingDelaySeconds) || 0) * 1000);
+  };
+
+  const acceptIncomingCall = () => {
+    if (!callMode) return;
+    stopAudioTone(); setCallPhase("connecting"); scheduleConnect(Number(incomingCallAutoSeconds) || 0);
+  };
+
+  const declineIncomingCall = () => {
+    clearCallTimer(); stopAudioTone();
+    setCallMode(null); setCallPhase("idle"); setActiveCallProfile(null); setActiveCallDirection(null);
+  };
+
+  const endCall = () => {
+    clearCallTimer(); stopAudioTone();
+    setCallMode(null); setCallPhase("idle"); setActiveCallProfile(null); setActiveCallDirection(null);
+  };
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, typingText, isTyping]);
+
+  useEffect(() => {
+    return () => {
+      clearTypingTimers(); clearCallTimer(); stopAudioTone();
+      if (customRingtoneUrl && customRingtoneUrl.startsWith("blob:")) URL.revokeObjectURL(customRingtoneUrl);
+      if (customOutgoingToneUrl && customOutgoingToneUrl.startsWith("blob:")) URL.revokeObjectURL(customOutgoingToneUrl);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customRingtoneUrl, customOutgoingToneUrl]);
+
+  useEffect(() => {
+    if (processedBridgeRef.current || typeof window === "undefined") return;
+    const raw = window.localStorage.getItem("line-mock-chat-call-bridge");
+    if (!raw) return;
+    processedBridgeRef.current = true;
+    try {
+      const parsed = JSON.parse(raw);
+      window.localStorage.removeItem("line-mock-chat-call-bridge");
+      if (parsed?.title) setActiveCallProfile({
+        title: String(parsed.title),
+        avatarLabel: String(parsed.avatarLabel || avatarLabel).slice(0, 2),
+        avatarImage: String(parsed.avatarImage || ""),
+      });
+      if (parsed?.direction === "incoming") {
+        setCallMode(parsed?.mode === "video" ? "video" : "voice");
+        setActiveCallDirection("incoming");
+        setCallPhase("incoming");
+      } else if (parsed?.direction === "outgoing") {
+        setCallMode(parsed?.mode === "video" ? "video" : "voice");
+        setActiveCallDirection("outgoing");
+        setCallPhase("calling");
+        clearCallTimer();
+        callTimeoutRef.current = window.setTimeout(() => {
+          setCallPhase("connected");
+        }, Math.max(0, Number(callAutoSeconds || 0)) * 1000);
+      }
+    } catch {
+      window.localStorage.removeItem("line-mock-chat-call-bridge");
+    }
+  }, [avatarLabel, callAutoSeconds, fullScreenMode]);
+
+
+  const callOverlayVisible = callPhase !== "idle" && Boolean(callMode);
+  const overlayTitle = activeCallProfile?.title || chatTitle;
+  const overlayAvatarImage = activeCallProfile?.avatarImage || "";
+  const overlayAvatarLabel = activeCallProfile?.avatarLabel || avatarLabel;
+  const overlayBgColor = activeCallDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
+  const overlayBgOpacity = activeCallDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
+  const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
+
+  const stageContainerStyle: React.CSSProperties = {
+    height: "100dvh",
+    minHeight: "100dvh",
+    width: "100%",
+    maxWidth: "100vw",
+    overflow: "hidden",
+    position: "relative",
+    ...(unifiedStageStyle || {}),
+  };
+  const messageListBottomPadding = showControls ? 32 : 24;
+
+  const controlsContent = showControls ? (
+    <div className="flex w-full items-end gap-2">
+        <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
+        <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
+          <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
+          <Textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => window.setTimeout(() => { if (document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") setComposerFocused(false); }, 180)}
+            placeholder={inputPlaceholder}
+            rows={1}
+            className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
+          />
+          <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
+            <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
+            <button type="button" className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="項目を追加"><PlusCircle className="h-4 w-4" /></button>
+          </div>
+        </div>
+        {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
+      </div>
+  ) : null;
+
+  const controlsPanel = controlsContent ? (
+    <div
+      className="w-full shrink-0 border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
+      style={{
+        backgroundColor: theme.toolbarBg,
+        paddingBottom: deviceFrameMode ? 8 : "max(8px,env(safe-area-inset-bottom))",
+      }}
+    >
+      {controlsContent}
+    </div>
+  ) : null;
+
+  return (
+    <div
+      className={cn("flex min-h-0 flex-col overflow-hidden", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none bg-black" : "mx-auto max-w-md")}
+      style={{
+        ...stageContainerStyle,
+        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
+        minHeight: viewportHeight ? `${viewportHeight}px` : "100dvh",
+      }}
+    >
+      {deviceFrameMode ? (
+        <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
+          <div className="absolute inset-0 flex items-center justify-center p-2">
+            <div className="relative h-full max-h-full w-auto max-w-full" style={{ aspectRatio: "9 / 19.5" }}>
+              <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
+              <div
+                ref={frameScreenRef}
+                className="absolute inset-[8px] flex min-h-0 h-[calc(100%-16px)] flex-col overflow-hidden rounded-[30px]"
+                style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
+              >
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <PhoneMockup
+                    ref={previewRef}
+                    onStartCall={startCall}
+                    onOpenSettings={openSettings}
+                    onCancelMessage={cancelMessageSend}
+                    title={chatTitle}
+                    messages={messages}
+                    typingText={typingText}
+                    isTyping={isTyping}
+                    theme={theme}
+                    avatarImage={avatarImage}
+                    avatarLabel={avatarLabel}
+                    deviceTime={deviceTime}
+                    showStatusBar={showStatusBar}
+                    showMessageTime={showMessageTime}
+                    todayDate={todayDate}
+                    wallpaper={wallpaper}
+                    unifyWallpaper={unifyChatBackground}
+                    bottomPadding={messageListBottomPadding}
+                  />
+                </div>
+                {controlsPanel}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div ref={scrollRef} className={cn("relative flex-1 min-h-0 overflow-hidden", !fullScreenMode && "bg-transparent", "pb-0")}>
+            <div
+              className="relative flex h-full min-h-0 flex-col overflow-hidden"
+              style={unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle}
+            >
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <PhoneMockup
+                  ref={previewRef}
+                  onStartCall={startCall}
+                  onOpenSettings={openSettings}
+                  onCancelMessage={cancelMessageSend}
+                  title={chatTitle}
+                  messages={messages}
+                  typingText={typingText}
+                  isTyping={isTyping}
+                  theme={theme}
+                  avatarImage={avatarImage}
+                  avatarLabel={avatarLabel}
+                  deviceTime={deviceTime}
+                  showStatusBar={showStatusBar}
+                  showMessageTime={showMessageTime}
+                  todayDate={todayDate}
+                  wallpaper={wallpaper}
+                  unifyWallpaper={unifyChatBackground}
+                  bottomPadding={messageListBottomPadding}
+                />
+              </div>
+              {controlsPanel}
+            </div>
+          </div>
+        </>
+      )}
+
+      <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
+
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 bg-black/35">
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
+            <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]"
+                aria-label="閉じる"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="text-lg font-semibold">設定</div>
+              <div className="h-10 w-10" aria-hidden="true" />
+            </div>
+
+            <div className="grid grid-cols-6 rounded-2xl bg-black/5 p-1 text-center">
+              <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
+              <TabButton active={activeTab === "chat"} onClick={() => setActiveTab("chat")}>会話</TabButton>
+              <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")}>履歴</TabButton>
+              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
+              <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
+              {activeTab === "appearance" && (
+                <div className="space-y-4">
+                  <SectionCard icon={Palette} title="デザイン">
+                    <div className="space-y-2">
+                      <Label>テーマ</Label>
+                      <select value={themeKey} onChange={(e) => {
+                        setThemeKey(e.target.value);
+                        setCustomBgColor("");
+                        setCustomHeaderColor("");
+                        setCustomHeaderIconColor("");
+                        setCustomToolbarColor("");
+                        setCustomOuterBgColor("");
+                        setCustomSelfBubbleColor("");
+                        setCustomSelfTextColor("");
+                        setCustomOtherBubbleColor("");
+                        setCustomOtherTextColor("");
+                      }} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
+                        {Object.entries(themePresets).map(([key, preset]) => <option key={key} value={key}>{preset.name}</option>)}
+                      </select>
+                      <button type="button" onClick={() => { setCustomBgColor(""); setCustomHeaderColor(""); setCustomHeaderIconColor(""); setCustomToolbarColor(""); setCustomOuterBgColor(""); setCustomSelfBubbleColor(""); setCustomSelfTextColor(""); setCustomOtherBubbleColor(""); setCustomOtherTextColor(""); }} className="text-xs text-black/40 underline">カスタム色をリセット</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>背景色</Label><ColorSwatch value={customBgColor || theme.appBg} onChange={(e) => setCustomBgColor(e.target.value)} /></div>
+                      <div className="space-y-2">
+                        <Label>{unifyChatBackground ? "余白部分の色（背景と統一中）" : "余白部分の色"}</Label>
+                        <ColorSwatch value={unifyChatBackground ? (customBgColor || theme.appBg) : (customOuterBgColor || theme.outerBg)} onChange={(e) => setCustomOuterBgColor(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                      <div>
+                        <div className="text-sm font-medium">背景と余白を統一する</div>
+                        <div className="text-xs text-black/50">ONにすると背景色と背景画像が余白部分まで同じ見た目になります</div>
+                      </div>
+                      <Switch checked={unifyChatBackground} onCheckedChange={setUnifyChatBackground} />
+                    </div>
+                    {!unifyChatBackground && (
+                      <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
+                        余白部分だけ別色にしたいときは、この設定をOFFにしてください。
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>ヘッダー色</Label><ColorSwatch value={customHeaderColor || theme.headerBg} onChange={(e) => setCustomHeaderColor(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>ヘッダーアイコン色</Label><ColorSwatch value={customHeaderIconColor || theme.headerIconColor} onChange={(e) => setCustomHeaderIconColor(e.target.value)} /></div>
+                    </div>
+                    <div className="space-y-2"><Label>操作バー背景色</Label><ColorSwatch value={customToolbarColor || theme.toolbarBg} onChange={(e) => setCustomToolbarColor(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>自分のメッセージ背景色</Label><ColorSwatch value={customSelfBubbleColor || theme.selfBubble} onChange={(e) => setCustomSelfBubbleColor(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>自分の文字色</Label><ColorSwatch value={customSelfTextColor || theme.selfTextColor} onChange={(e) => setCustomSelfTextColor(e.target.value)} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>相手のメッセージ背景色</Label><ColorSwatch value={customOtherBubbleColor || theme.otherBubble} onChange={(e) => setCustomOtherBubbleColor(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>相手の文字色</Label><ColorSwatch value={customOtherTextColor || theme.otherTextColor} onChange={(e) => setCustomOtherTextColor(e.target.value)} /></div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>背景画像</Label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setWallpaper)}>画像を選択</FileButton>
+                        {wallpaper ? <Button variant="outline" className="w-full sm:w-auto" onClick={() => setWallpaper("")}>背景画像を解除</Button> : null}
+                      </div>
+                      {wallpaper ? <img src={wallpaper} alt="背景画像プレビュー" className="max-h-48 w-full rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-3 text-xs text-black/45">背景画像は未設定です</div>}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard icon={UserCircle2} title="相手情報">
+                    <div className="space-y-2"><Label>表示名</Label><Input value={chatTitle} onChange={(e) => setChatTitle(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>アイコン文字</Label><Input value={avatarLabel} onChange={(e) => setAvatarLabel(e.target.value.slice(0, 2))} /></div>
+                    <div className="space-y-2">
+                      <Label>アイコン画像</Label>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setAvatarImage)}>画像を選択</FileButton>
+                        {avatarImage ? <Button variant="outline" className="w-full sm:w-auto" onClick={() => setAvatarImage("")}>アイコン画像を解除</Button> : null}
+                      </div>
+                      {avatarImage ? <img src={avatarImage} alt="アイコン画像プレビュー" className="h-24 w-24 rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-3 text-xs text-black/45">アイコン画像は未設定です</div>}
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+              {activeTab === "chat" && (
+                <div className="space-y-4">
+                  <SectionCard icon={Clock3} title="時刻と表示">
+                    <div className="space-y-2"><Label>今日の日付</Label><Input value={todayDate} onChange={(e) => setTodayDate(e.target.value)} placeholder="2026/04/04" /></div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>自分の送信日</Label><Input value={outgoingMessageDate} onChange={(e) => setOutgoingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
+                      <div className="space-y-2"><Label>相手の送信日</Label><Input value={incomingMessageDate} onChange={(e) => setIncomingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2"><Label>自分の送信時刻</Label><Input value={outgoingMessageTime} onChange={(e) => setOutgoingMessageTime(e.target.value)} placeholder="22:14" /></div>
+                      <div className="space-y-2"><Label>相手の送信時刻</Label><Input value={incomingMessageTime} onChange={(e) => setIncomingMessageTime(e.target.value)} placeholder="22:14" /></div>
+                    </div>
+                    <div className="space-y-2"><Label>入力欄プレースホルダー</Label><Input value={inputPlaceholder} onChange={(e) => setInputPlaceholder(e.target.value)} /></div>
+                  </SectionCard>
+
+                  <SectionCard icon={MessageSquareMore} title="メッセージ追加">
+                    <div className="space-y-2"><Label>自分のメッセージ</Label><Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} className="min-h-24" placeholder="ここにセリフを書く" /></div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button onClick={sendInstant} disabled={!inputText.trim() || isTyping} className="w-full"><SendHorizontal className="mr-2 h-4 w-4" />すぐ送信</Button>
+                      <FileButton accept="image/*" onFile={handleOutgoingImageUpload}>画像をアップロードして送信</FileButton>
+                    </div>
+                    <div className="text-xs text-black/45">チャット画面ではテキストだけでなく画像もそのまま送信できます。</div>
+                    <div className="space-y-2 pt-2"><Label>相手名</Label><Input value={incomingSender} onChange={(e) => setIncomingSender(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>相手のメッセージ</Label><Textarea value={incomingText} onChange={(e) => setIncomingText(e.target.value)} className="min-h-24" placeholder="受信メッセージを入力" /></div>
+                    <Button onClick={addIncomingMessage} variant="outline" className="w-full">相手メッセージを追加</Button>
+
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 space-y-3 mt-2">
+                      <div className="text-xs font-semibold text-black/60">タイマーメッセージ</div>
+                      {timedMsgs.map((msg, idx) => (
+                        <div key={msg.id} className="rounded-2xl border border-black/10 bg-white p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs font-medium text-black/50">メッセージ {idx + 1}</div>
+                            {timedMsgs.length > 1 && <button type="button" onClick={() => removeTimedMsgSlot(msg.id)} className="text-xs text-red-400 hover:text-red-600">削除</button>}
+                          </div>
+                          <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateTimedMsg(msg.id, "sender", e.target.value)} disabled={msg.pending} placeholder="美咲" /></div>
+                          <div className="space-y-1"><Label>メッセージ内容</Label><Textarea value={msg.text} onChange={(e) => updateTimedMsg(msg.id, "text", e.target.value)} className="min-h-16" placeholder="○秒後に届くメッセージ" disabled={msg.pending} /></div>
+                          <div className="space-y-1"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={msg.delay} onChange={(e) => updateTimedMsg(msg.id, "delay", Number(e.target.value))} disabled={msg.pending} /></div>
+                          {msg.pending ? (
+                        <div className="space-y-2">
+                              <div className="text-center text-sm font-medium text-black/60">{msg.countdown}秒後に届きます…</div>
+                              <Button onClick={() => cancelTimedMsg(msg.id)} variant="outline" className="w-full text-red-500 border-red-200">キャンセル</Button>
+                            </div>
+                          ) : (
+                            <Button onClick={() => startTimedMsg(msg.id)} disabled={!msg.text.trim()} className="w-full">タイマーセット</Button>
+                          )}
+                        </div>
+                      ))}
+                      <Button onClick={addTimedMsgSlot} variant="outline" className="w-full">＋ メッセージを追加</Button>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+              {activeTab === "messages" && (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-2 text-xs text-black/60">履歴ごとに「隠す / 表示する」を切り替えると、チャット画面への表示を個別に調整できます。</div>
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm">
+                    <div>
+                      <div className="text-sm font-semibold text-black/75">履歴をまとめて操作</div>
+                      <div className="text-xs text-black/45">件数: {sortedHistoryMessages.length}件</div>
+                    </div>
+                    <Button variant="outline" className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600" onClick={clearAllMessages}>
+                      <Trash2 className="mr-2 h-4 w-4" />全削除
+                    </Button>
+                  </div>
+                  {sortedHistoryMessages.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-black/10 bg-white px-4 py-8 text-center text-sm text-black/45">履歴はありません。メッセージを追加するとここに表示されます。</div>
+                  ) : null}
+                  {sortedHistoryMessages.map((msg, index) => (
+                    <div key={msg.id} className={cn("rounded-3xl border border-black/10 bg-white p-4 shadow-sm transition", msg.visible === false && "opacity-70")}>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                          <span className={cn("inline-flex rounded-full px-2 py-1 text-xs", msg.side === "right" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700")}>{msg.side === "right" ? "自分" : "相手"}</span>
+                          <span>#{index + 1}</span>
+                          <span className={cn("inline-flex rounded-full px-2 py-1 text-[11px]", msg.visible === false ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700")}>
+                            {msg.visible === false ? "非表示" : "表示中"}
+                          </span>
+                          {msg.canceled && <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">取消済み</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {msg.side === "right" && !msg.canceled && (
+                            <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => cancelMessageSend(msg.id)}>
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />送信取消
+                            </Button>
+                          )}
+                          {msg.side === "right" && msg.canceled && (
+                            <Button variant="outline" className="px-3 py-2 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => restoreCanceledMessage(msg.id)}>
+                              取消を元に戻す
+                            </Button>
+                          )}
+                          <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => toggleMessageVisibility(msg.id)}>
+                            {msg.visible === false ? "表示する" : "隠す"}
+                          </Button>
+                          <button type="button" onClick={() => deleteMessage(msg.id)} className="rounded-full p-2 text-black/45 hover:bg-black/5 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {msg.side === "left" && <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateMessageField(msg.id, "sender", e.target.value)} /></div>}
+                        <div className="space-y-1">
+                          <Label>メッセージ種類</Label>
+                          <select value={msg.type} onChange={(e) => updateMessageField(msg.id, "type", e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none">
+                            <option value="text">テキスト</option>
+                            <option value="image">画像</option>
+                          </select>
+                        </div>
+                        {msg.canceled ? (
+                          <div className="space-y-2 rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-3 text-sm text-black/55">
+                            <div>送信を取り消しました</div>
+                            <div className="text-xs text-black/40">「取消を元に戻す」で、取り消し前の内容に戻せます。</div>
+                          </div>
+                        ) : msg.type === "image" ? (
+                          <div className="space-y-2">
+                            <Label>画像</Label>
+                            {msg.image ? <img src={msg.image} alt="履歴画像" className="max-h-56 w-full rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-4 text-sm text-black/45">画像が未設定です</div>}
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <FileButton accept="image/*" onFile={(e) => handleHistoryImageUpload(msg.id, e)}>画像を変更</FileButton>
+                              {msg.image ? (
+                                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setMessages((prev) => prev.map((item) => item.id === msg.id ? { ...item, image: "", type: "text" } : item))}>画像を解除</Button>
+                              ) : null}
+                            </div>
+                            <div className="space-y-1"><Label>補助テキスト</Label><Input value={msg.text || ""} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} placeholder="必要ならメモ用に残せます" /></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} className="min-h-20" /></div>
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1"><Label>日付</Label><Input value={msg.date || ""} onChange={(e) => updateMessageField(msg.id, "date", e.target.value)} placeholder="2026/04/04" /></div>
+                          <div className="space-y-1"><Label>時刻</Label><Input value={msg.time} onChange={(e) => updateMessageField(msg.id, "time", e.target.value)} /></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === "saved" && (
+                <div className="space-y-4">
+                  <SectionCard icon={MessageSquareMore} title="保存チャット">
+                    <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-3 text-xs text-black/55">
+                      作成したチャット画面一式を名前付きで保存して、いつでも切り替えられます。
+                    </div>
+                    <div className="space-y-2">
+                      <Label>保存名</Label>
+                      <Input value={chatSaveName} onChange={(e) => setChatSaveName(e.target.value)} placeholder="例：Aシーン_玄関前" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button onClick={saveChatPresetAsNew} className="w-full justify-center">新規保存</Button>
+                      <Button
+                        onClick={() => {
+                          const latest = savedChats[0];
+                          if (!latest) {
+                            showToast("保存チャットがありません");
+                            return;
+                          }
+                          overwriteChatPreset(latest.id);
+                        }}
+                        variant="outline"
+                        className="w-full justify-center"
+                      >
+                        最新を上書き
+                      </Button>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard icon={Clock3} title={`保存一覧 (${savedChats.length})`}>
+                    {savedChats.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-black/10 bg-black/[0.02] p-4 text-sm text-black/45">
+                        まだ保存チャットはありません。まずは上の「新規保存」から保存してください。
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {savedChats.map((item) => (
+                          <div key={item.id} className="rounded-2xl border border-black/10 bg-white p-3 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-black/85">{item.name}</div>
+                                <div className="mt-1 text-[11px] text-black/45">最終更新: {new Date(item.updatedAt).toLocaleString("ja-JP")}</div>
+                              </div>
+                              <div className="shrink-0 rounded-full bg-black/[0.04] px-2 py-1 text-[10px] text-black/55">{item.snapshot.messages?.length || 0}件</div>
+                            </div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <Button onClick={() => loadChatPreset(item.id)} variant="outline" className="w-full justify-center">読み込む</Button>
+                              <Button onClick={() => overwriteChatPreset(item.id)} variant="outline" className="w-full justify-center">今ので上書き</Button>
+                              <Button onClick={() => { setChatSaveName(item.name); duplicateChatPreset(item.id); }} variant="outline" className="w-full justify-center">複製</Button>
+                              <Button onClick={() => deleteChatPreset(item.id)} variant="outline" className="w-full justify-center">削除</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </SectionCard>
+                </div>
+              )}
+              {activeTab === "modes" && (
+                <div className="space-y-4">
+                  <SectionCard icon={Settings2} title="モード切り替え">
+                    <div className="text-sm text-black/55">
+                      各画面作成モードへ切り替えます。現在のチャット内容は保存してから切り替えると安心です。
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button className="w-full justify-center">チャットモード</Button>
+                      <Button onClick={() => router.push("/notification")} variant="outline" className="w-full justify-center">通知画面モードへ</Button>
+                      <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
+                      <Button onClick={() => router.push("/x")} variant="outline" className="w-full justify-center">Xモードへ</Button>
+                      <Button onClick={() => router.push("/tiktok")} variant="outline" className="w-full justify-center">TikTokモードへ</Button>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+
+
+              {activeTab === "screen" && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button onClick={saveCurrentAsDefaultSettings} variant="outline" className="w-full justify-center">今の設定を既定にする</Button>
+                    <Button onClick={resetToSavedDefaultSettings} variant="outline" className="w-full justify-center">既定の設定に戻す</Button>
+                    <Button onClick={resetSavedDefaultsToAppDefaults} variant="outline" className="w-full justify-center">アプリ初期設定に戻す</Button>
+                  </div>
+
+                  <SectionCard icon={Settings2} title="操作表示">
+                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">上部の時刻や電波表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
+
+
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
+
+                  </SectionCard>
+
+                  <SectionCard icon={Phone} title="通話演出">
+                    <div className="space-y-2"><Label>発信画面 背景色</Label><ColorSwatch value={outgoingCallBgColor} onChange={(e) => setOutgoingCallBgColor(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>発信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={outgoingCallBgOpacity} onChange={(e) => setOutgoingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(outgoingCallBgOpacity * 100)}%</div></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">発信音（ダミー）</div><div className="text-xs text-black/50">発信中に音を鳴らす</div></div><Switch checked={outgoingToneEnabled} onCheckedChange={setOutgoingToneEnabled} /></div>
+                    <div className="space-y-2"><Label>発信音の種類</Label><select value={outgoingToneType} onChange={(e) => setOutgoingToneType(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
+                    <div className="space-y-2"><Label>発信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomOutgoingToneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customOutgoingToneName ? `選択中: ${customOutgoingToneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
+                    <div className="space-y-2"><Label>着信画面 背景色</Label><ColorSwatch value={incomingCallBgColor} onChange={(e) => setIncomingCallBgColor(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>着信画面の透明度</Label><Input type="range" min="0" max="1" step="0.01" value={incomingCallBgOpacity} onChange={(e) => setIncomingCallBgOpacity(Number(e.target.value))} /><div className="text-xs text-black/50">{Math.round(incomingCallBgOpacity * 100)}%</div></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">着信音（ダミー）</div><div className="text-xs text-black/50">着信時に音を鳴らす</div></div><Switch checked={soundEnabled} onCheckedChange={setSoundEnabled} /></div>
+                    <div className="space-y-2"><Label>着信音の種類</Label><select value={ringtoneType} onChange={(e) => setRingtoneType(e.target.value)} className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"><option value="iphone">iPhone風</option><option value="line">LINE風</option><option value="custom">アップロード音源</option></select></div>
+                    <div className="space-y-2"><Label>着信音アップロード</Label><FileButton accept="audio/*" onFile={handleCustomRingtoneUpload}>音源を選択</FileButton><div className="text-xs text-black/50">{customRingtoneName ? `選択中: ${customRingtoneName}` : "mp3 / wav / m4a などを選択できます"}</div></div>
+                    <div className="space-y-2"><Label>発信→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={callAutoSeconds} onChange={(e) => setCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中から通話中に切り替わるまでの秒数</div></div>
+                    <div className="space-y-2"><Label>着信応答→通話中 になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={incomingCallAutoSeconds} onChange={(e) => setIncomingCallAutoSeconds(e.target.value)} /><div className="text-xs text-black/50">着信を応答してから通話中に切り替わるまでの秒数</div></div>
+                    <div className="space-y-2"><Label>着信までの秒数</Label><Input type="number" min="0" step="0.1" value={incomingDelaySeconds} onChange={(e) => setIncomingDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">着信ボタンを押してから指定秒数で着信</div></div>
+                    <div className="space-y-2 pt-1"><Label>着信相手の名前</Label><Input value={incomingCallTitle} onChange={(e) => setIncomingCallTitle(e.target.value)} placeholder="母" /></div>
+                    <div className="space-y-2"><Label>着信相手のアイコン文字</Label><Input value={incomingCallAvatarLabel} onChange={(e) => setIncomingCallAvatarLabel(e.target.value.slice(0, 2))} placeholder="母" /></div>
+                    <div className="space-y-2"><Label>着信相手のアイコン画像</Label><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, setIncomingCallAvatarImage)}>画像を選択</FileButton></div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Button onClick={() => scheduleIncomingCall("voice")} variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />音声着信</Button>
+                      <Button onClick={() => scheduleIncomingCall("video")} variant="outline" className="w-full"><Video className="mr-2 h-4 w-4" />ビデオ着信</Button>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-dashed border-black/10 bg-black/[0.02] px-4 py-3 text-center text-xs text-black/45">
+                ここが設定画面の最下部です
+              </div>
+            </div>
+            <div className="pointer-events-none shrink-0 bg-gradient-to-t from-[#fafafa] via-[#fafafa]/95 to-transparent pb-[max(12px,env(safe-area-inset-bottom))] pt-4">
+              <div className="flex items-center gap-3 text-[10px] text-black/28">
+                <div className="h-px flex-1 bg-black/8" />
+                <span>スクロール終点</span>
+                <div className="h-px flex-1 bg-black/8" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toastMessage && typeof document !== "undefined"
+        ? (() => {
+            const toastMeta = getToastMeta(toastMessage);
+
+            return createPortal(
+              <div className="pointer-events-none fixed inset-x-0 top-[max(12px,env(safe-area-inset-top))] z-[9999] flex justify-center px-3">
+                <div
+                  className={`w-full max-w-md overflow-hidden rounded-2xl border bg-white/96 shadow-[0_16px_40px_rgba(15,23,42,0.18)] backdrop-blur-md ${toastMeta.borderClassName}`}
+                >
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold ${toastMeta.iconClassName}`}
+                    >
+                      {toastMeta.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-[14px] font-semibold leading-5 text-slate-900">{toastMessage}</div>
+                      <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{toastMeta.subtitle}</div>
+                    </div>
+                  </div>
+                  <div className="h-1 w-full bg-black/5">
+                    <div className="h-full w-full bg-black/20" />
+                  </div>
+                </div>
+              </div>,
+              document.body,
+            );
+          })()
+        : null}
+    </div>
+  );
+}
