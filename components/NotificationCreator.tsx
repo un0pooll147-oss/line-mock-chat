@@ -52,6 +52,7 @@ type NotificationSettings = {
   lockscreenTime: string;
   lockscreenTimeSize: number;
   lockscreenDate: string;
+  lockscreenDateSize: number;
   showLargeClock: boolean;
   groupName: string;
   selectedWallpaper: string;
@@ -83,7 +84,7 @@ type NotificationSettings = {
   customOutgoingToneUrl: string | null;
 };
 
-const STORAGE_KEY = "notification-mock-settings-v5";
+const STORAGE_KEY = "notification-mock-settings-v6";
 const SAVED_NOTIFICATION_STORAGE_KEY = "notification-mock-saved-presets-v1";
 
 type SavedNotificationPreset = {
@@ -169,7 +170,7 @@ const osThemes: Record<
     timeText: "text-[11px] text-white/55",
     topInset: "pt-0",
     largeClockTime: "font-semibold text-white tracking-[-0.03em]",
-    largeClockDate: "mt-1 text-[15px] text-white/80",
+    largeClockDate: "text-white/80",
     notificationsTopWithClock: "pt-[230px]",
     notificationsTopWithoutClock: "pt-[108px]",
     showNotch: true,
@@ -185,7 +186,7 @@ const osThemes: Record<
     timeText: "text-[11px] text-white/50",
     topInset: "pt-0",
     largeClockTime: "font-medium text-white tracking-[-0.02em]",
-    largeClockDate: "mt-1 text-[14px] text-white/75",
+    largeClockDate: "text-white/75",
     notificationsTopWithClock: "pt-[205px]",
     notificationsTopWithoutClock: "pt-[88px]",
     showNotch: false,
@@ -214,8 +215,9 @@ const defaultSettings: NotificationSettings = {
   phoneTime: "22:18",
   showStatusBar: true,
   lockscreenTime: "22:18",
-  lockscreenTimeSize: 72,
+  lockscreenTimeSize: 88,
   lockscreenDate: "4月23日 木曜日",
+  lockscreenDateSize: 16,
   showLargeClock: true,
   groupName: "森田家",
   selectedWallpaper: "simple",
@@ -601,16 +603,20 @@ function readSavedNotificationPresets(): SavedNotificationPreset[] {
 function readStoredSettings(): NotificationSettings {
   if (typeof window === "undefined") return defaultSettings;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("notification-mock-settings-v4") || window.localStorage.getItem("notification-mock-settings-v2");
+    const currentRaw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = currentRaw || window.localStorage.getItem("notification-mock-settings-v5") || window.localStorage.getItem("notification-mock-settings-v4") || window.localStorage.getItem("notification-mock-settings-v2");
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw) as Partial<NotificationSettings> & { messages?: any[] };
     return {
       ...defaultSettings,
       ...parsed,
       messages: normalizeMessages(parsed.messages),
-      lockscreenTimeSize: Number.isFinite(Number(parsed.lockscreenTimeSize))
-        ? Math.max(40, Math.min(108, Number(parsed.lockscreenTimeSize)))
+      lockscreenTimeSize: currentRaw && Number.isFinite(Number(parsed.lockscreenTimeSize))
+        ? Math.max(56, Math.min(132, Number(parsed.lockscreenTimeSize)))
         : defaultSettings.lockscreenTimeSize,
+      lockscreenDateSize: Number.isFinite(Number(parsed.lockscreenDateSize))
+        ? Math.max(12, Math.min(40, Number(parsed.lockscreenDateSize)))
+        : defaultSettings.lockscreenDateSize,
       notificationDirection:
         parsed.notificationDirection === "bottom" || parsed.notificationDirection === "top"
           ? parsed.notificationDirection
@@ -661,6 +667,7 @@ export default function NotificationCreator() {
   const [lockscreenTime, setLockscreenTime] = useState(defaultSettings.lockscreenTime);
   const [lockscreenTimeSize, setLockscreenTimeSize] = useState(defaultSettings.lockscreenTimeSize);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
+  const [lockscreenDateSize, setLockscreenDateSize] = useState(defaultSettings.lockscreenDateSize);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
@@ -715,6 +722,7 @@ export default function NotificationCreator() {
     setLockscreenTime(stored.lockscreenTime);
     setLockscreenTimeSize(stored.lockscreenTimeSize);
     setLockscreenDate(stored.lockscreenDate);
+    setLockscreenDateSize(stored.lockscreenDateSize);
     setShowLargeClock(stored.showLargeClock);
     setGroupName(stored.groupName);
     setSelectedWallpaper(stored.selectedWallpaper);
@@ -757,6 +765,7 @@ export default function NotificationCreator() {
       lockscreenTime,
       lockscreenTimeSize,
       lockscreenDate,
+      lockscreenDateSize,
       showLargeClock,
       groupName,
       selectedWallpaper,
@@ -796,6 +805,7 @@ export default function NotificationCreator() {
     lockscreenTime,
     lockscreenTimeSize,
     lockscreenDate,
+    lockscreenDateSize,
     showLargeClock,
     groupName,
     selectedWallpaper,
@@ -1228,6 +1238,7 @@ export default function NotificationCreator() {
     lockscreenTime,
     lockscreenTimeSize,
     lockscreenDate,
+    lockscreenDateSize,
     showLargeClock,
     groupName,
     selectedWallpaper,
@@ -1265,6 +1276,7 @@ export default function NotificationCreator() {
     setLockscreenTime(next.lockscreenTime);
     setLockscreenTimeSize(next.lockscreenTimeSize);
     setLockscreenDate(next.lockscreenDate);
+    setLockscreenDateSize(next.lockscreenDateSize);
     setShowLargeClock(next.showLargeClock);
     setGroupName(next.groupName);
     setSelectedWallpaper(next.selectedWallpaper);
@@ -1382,6 +1394,7 @@ export default function NotificationCreator() {
       lockscreenTime,
       lockscreenTimeSize,
       lockscreenDate,
+      lockscreenDateSize,
       showLargeClock,
       groupName,
       selectedWallpaper,
@@ -1428,6 +1441,7 @@ export default function NotificationCreator() {
     setLockscreenTime(defaultSettings.lockscreenTime);
     setLockscreenTimeSize(defaultSettings.lockscreenTimeSize);
     setLockscreenDate(defaultSettings.lockscreenDate);
+    setLockscreenDateSize(defaultSettings.lockscreenDateSize);
     setShowLargeClock(defaultSettings.showLargeClock);
     setGroupName(defaultSettings.groupName);
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
@@ -1462,8 +1476,14 @@ export default function NotificationCreator() {
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
-  const topStackClass = showLargeClock ? theme.notificationsTopWithClock : theme.notificationsTopWithoutClock;
-  const safeLockscreenTimeSize = Math.max(40, Math.min(108, Number(lockscreenTimeSize) || defaultSettings.lockscreenTimeSize));
+  const topStackClass = showLargeClock ? "" : theme.notificationsTopWithoutClock;
+  const safeLockscreenTimeSize = Math.max(56, Math.min(132, Number(lockscreenTimeSize) || defaultSettings.lockscreenTimeSize));
+  const safeLockscreenDateSize = Math.max(12, Math.min(40, Number(lockscreenDateSize) || defaultSettings.lockscreenDateSize));
+  const lockscreenClockTop = 110;
+  const clockDateGap = 8;
+  const notificationTopPadding = showLargeClock
+    ? Math.min(360, lockscreenClockTop + safeLockscreenTimeSize + clockDateGap + safeLockscreenDateSize * 1.25 + 28)
+    : undefined;
 
   const callOverlayBgColor = callDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
@@ -1506,9 +1526,12 @@ export default function NotificationCreator() {
       )}
 
       {showLargeClock && (
-        <div className="absolute inset-x-0 top-0 z-10 pt-[92px] text-center">
+        <div
+          className="absolute inset-x-0 top-0 z-10 flex flex-col items-center text-center"
+          style={{ paddingTop: `${lockscreenClockTop}px`, gap: `${clockDateGap}px` }}
+        >
           <div className={theme.largeClockTime} style={{ fontSize: `${safeLockscreenTimeSize}px`, lineHeight: 1 }}>{lockscreenTime}</div>
-          <div className={theme.largeClockDate}>{lockscreenDate}</div>
+          <div className={theme.largeClockDate} style={{ fontSize: `${safeLockscreenDateSize}px`, lineHeight: 1.25 }}>{lockscreenDate}</div>
         </div>
       )}
 
@@ -1518,6 +1541,7 @@ export default function NotificationCreator() {
             "absolute inset-x-0 top-0 z-10 h-full overflow-hidden px-4 pb-[max(18px,env(safe-area-inset-bottom))]",
             topStackClass,
           )}
+          style={{ paddingTop: notificationTopPadding ? `${notificationTopPadding}px` : undefined }}
         >
           <div className="space-y-3">
             {renderedNotifications.map((msg) => (
@@ -1681,12 +1705,33 @@ export default function NotificationCreator() {
                     </div>
                     <Input
                       type="range"
-                      min="40"
-                      max="108"
+                      min="56"
+                      max="132"
                       step="1"
                       value={safeLockscreenTimeSize}
                       onChange={(e) => setLockscreenTimeSize(Number(e.target.value))}
                       aria-label="時間表示サイズ"
+                      className="cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[11px] text-black/40">
+                      <span>小さめ</span>
+                      <span>大きめ</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-black/45">時計の大きさに合わせて、通知が重ならない位置へ自動で移動します。</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>日付表示サイズ</Label>
+                      <span className="text-xs font-medium text-black/50">{safeLockscreenDateSize}px</span>
+                    </div>
+                    <Input
+                      type="range"
+                      min="12"
+                      max="40"
+                      step="1"
+                      value={safeLockscreenDateSize}
+                      onChange={(e) => setLockscreenDateSize(Number(e.target.value))}
+                      aria-label="日付表示サイズ"
                       className="cursor-pointer"
                     />
                     <div className="flex justify-between text-[11px] text-black/40">
