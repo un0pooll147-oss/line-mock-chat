@@ -2,6 +2,7 @@
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import {
   ArrowLeft,
   BarChart3,
@@ -474,6 +475,7 @@ function ImageGrid({ images }: { images: string[]; currentImageIndex?: number; s
 }
 
 export default function XMockCreator() {
+  const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<XSettings>(initialSettings);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
@@ -681,19 +683,9 @@ export default function XMockCreator() {
     setSettings(initialSettings);
   };
 
-  const setFullscreenMode = async (enabled: boolean) => {
+  const setFullscreenMode = (enabled: boolean) => {
+    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", enabled);
-    if (typeof document === "undefined") return;
-    try {
-      if (enabled && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      }
-      if (!enabled && document.fullscreenElement) {
-        await document.exitFullscreen();
-      }
-    } catch {
-      // iOS Safariなど、Fullscreen API非対応環境ではアプリ内表示だけ切り替える
-    }
   };
 
   const header = (
@@ -949,7 +941,7 @@ export default function XMockCreator() {
   );
 
   const phone = settings.deviceFrameMode ? (
-    <div className={cls("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+    <div className={cls("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
       <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {phoneContent}
@@ -957,13 +949,13 @@ export default function XMockCreator() {
       </div>
     </div>
   ) : (
-    <div className={cls("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor || undefined }}>
+    <div className={cls("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor || undefined, height: visualViewportHeight, maxHeight: visualViewportHeight }}>
       {phoneContent}
     </div>
   );
 
   return (
-    <main className={cls("relative min-h-[100dvh]", theme.page)} style={{ backgroundColor: settings.bgColor || undefined }}>
+    <main className={cls("relative min-h-[100dvh]", theme.page, settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} style={{ backgroundColor: settings.bgColor || undefined, ...(settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : {}) }}>
       {phone}
 
         {settingsOpen && (

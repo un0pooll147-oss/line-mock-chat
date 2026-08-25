@@ -2,6 +2,7 @@
 
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import {
   Bell,
   Bookmark,
@@ -561,6 +562,7 @@ function CommentsSheet({ settings, setSettings, onClose }: { settings: TikTokSet
 }
 
 export default function TikTokMockCreator() {
+  const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<TikTokSettings>(defaultSettings);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -608,44 +610,7 @@ export default function TikTokMockCreator() {
     }
   }, [savedPresets, isHydrated]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const handleFullscreenChange = () => {
-      const doc = document as Document & { webkitFullscreenElement?: Element | null };
-      const isBrowserFullscreen = Boolean(document.fullscreenElement || doc.webkitFullscreenElement);
-      if (!isBrowserFullscreen) {
-        setSettings((prev) => prev.fullScreenMode ? { ...prev, fullScreenMode: false } : prev);
-      }
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
-    };
-  }, []);
-
   const update = <K extends keyof TikTokSettings>(key: K, value: TikTokSettings[K]) => setSettings((prev) => ({ ...prev, [key]: value }));
-
-  const requestBrowserFullscreen = async (enabled: boolean) => {
-    if (typeof document === "undefined") return;
-    const root = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
-    const doc = document as Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> | void };
-    try {
-      if (enabled) {
-        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
-          const request = root.requestFullscreen?.bind(root) ?? root.webkitRequestFullscreen?.bind(root);
-          await request?.();
-        }
-      } else if (document.fullscreenElement || doc.webkitFullscreenElement) {
-        const exit = document.exitFullscreen?.bind(document) ?? doc.webkitExitFullscreen?.bind(doc);
-        await exit?.();
-      }
-    } catch {
-      // ブラウザ側で許可されない場合も、アプリ内の撮影用表示は切り替える。
-    }
-  };
-
 
   const saveCurrentAsDefaultSettings = () => {
     try { window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify(settings)); } catch {}
@@ -661,8 +626,8 @@ export default function TikTokMockCreator() {
   };
 
   const setFullScreenMode = (value: boolean) => {
+    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", value);
-    void requestBrowserFullscreen(value);
   };
 
   const readFile = (file: File, callback: (url: string) => void) => {
@@ -731,8 +696,8 @@ export default function TikTokMockCreator() {
   );
 
   return (
-    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50" : "")}>
-      <div className={cn("relative flex h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md")}>
+    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50 h-[100dvh] w-screen" : "")} style={settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : undefined}>
+      <div className={cn("relative flex h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md")} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
         <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-4" : "p-0")}>
           <div className={cn("relative h-full min-h-0 w-full overflow-hidden bg-black text-white", settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}>
             {screen}

@@ -865,20 +865,11 @@ export default function LineMockChatCreator() {
       }, 60);
     };
 
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        setComposerFocused(false);
-      }
-      handleViewportReset();
-    };
-
     window.addEventListener("resize", handleViewportReset);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
     window.addEventListener("orientationchange", handleViewportReset);
 
     return () => {
       window.removeEventListener("resize", handleViewportReset);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
       window.removeEventListener("orientationchange", handleViewportReset);
     };
   }, []);
@@ -892,25 +883,6 @@ export default function LineMockChatCreator() {
     }, 80);
     return () => window.clearTimeout(timer);
   }, [composerFocused, keyboardInset]);
-
-  useEffect(() => {
-    if (fullScreenMode) {
-      const requestFullscreen = () => {
-        const el = document.documentElement;
-        if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-        else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
-      };
-      const handleClick = () => {
-        if (!document.fullscreenElement) requestFullscreen();
-      };
-      document.addEventListener("click", handleClick, { once: true });
-      return () => document.removeEventListener("click", handleClick);
-    } else {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
-  }, [fullScreenMode]);
 
 
   const [frameScreenBounds, setFrameScreenBounds] = useState<{ left: number; width: number; bottomGap: number } | null>(null);
@@ -1429,7 +1401,6 @@ export default function LineMockChatCreator() {
         setCallMode(parsed?.mode === "video" ? "video" : "voice");
         setActiveCallDirection("outgoing");
         setCallPhase("calling");
-        if (fullScreenMode) { const el = document.documentElement as any; if (el.requestFullscreen) el.requestFullscreen().catch(() => {}); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); }
         clearCallTimer();
         callTimeoutRef.current = window.setTimeout(() => {
           setCallPhase("connected");
@@ -1497,7 +1468,7 @@ export default function LineMockChatCreator() {
 
   return (
     <div
-      className={cn("flex min-h-0 flex-col overflow-hidden", fullScreenMode ? (unifiedStageStyle ? "max-w-none" : "bg-black max-w-none") : "mx-auto max-w-md")}
+      className={cn("flex min-h-0 flex-col overflow-hidden", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none bg-black" : "mx-auto max-w-md")}
       style={{
         ...stageContainerStyle,
         height: viewportHeight ? `${viewportHeight}px` : "100dvh",

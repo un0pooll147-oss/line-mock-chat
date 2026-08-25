@@ -3,6 +3,7 @@
 import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import {
   Clock3,
   Image as ImageIcon,
@@ -242,24 +243,6 @@ const defaultSettings: NotificationSettings = {
 };
 
 
-
-function requestDocumentFullscreen() {
-  if (typeof document === "undefined") return;
-  const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
-  if (document.fullscreenElement) return;
-  if (el.requestFullscreen) {
-    el.requestFullscreen().catch(() => {});
-  } else if (el.webkitRequestFullscreen) {
-    el.webkitRequestFullscreen();
-  }
-}
-
-function exitDocumentFullscreen() {
-  if (typeof document === "undefined") return;
-  if (document.fullscreenElement && document.exitFullscreen) {
-    document.exitFullscreen().catch(() => {});
-  }
-}
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -655,6 +638,7 @@ function readStoredSettings(): NotificationSettings {
 }
 
 export default function NotificationCreator() {
+  const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -846,18 +830,6 @@ export default function NotificationCreator() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated || typeof document === "undefined") return;
-    if (fullScreenMode) {
-      const handlePointer = () => {
-        requestDocumentFullscreen();
-      };
-      document.addEventListener("pointerdown", handlePointer, { once: true });
-      return () => document.removeEventListener("pointerdown", handlePointer);
-    }
-    exitDocumentFullscreen();
-  }, [hydrated, fullScreenMode]);
 
   const theme = osThemes[osType];
 
@@ -1056,7 +1028,6 @@ export default function NotificationCreator() {
   const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video", startDelaySeconds = 0) => {
     clearCallTimer();
     setSettingsOpen(false);
-    if (fullScreenMode) requestDocumentFullscreen();
 
     const bootCall = () => {
       setCallDirection(direction);
@@ -1362,7 +1333,6 @@ export default function NotificationCreator() {
   const playNotifications = () => {
     clearTimers();
     setSettingsOpen(false);
-    if (fullScreenMode) requestDocumentFullscreen();
     void ensureAudioContext();
     setMessages((prev) => prev.map((m) => ({ ...m, displayed: false, animatedAt: null })));
     const enabledMessages = [...messages]
@@ -1480,8 +1450,9 @@ export default function NotificationCreator() {
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
 
   const stageContainerStyle: React.CSSProperties = {
-    height: fullScreenMode ? "100dvh" : undefined,
-    minHeight: fullScreenMode ? undefined : "100dvh",
+    height: fullScreenMode ? visualViewportHeight : undefined,
+    minHeight: fullScreenMode ? undefined : visualViewportHeight,
+    maxHeight: fullScreenMode ? visualViewportHeight : undefined,
     width: "100%",
     maxWidth: "100vw",
     overflow: fullScreenMode ? "hidden" : undefined,
@@ -1499,9 +1470,9 @@ export default function NotificationCreator() {
     : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
 
   return (
-    <div className={cn("flex flex-col bg-black", fullScreenMode ? "max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
+    <div className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
       <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
-        <div className={cn("relative h-full min-h-[100dvh] w-full overflow-hidden bg-black text-white", deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}> 
+        <div className={cn("relative h-full min-h-0 w-full overflow-hidden bg-black text-white", deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}>
           <div className="absolute inset-0" style={bgStyle} />
           <div className="absolute inset-0 bg-black/15" />
 
@@ -1923,7 +1894,7 @@ export default function NotificationCreator() {
                       <div className="text-sm font-medium">フルスクリーンモード</div>
                       <div className="text-xs text-black/50">余白や中央寄せを解除して、画面いっぱいに表示します。</div>
                     </div>
-                    <Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) requestDocumentFullscreen(); else exitDocumentFullscreen(); }} />
+                    <Switch checked={fullScreenMode} onCheckedChange={setFullScreenMode} />
                   </div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>

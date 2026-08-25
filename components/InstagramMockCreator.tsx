@@ -2,6 +2,7 @@
 
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import {
   Bookmark,
   Heart,
@@ -799,6 +800,7 @@ function InstagramStoryPreview({ settings, setSettings, onOpenSettings }: { sett
 }
 
 export default function InstagramMockCreator() {
+  const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<InstagramSettings>(defaultSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -970,14 +972,9 @@ export default function InstagramMockCreator() {
     setSettings(defaultSettings);
   };
 
-  const enterFullscreenIfNeeded = async (enabled: boolean) => {
+  const enterFullscreenIfNeeded = (enabled: boolean) => {
+    // Android Chromeの全画面終了案内を出さないため、Browser Fullscreen APIは使わない。
     update("fullScreenMode", enabled);
-    if (enabled && typeof document !== "undefined" && !document.fullscreenElement) {
-      try { await document.documentElement.requestFullscreen(); } catch {}
-    }
-    if (!enabled && typeof document !== "undefined" && document.fullscreenElement) {
-      try { await document.exitFullscreen(); } catch {}
-    }
   };
 
   const screen = (
@@ -987,7 +984,7 @@ export default function InstagramMockCreator() {
   );
 
   const stage = settings.deviceFrameMode ? (
-    <div className={cn("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+    <div className={cn("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
       <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {screen}
@@ -995,13 +992,13 @@ export default function InstagramMockCreator() {
       </div>
     </div>
   ) : (
-    <div className={cn("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor }}>
+    <div className={cn("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor, height: visualViewportHeight, maxHeight: visualViewportHeight }}>
       {screen}
     </div>
   );
 
   return (
-    <div className="relative min-h-[100dvh] bg-[#f2f2f2]">
+    <div className={cn("relative min-h-[100dvh] bg-[#f2f2f2]", settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} style={settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : undefined}>
       {stage}
 
       {settings.showSettingsButton && (
