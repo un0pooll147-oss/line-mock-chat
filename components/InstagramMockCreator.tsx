@@ -102,7 +102,7 @@ type InstagramSettings = {
   bgColor: string;
 };
 
-const STORAGE_KEY = "instagram-mock-settings-v2";
+const STORAGE_KEY = "instagram-mock-settings-v5";
 const DEFAULT_STORAGE_KEY = "instagram-mock-default-settings-v1";
 const SAVED_INSTAGRAM_STORAGE_KEY = "instagram-mock-saved-presets-v1";
 
@@ -131,15 +131,15 @@ const instagramThemes: Record<InstagramThemeKey, {
 
 
 const defaultSettings: InstagramSettings = {
-  screenType: "post",
+  screenType: "feed",
   themeKey: "instagram",
   appName: "Picgram",
   username: "misaki_film",
   displayName: "美咲",
   avatarLabel: "美",
   avatarImage: null,
-  navAvatarLabel: "美",
-  navAvatarImage: null,
+  navAvatarLabel: "ま",
+  navAvatarImage: "/scene2-instagram/profile-v2-00-mako.png",
   postImage: null,
   postImages: [],
   caption: "今日の撮影、少しだけ特別な時間だった。",
@@ -151,32 +151,80 @@ const defaultSettings: InstagramSettings = {
   repostCount: "3",
   feedPosts: [
     {
-      id: "feed-post-1",
-      username: "ayaka_photo",
-      displayName: "彩花",
-      avatarLabel: "彩",
-      avatarImage: null,
-      postImage: null,
-      caption: "光がきれいだった日の記録。\nまたこの場所で撮りたい。",
-      likeCount: "246",
-      commentCount: "18",
-      repostCount: "5",
+      id: "scene2-travel-sora",
+      username: "sora_trip",
+      displayName: "そら",
+      avatarLabel: "そ",
+      avatarImage: "/scene2-instagram/profile-v2-01-sora.png",
+      postImage: "/scene2-instagram/post-01-lake.png",
+      caption: "朝いちばんの湖、空気まできらきらしてた。\n少し早起きしただけでこの景色。旅行って最高！",
+      likeCount: "348",
+      commentCount: "22",
+      repostCount: "8",
+      postTime: "1時間前",
+      liked: false,
+      reposted: false,
+      saved: false,
+    },
+    {
+      id: "scene2-travel-mii",
+      username: "mii_gourmet",
+      displayName: "美衣",
+      avatarLabel: "美",
+      avatarImage: "/scene2-instagram/profile-v2-02-mii.png",
+      postImage: "/scene2-instagram/post-02-seafood.png",
+      caption: "旅先の海鮮朝ごはん。\nどれから食べるか迷う時間まで幸せ。おいしい旅、最高！",
+      likeCount: "512",
+      commentCount: "31",
+      repostCount: "12",
       postTime: "2時間前",
       liked: false,
       reposted: false,
       saved: false,
     },
     {
-      id: "feed-post-2",
-      username: "ren_movie",
-      displayName: "蓮",
-      avatarLabel: "蓮",
-      avatarImage: null,
-      postImage: null,
-      caption: "今日の撮影終了。\n良いシーンになりました。",
-      likeCount: "189",
-      commentCount: "9",
-      repostCount: "2",
+      id: "scene2-travel-rina",
+      username: "rina_resort",
+      displayName: "莉奈",
+      avatarLabel: "莉",
+      avatarImage: "/scene2-instagram/profile-v2-03-rina.png",
+      postImage: "/scene2-instagram/post-03-resort.png",
+      caption: "海とつながって見えるプール。\n何もしないで過ごす午後がいちばん贅沢。リゾート最高！",
+      likeCount: "429",
+      commentCount: "28",
+      repostCount: "15",
+      postTime: "3時間前",
+      liked: false,
+      reposted: false,
+      saved: false,
+    },
+    {
+      id: "scene2-travel-yui",
+      username: "yui_sanpo",
+      displayName: "結衣",
+      avatarLabel: "結",
+      avatarImage: "/scene2-instagram/profile-v2-04-yui.png",
+      postImage: "/scene2-instagram/post-04-bamboo.png",
+      caption: "朝の竹林をのんびり散歩。\n風の音だけ聞こえる時間、ずっとここにいたい。",
+      likeCount: "286",
+      commentCount: "17",
+      repostCount: "6",
+      postTime: "4時間前",
+      liked: false,
+      reposted: false,
+      saved: false,
+    },
+    {
+      id: "scene2-travel-nao",
+      username: "nao_weekend",
+      displayName: "奈央",
+      avatarLabel: "奈",
+      avatarImage: "/scene2-instagram/profile-v2-05-nao.png",
+      postImage: "/scene2-instagram/post-05-onsen.png",
+      caption: "旅の最後は露天風呂でゆっくり。\n星空を見ながら何も考えない時間、最高すぎる。",
+      likeCount: "377",
+      commentCount: "24",
+      repostCount: "9",
       postTime: "5時間前",
       liked: false,
       reposted: false,
@@ -286,10 +334,17 @@ const readStoredDefaultSettings = (): InstagramSettings => {
 const readStoredSettings = (): InstagramSettings => {
   if (typeof window === "undefined") return defaultSettings;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("instagram-mock-settings-v1");
+    const currentRaw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = currentRaw || window.localStorage.getItem("instagram-mock-settings-v4") || window.localStorage.getItem("instagram-mock-settings-v3") || window.localStorage.getItem("instagram-mock-settings-v2") || window.localStorage.getItem("instagram-mock-settings-v1");
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw);
     const merged = normalizeInstagramSettings(parsed);
+    if (!currentRaw) {
+      merged.screenType = "feed";
+      merged.navAvatarLabel = "ま";
+      merged.navAvatarImage = defaultSettings.navAvatarImage;
+      merged.feedPosts = defaultSettings.feedPosts.map((post) => ({ ...post }));
+    }
     if (merged.themeKey !== "dark") merged.themeKey = "instagram";
     if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) {
       merged.postImages = [merged.postImage];
@@ -1356,6 +1411,19 @@ export default function InstagramMockCreator() {
                         <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
                           ここで登録した順番に投稿が並びます。トップ画面では上下にスクロールして、すべての投稿を閲覧できます。
                         </div>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => setSettings((prev) => ({
+                            ...prev,
+                            screenType: "feed",
+                            navAvatarLabel: "ま",
+                            navAvatarImage: defaultSettings.navAvatarImage,
+                            feedPosts: defaultSettings.feedPosts.map((post) => ({ ...post })),
+                          }))}
+                        >
+                          シーン2「旅行最高！」の5投稿を読み込む
+                        </Button>
                         <Button className="w-full" onClick={addFeedPost}><Plus className="mr-2 h-4 w-4" />投稿を追加</Button>
                       </SectionCard>
 
