@@ -985,7 +985,10 @@ export default function InstagramMockCreator() {
   };
 
   const screen = (
-    <div className="h-full w-full overflow-hidden rounded-[inherit] bg-white">
+    <div className={cn(
+      "h-full w-full overflow-hidden rounded-[inherit] bg-white",
+      settings.fullScreenMode && !settings.deviceFrameMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+    )}>
       {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />}
     </div>
   );
@@ -999,7 +1002,13 @@ export default function InstagramMockCreator() {
       </div>
     </div>
   ) : (
-    <div className={cn("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor, height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+    <div
+      className={cn(
+        "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
+        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+      )}
+      style={{ backgroundColor: settings.bgColor, height: visualViewportHeight, maxHeight: visualViewportHeight }}
+    >
       {screen}
     </div>
   );
@@ -1012,7 +1021,12 @@ export default function InstagramMockCreator() {
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+18px)] right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/75 text-white shadow-xl backdrop-blur transition active:scale-95"
+          className={cn(
+            "fixed z-40 flex h-12 w-12 items-center justify-center rounded-full bg-black/75 text-white shadow-xl backdrop-blur transition active:scale-95",
+            settings.fullScreenMode
+              ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]"
+              : "bottom-[calc(env(safe-area-inset-bottom)+18px)] right-5",
+          )}
           aria-label="設定を開く"
         >
           <Settings2 className="h-5 w-5" />

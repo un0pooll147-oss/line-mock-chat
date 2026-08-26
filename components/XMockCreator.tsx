@@ -923,7 +923,12 @@ export default function XMockCreator() {
   );
 
   const phoneContent = (
-    <div className={cls("relative h-full overflow-hidden", theme.phone, theme.text)}>
+    <div className={cls(
+      "relative h-full overflow-hidden",
+      theme.phone,
+      theme.text,
+      settings.fullScreenMode && !settings.deviceFrameMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+    )}>
       {header}
       <div className={cls(statusBarVisible ? "h-[calc(100%-78px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
         {settings.screenType === "profile" ? profileScreen : settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "post" ? (
@@ -956,7 +961,13 @@ export default function XMockCreator() {
       </div>
     </div>
   ) : (
-    <div className={cls("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor || undefined, height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+    <div
+      className={cls(
+        "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
+        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+      )}
+      style={{ backgroundColor: settings.bgColor || undefined, height: visualViewportHeight, maxHeight: visualViewportHeight }}
+    >
       {phoneContent}
     </div>
   );

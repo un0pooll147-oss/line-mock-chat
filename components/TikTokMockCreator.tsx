@@ -704,15 +704,36 @@ export default function TikTokMockCreator() {
 
   return (
     <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50 h-[100dvh] w-screen" : "")} style={settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : undefined}>
-      <div className={cn("relative flex h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md")} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+      <div
+        className={cn(
+          "relative flex h-[100dvh] w-full flex-col bg-black",
+          settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md",
+          settings.fullScreenMode && !settings.deviceFrameMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+        )}
+        style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}
+      >
         <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-4" : "p-0")}>
-          <div className={cn("relative h-full min-h-0 w-full overflow-hidden bg-black text-white", settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}>
+          <div className={cn(
+            "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
+            settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
+            settings.fullScreenMode && !settings.deviceFrameMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+          )}>
             {screen}
           </div>
         </div>
 
         {settings.showSettingsButton && (
-          <button type="button" onClick={() => setSettingsOpen(true)} className="fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-2xl ring-1 ring-white/20" aria-label="設定を開く">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className={cn(
+              "fixed z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-2xl ring-1 ring-white/20",
+              settings.fullScreenMode
+                ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]"
+                : "bottom-5 right-5",
+            )}
+            aria-label="設定を開く"
+          >
             <Settings2 className="h-6 w-6" />
           </button>
         )}
