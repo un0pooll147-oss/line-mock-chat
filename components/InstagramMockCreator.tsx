@@ -547,7 +547,10 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
             <Bookmark className="h-6 w-6" />
           </div>
           <div className="text-sm font-semibold">いいね！{settings.likeCount}件</div>
-          <div className="text-sm leading-relaxed"><span className="font-semibold">{settings.username}</span> {settings.caption}</div>
+          <div className="space-y-0.5">
+            <div className="text-sm font-semibold leading-relaxed">{settings.username}</div>
+            <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{settings.caption}</div>
+          </div>
           <div className={cn("text-xs uppercase", theme.muted)}>{settings.postTime}</div>
         </div>
       </div>
