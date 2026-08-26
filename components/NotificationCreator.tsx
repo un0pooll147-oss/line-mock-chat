@@ -1513,17 +1513,23 @@ export default function NotificationCreator() {
     ? "p-4"
     : "p-0 rounded-device-safe-shell";
   const previewShellStyle: React.CSSProperties | undefined = !deviceFrameMode && fullScreenMode
-    ? { padding: "16px", backgroundColor: "#000" }
+    ? {
+        paddingTop: "max(32px, env(safe-area-inset-top))",
+        paddingRight: "max(32px, env(safe-area-inset-right))",
+        paddingBottom: "max(32px, env(safe-area-inset-bottom))",
+        paddingLeft: "max(32px, env(safe-area-inset-left))",
+        backgroundColor: "#000",
+      }
     : undefined;
   const settingsButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] right-[max(24px,calc(env(safe-area-inset-right)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
-    : "fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] right-[max(24px,calc(env(safe-area-inset-right)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
+    ? "absolute bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
+    : "fixed bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
   const phoneButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] left-[max(24px,calc(env(safe-area-inset-left)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
-    : "fixed bottom-[max(24px,calc(env(safe-area-inset-bottom)+16px))] left-[max(24px,calc(env(safe-area-inset-left)+16px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
+    ? "absolute bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
+    : "fixed bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))] z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
   const hiddenSettingsButtonClassName = deviceFrameMode
-    ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
-    : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
+    ? "absolute bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))] z-10 h-20 w-20 opacity-0"
+    : "fixed bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))] z-10 h-20 w-20 opacity-0";
 
   return (
     <div className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
