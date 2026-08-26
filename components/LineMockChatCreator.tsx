@@ -1476,7 +1476,7 @@ export default function LineMockChatCreator() {
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
         fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none bg-black" : "mx-auto max-w-md",
-        fullScreenMode && !deviceFrameMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+        fullScreenMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
       )}
       style={{
         ...stageContainerStyle,

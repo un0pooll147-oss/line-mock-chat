@@ -927,7 +927,7 @@ export default function XMockCreator() {
       "relative h-full overflow-hidden",
       theme.phone,
       theme.text,
-      settings.fullScreenMode && !settings.deviceFrameMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+      settings.fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
     )}>
       {header}
       <div className={cls(statusBarVisible ? "h-[calc(100%-78px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
@@ -953,7 +953,10 @@ export default function XMockCreator() {
   );
 
   const phone = settings.deviceFrameMode ? (
-    <div className={cls("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+    <div className={cls(
+      "mx-auto flex h-[100dvh] min-h-0 flex-col bg-black",
+      settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+    )} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
       <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {phoneContent}

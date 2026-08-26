@@ -1509,21 +1509,28 @@ export default function NotificationCreator() {
     overflow: fullScreenMode ? "hidden" : undefined,
     position: "relative",
   };
-  const previewShellClassName = deviceFrameMode ? "p-4" : "p-0";
+  const previewShellClassName = cn(
+    deviceFrameMode ? "p-4" : "p-0",
+    fullScreenMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+  );
   const settingsButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95"
-    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95";
+    ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4")
+    : cn("fixed z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4");
   const phoneButtonClassName = deviceFrameMode
-    ? "absolute bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95"
-    : "fixed bottom-[max(18px,env(safe-area-inset-bottom))] left-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95";
+    ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4")
+    : cn("fixed z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4");
   const hiddenSettingsButtonClassName = deviceFrameMode
-    ? "absolute bottom-0 right-0 z-10 h-20 w-20 opacity-0"
-    : "fixed bottom-0 right-0 z-10 h-20 w-20 opacity-0";
+    ? cn("absolute z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0")
+    : cn("fixed z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0");
 
   return (
     <div className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
       <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
-        <div className={cn("relative h-full min-h-0 w-full overflow-hidden bg-black text-white", deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}>
+        <div className={cn(
+          "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
+          deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
+          fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+        )}>
           <div className="absolute inset-0" style={bgStyle} />
           <div className="absolute inset-0 bg-black/15" />
 
