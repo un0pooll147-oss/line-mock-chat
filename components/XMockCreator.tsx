@@ -927,7 +927,7 @@ export default function XMockCreator() {
       "relative h-full overflow-hidden",
       theme.phone,
       theme.text,
-      settings.fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+      settings.fullScreenMode && "rounded-device-safe-surface",
     )}>
       {header}
       <div className={cls(statusBarVisible ? "h-[calc(100%-78px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
@@ -955,9 +955,9 @@ export default function XMockCreator() {
   const phone = settings.deviceFrameMode ? (
     <div className={cls(
       "mx-auto flex h-[100dvh] min-h-0 flex-col bg-black",
-      settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+      settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
     )} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
-      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-1">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {phoneContent}
         </div>
@@ -967,7 +967,7 @@ export default function XMockCreator() {
     <div
       className={cls(
         "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
-        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
       )}
       style={{ backgroundColor: settings.bgColor || undefined, height: visualViewportHeight, maxHeight: visualViewportHeight }}
     >

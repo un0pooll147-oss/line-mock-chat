@@ -1476,7 +1476,7 @@ export default function LineMockChatCreator() {
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
         fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none bg-black" : "mx-auto max-w-md",
-        fullScreenMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+        fullScreenMode && "rounded-device-safe-shell",
       )}
       style={{
         ...stageContainerStyle,
@@ -1486,12 +1486,12 @@ export default function LineMockChatCreator() {
     >
       {deviceFrameMode ? (
         <div ref={scrollRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
-          <div className="absolute inset-0 flex items-center justify-center p-2">
+          <div className="absolute inset-0 flex items-center justify-center p-1">
             <div className="relative h-full max-h-full w-auto max-w-full" style={{ aspectRatio: "9 / 19.5" }}>
               <div className="absolute inset-0 rounded-[38px] bg-black shadow-2xl" />
               <div
                 ref={frameScreenRef}
-                className="absolute inset-[8px] flex min-h-0 h-[calc(100%-16px)] flex-col overflow-hidden rounded-[30px]"
+                className="absolute inset-[4px] flex min-h-0 h-[calc(100%-8px)] flex-col overflow-hidden rounded-[34px]"
                 style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
               >
                 <div className="min-h-0 flex-1 overflow-hidden">
@@ -1528,7 +1528,7 @@ export default function LineMockChatCreator() {
             className={cn(
               "relative flex-1 min-h-0 overflow-hidden pb-0",
               !fullScreenMode && "bg-transparent",
-              fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+              fullScreenMode && "rounded-device-safe-surface",
             )}
           >
             <div

@@ -27,7 +27,6 @@ body {
 
 /* Keep the complete mock screen inside the visible portion of rounded devices.
    The fixed fallback still works on Android builds that report zero safe-area values. */
-.rounded-device-safe-shell-active,
 :fullscreen .rounded-device-safe-shell,
 :-webkit-full-screen .rounded-device-safe-shell {
   padding-top: max(32px, env(safe-area-inset-top));
@@ -37,24 +36,9 @@ body {
   background: #000;
 }
 
-.rounded-device-safe-surface-active,
 :fullscreen .rounded-device-safe-surface,
 :-webkit-full-screen .rounded-device-safe-surface {
   border-radius: 32px;
-}
-
-@media (display-mode: fullscreen) {
-  .rounded-device-safe-shell {
-    padding-top: max(32px, env(safe-area-inset-top));
-    padding-right: max(32px, env(safe-area-inset-right));
-    padding-bottom: max(32px, env(safe-area-inset-bottom));
-    padding-left: max(32px, env(safe-area-inset-left));
-    background: #000;
-  }
-
-  .rounded-device-safe-surface {
-    border-radius: 32px;
-  }
 }
 
 input,

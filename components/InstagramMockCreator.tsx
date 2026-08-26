@@ -987,7 +987,7 @@ export default function InstagramMockCreator() {
   const screen = (
     <div className={cn(
       "h-full w-full overflow-hidden rounded-[inherit] bg-white",
-      settings.fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+      settings.fullScreenMode && "rounded-device-safe-surface",
     )}>
       {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />}
     </div>
@@ -996,9 +996,9 @@ export default function InstagramMockCreator() {
   const stage = settings.deviceFrameMode ? (
     <div className={cn(
       "mx-auto flex h-[100dvh] min-h-0 flex-col bg-black",
-      settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+      settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
     )} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
-      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-1">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {screen}
         </div>
@@ -1008,7 +1008,7 @@ export default function InstagramMockCreator() {
     <div
       className={cn(
         "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
-        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell rounded-device-safe-shell-active" : "max-w-md",
+        settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
       )}
       style={{ backgroundColor: settings.bgColor, height: visualViewportHeight, maxHeight: visualViewportHeight }}
     >

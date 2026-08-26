@@ -708,15 +708,15 @@ export default function TikTokMockCreator() {
         className={cn(
           "relative flex h-[100dvh] w-full flex-col bg-black",
           settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md",
-          settings.fullScreenMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+          settings.fullScreenMode && "rounded-device-safe-shell",
         )}
         style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}
       >
-        <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-4" : "p-0")}>
+        <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-1" : "p-0")}>
           <div className={cn(
             "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
             settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
-            settings.fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+            settings.fullScreenMode && "rounded-device-safe-surface",
           )}>
             {screen}
           </div>

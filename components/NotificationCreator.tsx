@@ -1510,8 +1510,8 @@ export default function NotificationCreator() {
     position: "relative",
   };
   const previewShellClassName = cn(
-    deviceFrameMode ? "p-4" : "p-0",
-    fullScreenMode && "rounded-device-safe-shell rounded-device-safe-shell-active",
+    deviceFrameMode ? "p-1" : "p-0",
+    fullScreenMode && "rounded-device-safe-shell",
   );
   const settingsButtonClassName = deviceFrameMode
     ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4")
@@ -1529,7 +1529,7 @@ export default function NotificationCreator() {
         <div className={cn(
           "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
           deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
-          fullScreenMode && "rounded-device-safe-surface rounded-device-safe-surface-active",
+          fullScreenMode && "rounded-device-safe-surface",
         )}>
           <div className="absolute inset-0" style={bgStyle} />
           <div className="absolute inset-0 bg-black/15" />
