@@ -25,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 
-type InstagramScreenType = "post" | "story";
+type InstagramScreenType = "feed" | "post" | "story";
 type SettingsTab = "create" | "comments" | "saved" | "screen" | "modes";
 type InstagramThemeKey = "instagram" | "dark";
 
@@ -38,6 +38,23 @@ type InstagramComment = {
   text: string;
   likeCount: string;
   visible: boolean;
+};
+
+type InstagramFeedPost = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarLabel: string;
+  avatarImage: string | null;
+  postImage: string | null;
+  caption: string;
+  likeCount: string;
+  commentCount: string;
+  repostCount: string;
+  postTime: string;
+  liked: boolean;
+  reposted: boolean;
+  saved: boolean;
 };
 
 type InstagramSettings = {
@@ -59,6 +76,7 @@ type InstagramSettings = {
   postSaved: boolean;
   commentCount: string;
   repostCount: string;
+  feedPosts: InstagramFeedPost[];
   comments: InstagramComment[];
   runtimeCommentUsername: string;
   runtimeCommentDisplayName: string;
@@ -131,6 +149,40 @@ const defaultSettings: InstagramSettings = {
   postSaved: false,
   commentCount: "12",
   repostCount: "3",
+  feedPosts: [
+    {
+      id: "feed-post-1",
+      username: "ayaka_photo",
+      displayName: "彩花",
+      avatarLabel: "彩",
+      avatarImage: null,
+      postImage: null,
+      caption: "光がきれいだった日の記録。\nまたこの場所で撮りたい。",
+      likeCount: "246",
+      commentCount: "18",
+      repostCount: "5",
+      postTime: "2時間前",
+      liked: false,
+      reposted: false,
+      saved: false,
+    },
+    {
+      id: "feed-post-2",
+      username: "ren_movie",
+      displayName: "蓮",
+      avatarLabel: "蓮",
+      avatarImage: null,
+      postImage: null,
+      caption: "今日の撮影終了。\n良いシーンになりました。",
+      likeCount: "189",
+      commentCount: "9",
+      repostCount: "2",
+      postTime: "5時間前",
+      liked: false,
+      reposted: false,
+      saved: false,
+    },
+  ],
   comments: [
     {
       id: "comment-default-1",
@@ -197,6 +249,26 @@ const normalizeInstagramSettings = (value: Partial<InstagramSettings> | null | u
   if (!Array.isArray(merged.postImages)) merged.postImages = [];
   if (!Array.isArray(merged.storyImages)) merged.storyImages = [];
   if (!Array.isArray(merged.comments)) merged.comments = defaultSettings.comments;
+  if (!Array.isArray(merged.feedPosts)) {
+    merged.feedPosts = defaultSettings.feedPosts;
+  } else {
+    merged.feedPosts = merged.feedPosts.map((post, index) => ({
+      id: String(post?.id || `feed-post-${index}-${Date.now()}`),
+      username: String(post?.username || `account_${index + 1}`),
+      displayName: String(post?.displayName || ""),
+      avatarLabel: String(post?.avatarLabel || "投").slice(0, 2),
+      avatarImage: typeof post?.avatarImage === "string" ? post.avatarImage : null,
+      postImage: typeof post?.postImage === "string" ? post.postImage : null,
+      caption: String(post?.caption || ""),
+      likeCount: String(post?.likeCount ?? "0"),
+      commentCount: String(post?.commentCount ?? "0"),
+      repostCount: String(post?.repostCount ?? "0"),
+      postTime: String(post?.postTime || "今"),
+      liked: Boolean(post?.liked),
+      reposted: Boolean(post?.reposted),
+      saved: Boolean(post?.saved),
+    }));
+  }
   if (!Array.isArray(merged.storyMessages)) merged.storyMessages = [];
   return merged;
 };
@@ -483,7 +555,9 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
             <Avatar label={settings.avatarLabel} image={settings.avatarImage} themeKey={settings.themeKey} />
             <div>
               <div className="text-[15px] font-semibold leading-tight">{settings.username}</div>
-              <div className={cn("text-[13px]", theme.muted)}>{settings.displayName}</div>
+              <div className={cn("text-[13px]", theme.muted)}>
+                {settings.displayName}{settings.displayName && settings.postTime ? " · " : ""}{settings.postTime}
+              </div>
             </div>
           </div>
           <button type="button" onClick={onOpenSettings} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
@@ -581,7 +655,6 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
             <div className="text-[15px] font-semibold leading-relaxed">{settings.username}</div>
             <div className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{settings.caption}</div>
           </div>
-          <div className={cn("text-[13px] uppercase", theme.muted)}>{settings.postTime}</div>
         </div>
       </div>
 
@@ -640,6 +713,108 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function InstagramFeedPreview({ settings, setSettings, onOpenSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>>; onOpenSettings: () => void }) {
+  const theme = instagramThemes[settings.themeKey || "instagram"] || instagramThemes.instagram;
+  const feedPosts = settings.feedPosts || [];
+
+  const updateFeedPostState = (id: string, updater: (post: InstagramFeedPost) => InstagramFeedPost) => {
+    setSettings((prev) => ({
+      ...prev,
+      feedPosts: (prev.feedPosts || []).map((post) => post.id === id ? updater(post) : post),
+    }));
+  };
+
+  return (
+    <div className={cn("relative flex h-full flex-col", theme.root, theme.text)}>
+      {settings.showStatusBar && <StatusBar time={settings.deviceTime} className={theme.text} />}
+      <div className={cn("flex h-12 shrink-0 items-center justify-between border-b px-4", theme.surface, theme.border)}>
+        <div className="text-[22px] font-bold tracking-tight">{settings.appName || "Picgram"}</div>
+        <div className="flex items-center gap-4"><Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /></div>
+      </div>
+
+      <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", theme.surface)}>
+        {feedPosts.length === 0 ? (
+          <div className={cn("flex min-h-full items-center justify-center px-8 text-center text-sm", theme.muted)}>
+            設定画面の「トップ投稿」から投稿を追加してください
+          </div>
+        ) : (
+          feedPosts.map((post) => (
+            <article key={post.id} className={cn("border-b pb-4", theme.border)}>
+              <div className="flex items-center justify-between px-3 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar label={post.avatarLabel} image={post.avatarImage} themeKey={settings.themeKey} />
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-semibold leading-tight">{post.username}</div>
+                    <div className={cn("truncate text-[13px]", theme.muted)}>
+                      {post.displayName}{post.displayName && post.postTime ? " · " : ""}{post.postTime}
+                    </div>
+                  </div>
+                </div>
+                <button type="button" onClick={onOpenSettings} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
+              </div>
+
+              {post.postImage ? (
+                isVideoUrl(post.postImage) ? (
+                  <video src={post.postImage} className="aspect-square w-full object-cover" autoPlay muted loop playsInline />
+                ) : (
+                  <img src={post.postImage} alt={`${post.username}の投稿`} className="aspect-square w-full object-cover" />
+                )
+              ) : (
+                <EmptyImage label={`${post.username} の投稿メディア`} themeKey={settings.themeKey} />
+              )}
+
+              <div className="space-y-2 px-3 pt-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => updateFeedPostState(post.id, (current) => ({ ...current, liked: !current.liked, likeCount: adjustCountText(current.likeCount, current.liked ? -1 : 1) }))}
+                      className="rounded-full transition active:scale-95"
+                      aria-label="いいね"
+                      aria-pressed={post.liked}
+                    >
+                      <Heart className={cn("h-6 w-6", post.liked && "fill-red-500 text-red-500")} />
+                    </button>
+                    <div className="flex items-center gap-1.5"><MessageCircle className="h-6 w-6" /><span className="text-[13px] font-semibold leading-none">{post.commentCount}</span></div>
+                    <button
+                      type="button"
+                      onClick={() => updateFeedPostState(post.id, (current) => ({ ...current, reposted: !current.reposted, repostCount: adjustCountText(current.repostCount, current.reposted ? -1 : 1) }))}
+                      className={cn("flex items-center gap-1.5 rounded-full transition active:scale-95", post.reposted && "text-green-500")}
+                      aria-label="リポスト"
+                      aria-pressed={post.reposted}
+                    >
+                      <Repeat2 className="h-6 w-6" /><span className="text-[13px] font-semibold leading-none">{post.repostCount}</span>
+                    </button>
+                    <Send className="h-6 w-6" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateFeedPostState(post.id, (current) => ({ ...current, saved: !current.saved }))}
+                    className="rounded-full transition active:scale-95"
+                    aria-label="投稿をキープ"
+                    aria-pressed={post.saved}
+                  >
+                    <Bookmark className={cn("h-6 w-6", post.saved && "fill-amber-400 text-amber-500")} />
+                  </button>
+                </div>
+                <div className="text-[15px] font-semibold">いいね！{post.likeCount}件</div>
+                <div className="space-y-0.5">
+                  <div className="text-[15px] font-semibold leading-relaxed">{post.username}</div>
+                  <div className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{post.caption}</div>
+                </div>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className={cn("flex h-12 shrink-0 items-center justify-around border-t", theme.border, theme.surface, theme.icon)}>
+        <Home className="h-6 w-6" /><Search className="h-6 w-6" /><Plus className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Avatar label={settings.navAvatarLabel} image={settings.navAvatarImage} size="h-6 w-6" themeKey={settings.themeKey} />
+      </div>
     </div>
   );
 }
@@ -920,6 +1095,58 @@ export default function InstagramMockCreator() {
     event.target.value = "";
   };
 
+  const updateFeedPost = <K extends keyof InstagramFeedPost>(id: string, key: K, value: InstagramFeedPost[K]) => {
+    setSettings((prev) => ({
+      ...prev,
+      feedPosts: (prev.feedPosts || []).map((post) => post.id === id ? { ...post, [key]: value } : post),
+    }));
+  };
+
+  const addFeedPost = () => {
+    const nextIndex = (settings.feedPosts || []).length + 1;
+    const nextPost: InstagramFeedPost = {
+      id: `feed-post-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      username: `account_${nextIndex}`,
+      displayName: `アカウント${nextIndex}`,
+      avatarLabel: "投",
+      avatarImage: null,
+      postImage: null,
+      caption: "投稿文章を入力してください。",
+      likeCount: "0",
+      commentCount: "0",
+      repostCount: "0",
+      postTime: "今",
+      liked: false,
+      reposted: false,
+      saved: false,
+    };
+    setSettings((prev) => ({ ...prev, feedPosts: [...(prev.feedPosts || []), nextPost] }));
+  };
+
+  const deleteFeedPost = (id: string) => {
+    setSettings((prev) => ({ ...prev, feedPosts: (prev.feedPosts || []).filter((post) => post.id !== id) }));
+  };
+
+  const moveFeedPost = (id: string, direction: -1 | 1) => {
+    setSettings((prev) => {
+      const posts = [...(prev.feedPosts || [])];
+      const currentIndex = posts.findIndex((post) => post.id === id);
+      const targetIndex = currentIndex + direction;
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= posts.length) return prev;
+      [posts[currentIndex], posts[targetIndex]] = [posts[targetIndex], posts[currentIndex]];
+      return { ...prev, feedPosts: posts };
+    });
+  };
+
+  const handleFeedPostImageUpload = (event: ChangeEvent<HTMLInputElement>, id: string, key: "avatarImage" | "postImage") => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => updateFeedPost(id, key, String(reader.result));
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
   const updateComment = <K extends keyof InstagramComment>(id: string, key: K, value: InstagramComment[K]) => {
     setSettings((prev) => ({
       ...prev,
@@ -1022,7 +1249,13 @@ export default function InstagramMockCreator() {
       "h-full w-full overflow-hidden rounded-[inherit] bg-white",
       settings.fullScreenMode && "rounded-device-safe-surface",
     )}>
-      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />}
+      {settings.screenType === "feed" ? (
+        <InstagramFeedPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
+      ) : settings.screenType === "post" ? (
+        <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
+      ) : (
+        <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
+      )}
     </div>
   );
 
@@ -1090,7 +1323,8 @@ export default function InstagramMockCreator() {
               {activeTab === "create" && (
                 <div className="space-y-4">
                   <SectionCard icon={ImageIcon} title="作成する画面">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button onClick={() => update("screenType", "feed")} variant={settings.screenType === "feed" ? "default" : "outline"}>トップ</Button>
                       <Button onClick={() => update("screenType", "post")} variant={settings.screenType === "post" ? "default" : "outline"}>投稿画面</Button>
                       <Button onClick={() => update("screenType", "story")} variant={settings.screenType === "story" ? "default" : "outline"}>ストーリー</Button>
                     </div>
@@ -1105,7 +1339,7 @@ export default function InstagramMockCreator() {
                     <div className="flex items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "avatarImage")}>投稿者アイコン画像</FileButton><Button variant="outline" onClick={() => update("avatarImage", null)}>解除</Button></div>
                   </SectionCard>
 
-                  {settings.screenType === "post" && (
+                  {settings.screenType !== "story" && (
                     <SectionCard icon={UserCircle2} title="下部バーの自分プロフィール">
                       <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">他アカウントの投稿を見ている設定にできます。投稿者アイコンとは別に保存されます。</div>
                       <div className="grid grid-cols-[1fr_auto] items-end gap-3">
@@ -1116,7 +1350,54 @@ export default function InstagramMockCreator() {
                     </SectionCard>
                   )}
 
-                  {settings.screenType === "post" ? (
+                  {settings.screenType === "feed" ? (
+                    <div className="space-y-3">
+                      <SectionCard icon={ImageIcon} title={`トップ投稿 (${(settings.feedPosts || []).length})`}>
+                        <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
+                          ここで登録した順番に投稿が並びます。トップ画面では上下にスクロールして、すべての投稿を閲覧できます。
+                        </div>
+                        <Button className="w-full" onClick={addFeedPost}><Plus className="mr-2 h-4 w-4" />投稿を追加</Button>
+                      </SectionCard>
+
+                      {(settings.feedPosts || []).map((post, index) => (
+                        <SectionCard key={post.id} icon={UserCircle2} title={`トップ投稿 ${index + 1}`}>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" disabled={index === 0} onClick={() => moveFeedPost(post.id, -1)}>上へ移動</Button>
+                            <Button variant="outline" disabled={index === (settings.feedPosts || []).length - 1} onClick={() => moveFeedPost(post.id, 1)}>下へ移動</Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2"><Label>ユーザー名</Label><Input value={post.username} onChange={(e) => updateFeedPost(post.id, "username", e.target.value)} /></div>
+                            <div className="space-y-2"><Label>表示名</Label><Input value={post.displayName} onChange={(e) => updateFeedPost(post.id, "displayName", e.target.value)} /></div>
+                          </div>
+                          <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                            <div className="space-y-2"><Label>アイコン文字</Label><Input value={post.avatarLabel} onChange={(e) => updateFeedPost(post.id, "avatarLabel", e.target.value.slice(0, 2))} /></div>
+                            <Avatar label={post.avatarLabel} image={post.avatarImage} size="h-11 w-11" themeKey={settings.themeKey} />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <FileButton accept="image/*" onFile={(e) => handleFeedPostImageUpload(e, post.id, "avatarImage")}>アイコン画像</FileButton>
+                            <Button variant="outline" onClick={() => updateFeedPost(post.id, "avatarImage", null)}>解除</Button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <FileButton accept="image/*,video/*" onFile={(e) => handleFeedPostImageUpload(e, post.id, "postImage")}>投稿メディア</FileButton>
+                            <Button variant="outline" onClick={() => updateFeedPost(post.id, "postImage", null)}>解除</Button>
+                          </div>
+                          {post.postImage && (
+                            isVideoUrl(post.postImage)
+                              ? <video src={post.postImage} className="aspect-video w-full rounded-2xl object-cover" muted playsInline />
+                              : <img src={post.postImage} alt="投稿プレビュー" className="aspect-video w-full rounded-2xl object-cover" />
+                          )}
+                          <div className="space-y-2"><Label>投稿文章</Label><Textarea value={post.caption} onChange={(e) => updateFeedPost(post.id, "caption", e.target.value)} /></div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-2"><Label>いいね数</Label><Input value={post.likeCount} onChange={(e) => updateFeedPost(post.id, "likeCount", e.target.value)} /></div>
+                            <div className="space-y-2"><Label>コメント数</Label><Input value={post.commentCount} onChange={(e) => updateFeedPost(post.id, "commentCount", e.target.value)} /></div>
+                            <div className="space-y-2"><Label>リポスト数</Label><Input value={post.repostCount} onChange={(e) => updateFeedPost(post.id, "repostCount", e.target.value)} /></div>
+                          </div>
+                          <div className="space-y-2"><Label>投稿日時</Label><Input value={post.postTime} onChange={(e) => updateFeedPost(post.id, "postTime", e.target.value)} placeholder="2時間前" /></div>
+                          <Button variant="outline" className="w-full text-red-600" onClick={() => deleteFeedPost(post.id)}><Trash2 className="mr-2 h-4 w-4" />この投稿を削除</Button>
+                        </SectionCard>
+                      ))}
+                    </div>
+                  ) : settings.screenType === "post" ? (
                     <SectionCard icon={ImageIcon} title="投稿内容">
                       <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿メディア</FileButton><MultiFileButton accept="image/*,video/*" onFiles={handlePostImagesUpload}>複数メディア</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">画像・動画を複数選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
                       <div className="space-y-2"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
