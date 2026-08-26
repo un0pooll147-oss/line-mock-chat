@@ -55,6 +55,8 @@ type InstagramSettings = {
   caption: string;
   likeCount: string;
   postLiked: boolean;
+  postReposted: boolean;
+  postSaved: boolean;
   commentCount: string;
   repostCount: string;
   comments: InstagramComment[];
@@ -125,6 +127,8 @@ const defaultSettings: InstagramSettings = {
   caption: "今日の撮影、少しだけ特別な時間だった。",
   likeCount: "128",
   postLiked: false,
+  postReposted: false,
+  postSaved: false,
   commentCount: "12",
   repostCount: "3",
   comments: [
@@ -436,6 +440,18 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
     }));
   };
 
+  const togglePostRepost = () => {
+    setSettings((prev) => ({
+      ...prev,
+      postReposted: !prev.postReposted,
+      repostCount: adjustCountText(prev.repostCount, prev.postReposted ? -1 : 1),
+    }));
+  };
+
+  const togglePostSaved = () => {
+    setSettings((prev) => ({ ...prev, postSaved: !prev.postSaved }));
+  };
+
   const submitRuntimeComment = () => {
     const text = commentDraft.trim();
     if (!text) return;
@@ -466,8 +482,8 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
           <div className="flex items-center gap-3">
             <Avatar label={settings.avatarLabel} image={settings.avatarImage} themeKey={settings.themeKey} />
             <div>
-              <div className="text-sm font-semibold leading-tight">{settings.username}</div>
-              <div className={cn("text-xs", theme.muted)}>{settings.displayName}</div>
+              <div className="text-[15px] font-semibold leading-tight">{settings.username}</div>
+              <div className={cn("text-[13px]", theme.muted)}>{settings.displayName}</div>
             </div>
           </div>
           <button type="button" onClick={onOpenSettings} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
@@ -536,22 +552,36 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
                 aria-label="コメント欄を開く"
               >
                 <MessageCircle className="h-6 w-6" />
-                <span className="text-xs font-semibold leading-none">{commentCountLabel}</span>
+                <span className="text-[13px] font-semibold leading-none">{commentCountLabel}</span>
               </button>
-              <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={togglePostRepost}
+                className={cn("flex items-center gap-1.5 rounded-full transition active:scale-95", settings.postReposted && "text-green-500")}
+                aria-label="リポスト"
+                aria-pressed={settings.postReposted}
+              >
                 <Repeat2 className="h-6 w-6" />
-                <span className="text-xs font-semibold leading-none">{settings.repostCount}</span>
-              </div>
+                <span className="text-[13px] font-semibold leading-none">{settings.repostCount}</span>
+              </button>
               <Send className="h-6 w-6" />
             </div>
-            <Bookmark className="h-6 w-6" />
+            <button
+              type="button"
+              onClick={togglePostSaved}
+              className="rounded-full transition active:scale-95"
+              aria-label="投稿をキープ"
+              aria-pressed={settings.postSaved}
+            >
+              <Bookmark className={cn("h-6 w-6", settings.postSaved && "fill-amber-400 text-amber-500")} />
+            </button>
           </div>
-          <div className="text-sm font-semibold">いいね！{settings.likeCount}件</div>
+          <div className="text-[15px] font-semibold">いいね！{settings.likeCount}件</div>
           <div className="space-y-0.5">
-            <div className="text-sm font-semibold leading-relaxed">{settings.username}</div>
-            <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{settings.caption}</div>
+            <div className="text-[15px] font-semibold leading-relaxed">{settings.username}</div>
+            <div className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{settings.caption}</div>
           </div>
-          <div className={cn("text-xs uppercase", theme.muted)}>{settings.postTime}</div>
+          <div className={cn("text-[13px] uppercase", theme.muted)}>{settings.postTime}</div>
         </div>
       </div>
 
