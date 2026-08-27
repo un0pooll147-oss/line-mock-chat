@@ -56,6 +56,7 @@ type NotificationSettings = {
   showLargeClock: boolean;
   groupName: string;
   selectedWallpaper: string;
+  wallpaperBlur: number;
   uploadedWallpaper: string | null;
   messages: Message[];
   showSettingsButton: boolean;
@@ -143,6 +144,14 @@ const presetWallpapers: Record<string, string> = {
   pink: "linear-gradient(180deg, #f9a8d4 0%, #db2777 45%, #2a0018 100%)",
 };
 
+const MAX_WALLPAPER_BLUR = 24;
+
+function clampWallpaperBlur(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return defaultSettings.wallpaperBlur;
+  return Math.max(0, Math.min(MAX_WALLPAPER_BLUR, Math.round(num)));
+}
+
 const osThemes: Record<
   OSType,
   {
@@ -223,6 +232,7 @@ const defaultSettings: NotificationSettings = {
   showLargeClock: true,
   groupName: "森田家",
   selectedWallpaper: "photoLake",
+  wallpaperBlur: 0,
   uploadedWallpaper: null,
   messages: defaultMessages,
   showSettingsButton: true,
@@ -681,6 +691,7 @@ function readStoredSettings(): NotificationSettings {
         parsed.notificationSoundPreset === "upload"
           ? parsed.notificationSoundPreset
           : defaultSettings.notificationSoundPreset,
+      wallpaperBlur: clampWallpaperBlur(parsed.wallpaperBlur),
       uploadedSound: typeof parsed.uploadedSound === "string" ? parsed.uploadedSound : defaultSettings.uploadedSound,
       uploadedSoundName: typeof parsed.uploadedSoundName === "string" ? parsed.uploadedSoundName : defaultSettings.uploadedSoundName,
       showCallButton: typeof parsed.showCallButton === "boolean" ? parsed.showCallButton : defaultSettings.showCallButton,
@@ -724,6 +735,7 @@ export default function NotificationCreator() {
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
+  const [wallpaperBlur, setWallpaperBlur] = useState(defaultSettings.wallpaperBlur);
   const [uploadedWallpaper, setUploadedWallpaper] = useState<string | null>(defaultSettings.uploadedWallpaper);
   const [messages, setMessages] = useState<Message[]>(defaultSettings.messages);
   const [showSettingsButton, setShowSettingsButton] = useState(defaultSettings.showSettingsButton);
@@ -779,6 +791,7 @@ export default function NotificationCreator() {
     setShowLargeClock(stored.showLargeClock);
     setGroupName(stored.groupName);
     setSelectedWallpaper(stored.selectedWallpaper);
+    setWallpaperBlur(stored.wallpaperBlur);
     setUploadedWallpaper(stored.uploadedWallpaper);
     setMessages(stored.messages);
     setShowSettingsButton(stored.showSettingsButton);
@@ -822,6 +835,7 @@ export default function NotificationCreator() {
       showLargeClock,
       groupName,
       selectedWallpaper,
+      wallpaperBlur,
       uploadedWallpaper,
       messages,
       showSettingsButton,
@@ -882,6 +896,7 @@ export default function NotificationCreator() {
     showLargeClock,
     groupName,
     selectedWallpaper,
+    wallpaperBlur,
     uploadedWallpaper,
     messages,
     showSettingsButton,
@@ -930,16 +945,23 @@ export default function NotificationCreator() {
 
   const theme = osThemes[osType];
 
+  const safeWallpaperBlur = clampWallpaperBlur(wallpaperBlur);
+
   const bgStyle = useMemo<React.CSSProperties>(() => {
-    if (selectedWallpaper === "upload" && uploadedWallpaper) {
-      return { backgroundImage: `url(${uploadedWallpaper})`, backgroundSize: "cover", backgroundPosition: "center" };
-    }
+    const image =
+      selectedWallpaper === "upload" && uploadedWallpaper
+        ? `url(${uploadedWallpaper})`
+        : presetWallpapers[selectedWallpaper] ?? presetWallpapers.simple;
     return {
-      backgroundImage: presetWallpapers[selectedWallpaper] ?? presetWallpapers.simple,
+      backgroundImage: image,
       backgroundSize: "cover",
       backgroundPosition: "center",
+      // ぼかすと端が透けてしまうため、少し拡大して縁が出ないようにする。
+      ...(safeWallpaperBlur > 0
+        ? { filter: `blur(${safeWallpaperBlur}px)`, transform: `scale(${1 + safeWallpaperBlur / 200})` }
+        : null),
     };
-  }, [selectedWallpaper, uploadedWallpaper]);
+  }, [selectedWallpaper, uploadedWallpaper, safeWallpaperBlur]);
 
   const renderedNotifications = useMemo(() => {
     const enabledMessages = messages.filter((m) => m.enabled && m.displayed);
@@ -1305,6 +1327,7 @@ export default function NotificationCreator() {
     showLargeClock,
     groupName,
     selectedWallpaper,
+    wallpaperBlur,
     uploadedWallpaper,
     messages,
     showSettingsButton,
@@ -1343,6 +1366,7 @@ export default function NotificationCreator() {
     setShowLargeClock(next.showLargeClock);
     setGroupName(next.groupName);
     setSelectedWallpaper(next.selectedWallpaper);
+    setWallpaperBlur(next.wallpaperBlur);
     setUploadedWallpaper(next.uploadedWallpaper);
     setMessages(normalizeMessages(next.messages));
     setShowSettingsButton(next.showSettingsButton);
@@ -1461,6 +1485,7 @@ export default function NotificationCreator() {
       showLargeClock,
       groupName,
       selectedWallpaper,
+      wallpaperBlur,
       uploadedWallpaper,
       messages,
       showSettingsButton,
@@ -1508,6 +1533,7 @@ export default function NotificationCreator() {
     setShowLargeClock(defaultSettings.showLargeClock);
     setGroupName(defaultSettings.groupName);
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
+    setWallpaperBlur(defaultSettings.wallpaperBlur);
     setUploadedWallpaper(defaultSettings.uploadedWallpaper);
     setMessages(defaultSettings.messages);
     setShowSettingsButton(defaultSettings.showSettingsButton);
@@ -1842,6 +1868,27 @@ export default function NotificationCreator() {
                       <option value="pink">ピンクベース</option>
                       {uploadedWallpaper && <option value="upload">アップロード画像</option>}
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>壁紙のぼかし</Label>
+                      <span className="text-xs font-medium text-black/50">{safeWallpaperBlur === 0 ? "なし" : `${safeWallpaperBlur}px`}</span>
+                    </div>
+                    <Input
+                      type="range"
+                      min="0"
+                      max={String(MAX_WALLPAPER_BLUR)}
+                      step="1"
+                      value={safeWallpaperBlur}
+                      onChange={(e) => setWallpaperBlur(Number(e.target.value))}
+                      aria-label="壁紙のぼかし"
+                      className="cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[11px] text-black/40">
+                      <span>くっきり</span>
+                      <span>強くぼかす</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-black/45">背景だけをぼかします。通知カードや時計はぼけません。</p>
                   </div>
                   <FileInputRow label="壁紙画像" description="アップロードした画像を背景に使えます" onChange={handleWallpaperUpload} previewName={uploadedWallpaper ? "画像を選択済み" : undefined} />
                   {uploadedWallpaper && (
