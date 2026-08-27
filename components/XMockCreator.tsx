@@ -6,6 +6,7 @@ import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
+import { useIncomingCall } from "./IncomingCall";
 import {
   type LucideIcon,
   ArrowLeft,
@@ -19,6 +20,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Palette,
+  Phone,
   Pin,
   Repeat2,
   Search,
@@ -926,6 +928,8 @@ export default function XMockCreator() {
     </div>
   );
 
+  const incomingCall = useIncomingCall({ settingsOpen });
+
   const phoneContent = (
     <div
       className={cls(
@@ -957,6 +961,8 @@ export default function XMockCreator() {
       {!settingsOpen && settings.showSettingsButton && (
         <button type="button" onClick={() => setSettingsOpen(true)} className="absolute bottom-20 right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-black text-white shadow-lg"><Settings2 className="h-5 w-5" /></button>
       )}
+      {incomingCall.startButton}
+      {incomingCall.overlay}
     </div>
   );
 
@@ -1274,6 +1280,9 @@ export default function XMockCreator() {
                       <Button variant="outline" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
                       <Button variant="outline" onClick={resetToInitialSettings}>初期設定に戻す</Button>
                     </div>
+                  </SectionCard>
+                  <SectionCard icon={Phone} title="着信を割り込ませる">
+                    {incomingCall.settingsSection}
                   </SectionCard>
                   <SectionCard icon={Settings2} title="撮影表示">
                     <Field label="ステータスバー時刻" value={settings.deviceTime} onChange={(v) => update("deviceTime", v)} />

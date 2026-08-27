@@ -6,6 +6,7 @@ import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
+import { useIncomingCall } from "./IncomingCall";
 import {
   type LucideIcon,
   Bell,
@@ -17,6 +18,7 @@ import {
   MoreHorizontal,
   Music2,
   Palette,
+  Phone,
   Plus,
   Search,
   Send,
@@ -694,6 +696,8 @@ export default function TikTokMockCreator() {
 
   const deletePreset = (id: string) => setSavedPresets((prev) => prev.filter((preset) => preset.id !== id));
 
+  const incomingCall = useIncomingCall({ settingsOpen });
+
   const screen = (
     <TikTokScreen
       settings={settings}
@@ -726,6 +730,8 @@ export default function TikTokMockCreator() {
             style={textScaleStyle(settings.textScale)}
           >
             {screen}
+            {incomingCall.startButton}
+            {incomingCall.overlay}
           </div>
         </div>
 
@@ -876,6 +882,9 @@ export default function TikTokMockCreator() {
                         <Button variant="outline" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
                         <Button variant="outline" onClick={resetToInitialSettings}>初期設定に戻す</Button>
                       </div>
+                    </SectionCard>
+                    <SectionCard icon={Phone} title="着信を割り込ませる">
+                      {incomingCall.settingsSection}
                     </SectionCard>
                     <SectionCard icon={Settings2} title="画面表示">
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>

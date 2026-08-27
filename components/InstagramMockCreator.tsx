@@ -6,6 +6,7 @@ import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
+import { useIncomingCall } from "./IncomingCall";
 import {
   type LucideIcon,
   Bookmark,
@@ -15,6 +16,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Palette,
+  Phone,
   Plus,
   Repeat2,
   Search,
@@ -1303,10 +1305,12 @@ export default function InstagramMockCreator() {
     });
   };
 
+  const incomingCall = useIncomingCall({ settingsOpen });
+
   const screen = (
     <div
       className={cn(
-        "h-full w-full overflow-hidden rounded-[inherit] bg-white",
+        "relative h-full w-full overflow-hidden rounded-[inherit] bg-white",
         MOCK_TEXT_SCALE_CLASS,
         settings.fullScreenMode && "rounded-device-safe-surface",
       )}
@@ -1319,6 +1323,8 @@ export default function InstagramMockCreator() {
       ) : (
         <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
       )}
+      {incomingCall.startButton}
+      {incomingCall.overlay}
     </div>
   );
 
@@ -1601,6 +1607,9 @@ export default function InstagramMockCreator() {
 
               {activeTab === "screen" && (
                 <div className="space-y-4">
+                  <SectionCard icon={Phone} title="着信を割り込ませる">
+                    {incomingCall.settingsSection}
+                  </SectionCard>
                   <SectionCard icon={Settings2} title="撮影表示">
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ画面として表示</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(v) => update("deviceFrameMode", v)} /></div>
