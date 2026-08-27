@@ -131,6 +131,8 @@ const getToastMeta = (message: string) => {
 };
 
 const presetWallpapers: Record<string, string> = {
+  // 既定の壁紙。ロック画面の見た目を実機に近づけるための写真素材。
+  photoLake: "url(/notification-wallpaper-lake.webp)",
   simple: "linear-gradient(180deg, #7b8188 0%, #3d4349 35%, #111111 100%)",
   red: "linear-gradient(180deg, #ff6b6b 0%, #b91c1c 45%, #220a0a 100%)",
   blue: "linear-gradient(180deg, #7dd3fc 0%, #2563eb 45%, #081226 100%)",
@@ -220,7 +222,7 @@ const defaultSettings: NotificationSettings = {
   lockscreenDateSize: 16,
   showLargeClock: true,
   groupName: "森田家",
-  selectedWallpaper: "simple",
+  selectedWallpaper: "photoLake",
   uploadedWallpaper: null,
   messages: defaultMessages,
   showSettingsButton: true,
@@ -253,6 +255,57 @@ const defaultSettings: NotificationSettings = {
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
+}
+
+// 端末で撮った写真をそのまま保存すると localStorage の容量を超えてエラーになるため、
+// 読み込み時に縮小・再エンコードしてから使う。
+const MAX_IMAGE_DIMENSION = 1280;
+const MAX_LOSSLESS_LENGTH = 600000;
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("file-read-failed"));
+    reader.onload = () => {
+      if (typeof reader.result === "string" && reader.result) resolve(reader.result);
+      else reject(new Error("file-read-failed"));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function readImageFileAsDataUrl(file: File): Promise<string> {
+  const original = await readFileAsDataUrl(file);
+  // GIF は縮小するとアニメーションが失われるのでそのまま使う。
+  if (file.type === "image/gif") return original;
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onerror = () => resolve(original);
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(original);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const keepsAlpha = file.type === "image/png" || file.type === "image/webp";
+        let encoded = keepsAlpha ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.82);
+        // 透過付きでも大きすぎる場合は JPEG に落として容量を優先する。
+        if (keepsAlpha && encoded.length > MAX_LOSSLESS_LENGTH) encoded = canvas.toDataURL("image/jpeg", 0.82);
+        resolve(encoded.length < original.length ? encoded : original);
+      } catch {
+        resolve(original);
+      }
+    };
+    img.src = original;
+  });
 }
 
 function toRgba(color: string, alpha: number) {
@@ -796,7 +849,27 @@ export default function NotificationCreator() {
       customOutgoingToneName,
       customOutgoingToneUrl,
     };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // 画像や音声を入れると保存容量を超えることがあるため、
+      // 画面表示はそのまま維持して、保存時だけ重いデータを外す。
+      try {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            ...payload,
+            uploadedWallpaper: null,
+            uploadedSound: null,
+            customOutgoingToneUrl: null,
+            quickCallAvatarImage: null,
+            messages: payload.messages.map((msg) => ({ ...msg, iconImage: undefined })),
+          }),
+        );
+      } catch {
+        // それでも保存できない場合は撮影用プレビューの継続を優先する。
+      }
+    }
   }, [
     hydrated,
     osType,
@@ -1118,86 +1191,76 @@ export default function NotificationCreator() {
     router.push("/");
   };
 
-  const handleWallpaperUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleWallpaperUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setUploadedWallpaper(reader.result);
-        setSelectedWallpaper("upload");
-      }
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      const dataUrl = await readImageFileAsDataUrl(file);
+      setUploadedWallpaper(dataUrl);
+      setSelectedWallpaper("upload");
+    } catch {
+      showToast("画像の読み込みに失敗しました");
+    }
   };
 
-  const handleIconUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleIconUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setUploadedIcon(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      setUploadedIcon(await readImageFileAsDataUrl(file));
+    } catch {
+      showToast("画像の読み込みに失敗しました");
+    }
   };
 
-  const handleQuickCallAvatarUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleQuickCallAvatarUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setQuickCallAvatarImage(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      setQuickCallAvatarImage(await readImageFileAsDataUrl(file));
+    } catch {
+      showToast("画像の読み込みに失敗しました");
+    }
   };
 
-  const handleOutgoingToneUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleOutgoingToneUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setCustomOutgoingToneUrl(reader.result);
-        setCustomOutgoingToneName(file.name);
-        setOutgoingToneType("custom");
-      }
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      setCustomOutgoingToneUrl(await readFileAsDataUrl(file));
+      setCustomOutgoingToneName(file.name);
+      setOutgoingToneType("custom");
+    } catch {
+      showToast("音声の読み込みに失敗しました");
+    }
   };
 
-  const handleExistingIconUpload = (id: number, e: ChangeEvent<HTMLInputElement>) => {
+  const handleExistingIconUpload = async (id: number, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, iconImage: reader.result as string } : msg)));
-      }
-    };
-    reader.readAsDataURL(file);
     e.target.value = "";
+    if (!file) return;
+    try {
+      const dataUrl = await readImageFileAsDataUrl(file);
+      setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, iconImage: dataUrl } : msg)));
+    } catch {
+      showToast("画像の読み込みに失敗しました");
+    }
   };
 
-  const handleSoundUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleSoundUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setUploadedSound(reader.result);
-        setUploadedSoundName(file.name);
-        setNotificationSoundPreset("upload");
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      setUploadedSound(await readFileAsDataUrl(file));
+      setUploadedSoundName(file.name);
+      setNotificationSoundPreset("upload");
+    } catch {
+      showToast("音声の読み込みに失敗しました");
+    }
   };
 
   const addMessage = () => {
@@ -1768,6 +1831,7 @@ export default function NotificationCreator() {
                       onChange={(e) => setSelectedWallpaper(e.target.value)}
                       className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"
                     >
+                      <option value="photoLake">写真（湖の夕景）</option>
                       <option value="simple">シンプル</option>
                       <option value="blue">青ベース</option>
                       <option value="red">赤ベース</option>
@@ -1781,7 +1845,7 @@ export default function NotificationCreator() {
                   </div>
                   <FileInputRow label="壁紙画像" description="アップロードした画像を背景に使えます" onChange={handleWallpaperUpload} previewName={uploadedWallpaper ? "画像を選択済み" : undefined} />
                   {uploadedWallpaper && (
-                    <Button onClick={() => { setUploadedWallpaper(null); setSelectedWallpaper("simple"); }} variant="outline" className="w-full">
+                    <Button onClick={() => { setUploadedWallpaper(null); setSelectedWallpaper(defaultSettings.selectedWallpaper); }} variant="outline" className="w-full">
                       アップロード壁紙を解除
                     </Button>
                   )}

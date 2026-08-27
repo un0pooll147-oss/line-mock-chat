@@ -1422,7 +1422,7 @@ export default function InstagramMockCreator() {
                             feedPosts: defaultSettings.feedPosts.map((post) => ({ ...post })),
                           }))}
                         >
-                          シーン2「旅行最高！」の5投稿を読み込む
+                          「旅行最高！」の5投稿を読み込む
                         </Button>
                         <Button className="w-full" onClick={addFeedPost}><Plus className="mr-2 h-4 w-4" />投稿を追加</Button>
                       </SectionCard>
