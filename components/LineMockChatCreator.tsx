@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
+import { useMockNotifications } from "./MockNotifications";
 import {
   type LucideIcon,
+  Bell,
   PlusCircle,
   Image as ImageIcon,
   Smile,
@@ -1484,6 +1486,8 @@ export default function LineMockChatCreator() {
     if (settingsOpen) setStartArmed(true);
   }, [settingsOpen]);
 
+  const mockNotifications = useMockNotifications({ settingsOpen });
+
   const startButtonLabel = startButtonAction === "timedMessages" ? "メッセージを開始" : "着信を開始";
   const startButtonDelaySeconds = Math.max(0, Number(incomingDelaySeconds) || 0);
   const callInProgress = callPhase !== "idle";
@@ -1568,6 +1572,8 @@ export default function LineMockChatCreator() {
                   />
                 </div>
                 {controlsPanel}
+                {mockNotifications.overlay}
+                {mockNotifications.startButton}
                 {startButtonNode}
               </div>
             </div>
@@ -1610,6 +1616,8 @@ export default function LineMockChatCreator() {
                 />
               </div>
               {controlsPanel}
+              {mockNotifications.overlay}
+              {mockNotifications.startButton}
               {startButtonNode}
             </div>
           </div>
@@ -1640,7 +1648,7 @@ export default function LineMockChatCreator() {
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "chat"} onClick={() => setActiveTab("chat")}>会話</TabButton>
               <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")}>履歴</TabButton>
-              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面・通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
@@ -1943,6 +1951,10 @@ export default function LineMockChatCreator() {
                     <Button onClick={resetToSavedDefaultSettings} variant="outline" className="w-full justify-center">既定の設定に戻す</Button>
                     <Button onClick={resetSavedDefaultsToAppDefaults} variant="outline" className="w-full justify-center">アプリ初期設定に戻す</Button>
                   </div>
+
+                  <SectionCard icon={Bell} title="メッセージ通知を割り込ませる">
+                    {mockNotifications.settingsSection}
+                  </SectionCard>
 
                   <SectionCard icon={Settings2} title="操作表示">
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>

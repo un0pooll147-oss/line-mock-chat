@@ -2056,7 +2056,7 @@ export default function NotificationCreator() {
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
-              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面・通知</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 

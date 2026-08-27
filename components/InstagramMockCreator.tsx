@@ -7,6 +7,7 @@ import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useIncomingCall } from "./IncomingCall";
+import { useMockNotifications } from "./MockNotifications";
 import {
   type LucideIcon,
   Bookmark,
@@ -15,6 +16,7 @@ import {
   Image as ImageIcon,
   MessageCircle,
   MoreHorizontal,
+  Bell,
   Palette,
   Phone,
   Plus,
@@ -1306,6 +1308,7 @@ export default function InstagramMockCreator() {
   };
 
   const incomingCall = useIncomingCall({ settingsOpen });
+  const mockNotifications = useMockNotifications({ settingsOpen });
 
   const screen = (
     <div
@@ -1323,6 +1326,8 @@ export default function InstagramMockCreator() {
       ) : (
         <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
       )}
+      {mockNotifications.overlay}
+      {mockNotifications.startButton}
       {incomingCall.startButton}
       {incomingCall.overlay}
     </div>
@@ -1384,7 +1389,7 @@ export default function InstagramMockCreator() {
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "comments"} onClick={() => setActiveTab("comments")}>コメント</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
-              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面・通知</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
@@ -1607,6 +1612,9 @@ export default function InstagramMockCreator() {
 
               {activeTab === "screen" && (
                 <div className="space-y-4">
+                  <SectionCard icon={Bell} title="メッセージ通知を割り込ませる">
+                    {mockNotifications.settingsSection}
+                  </SectionCard>
                   <SectionCard icon={Phone} title="着信を割り込ませる">
                     {incomingCall.settingsSection}
                   </SectionCard>

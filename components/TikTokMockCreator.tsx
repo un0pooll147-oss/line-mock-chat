@@ -7,6 +7,7 @@ import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useIncomingCall } from "./IncomingCall";
+import { useMockNotifications } from "./MockNotifications";
 import {
   type LucideIcon,
   Bell,
@@ -697,6 +698,7 @@ export default function TikTokMockCreator() {
   const deletePreset = (id: string) => setSavedPresets((prev) => prev.filter((preset) => preset.id !== id));
 
   const incomingCall = useIncomingCall({ settingsOpen });
+  const mockNotifications = useMockNotifications({ settingsOpen });
 
   const screen = (
     <TikTokScreen
@@ -730,6 +732,8 @@ export default function TikTokMockCreator() {
             style={textScaleStyle(settings.textScale)}
           >
             {screen}
+            {mockNotifications.overlay}
+            {mockNotifications.startButton}
             {incomingCall.startButton}
             {incomingCall.overlay}
           </div>
@@ -765,7 +769,7 @@ export default function TikTokMockCreator() {
                   <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
                   <TabButton active={activeTab === "comments"} onClick={() => setActiveTab("comments")}>コメント</TabButton>
                   <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
-                  <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+                  <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面・通知</TabButton>
                   <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
                 </div>
               </div>
@@ -882,6 +886,9 @@ export default function TikTokMockCreator() {
                         <Button variant="outline" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
                         <Button variant="outline" onClick={resetToInitialSettings}>初期設定に戻す</Button>
                       </div>
+                    </SectionCard>
+                    <SectionCard icon={Bell} title="メッセージ通知を割り込ませる">
+                      {mockNotifications.settingsSection}
                     </SectionCard>
                     <SectionCard icon={Phone} title="着信を割り込ませる">
                       {incomingCall.settingsSection}
