@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
+import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import {
   type LucideIcon,
   Bookmark,
@@ -100,6 +101,7 @@ type InstagramSettings = {
   deviceFrameMode: boolean;
   showSettingsButton: boolean;
   bgColor: string;
+  textScale: number;
 };
 
 const STORAGE_KEY = "instagram-mock-settings-v5";
@@ -275,6 +277,7 @@ const defaultSettings: InstagramSettings = {
   deviceFrameMode: false,
   showSettingsButton: true,
   bgColor: "#ffffff",
+  textScale: DEFAULT_TEXT_SCALE,
 };
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
@@ -285,6 +288,7 @@ const isVideoUrl = (url: string | null | undefined) => Boolean(url && (url.start
 const normalizeInstagramSettings = (value: Partial<InstagramSettings> | null | undefined): InstagramSettings => {
   const source = value || {};
   const merged = { ...defaultSettings, ...source } as InstagramSettings;
+  merged.textScale = clampTextScale(merged.textScale);
   if (typeof source.navAvatarLabel !== "string") {
     merged.navAvatarLabel = typeof source.avatarLabel === "string" ? source.avatarLabel : defaultSettings.navAvatarLabel;
   }
@@ -1300,10 +1304,14 @@ export default function InstagramMockCreator() {
   };
 
   const screen = (
-    <div className={cn(
-      "h-full w-full overflow-hidden rounded-[inherit] bg-white",
-      settings.fullScreenMode && "rounded-device-safe-surface",
-    )}>
+    <div
+      className={cn(
+        "h-full w-full overflow-hidden rounded-[inherit] bg-white",
+        MOCK_TEXT_SCALE_CLASS,
+        settings.fullScreenMode && "rounded-device-safe-surface",
+      )}
+      style={textScaleStyle(settings.textScale)}
+    >
       {settings.screenType === "feed" ? (
         <InstagramFeedPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />
       ) : settings.screenType === "post" ? (
@@ -1599,6 +1607,24 @@ export default function InstagramMockCreator() {
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダで設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(v) => update("showSettingsButton", v)} /></div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>文字サイズ</Label>
+                        <span className="text-xs font-medium text-black/50">{clampTextScale(settings.textScale)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={MIN_TEXT_SCALE}
+                        max={MAX_TEXT_SCALE}
+                        step={5}
+                        value={clampTextScale(settings.textScale)}
+                        onChange={(e) => update("textScale", Number(e.target.value))}
+                        aria-label="文字サイズ"
+                        className="w-full cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
+                      <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
+                    </div>
                   </SectionCard>
 
                   <SectionCard icon={Palette} title="規定・初期化">

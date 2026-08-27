@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
+import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import {
   type LucideIcon,
   ArrowLeft,
@@ -139,6 +140,7 @@ type XSettings = {
   deviceFrameMode: boolean;
   showSettingsButton: boolean;
   bgColor: string;
+  textScale: number;
 };
 
 const STORAGE_KEY = "x-mock-settings-v1";
@@ -212,6 +214,7 @@ const initialSettings: XSettings = {
   deviceFrameMode: false,
   showSettingsButton: true,
   bgColor: "#e5e7eb",
+  textScale: DEFAULT_TEXT_SCALE,
 };
 
 const themes: Record<XThemeKey, {
@@ -265,6 +268,7 @@ function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSett
   if (typeof (merged as any).profileFollowed !== "boolean") merged.profileFollowed = false;
   if (!(merged as any).replyTime) merged.replyTime = "今";
   if (typeof (merged as any).showScreenLabel !== "boolean") merged.showScreenLabel = true;
+  merged.textScale = clampTextScale(merged.textScale);
   if (typeof (merged as any).profilePinnedLabelVisible !== "boolean") merged.profilePinnedLabelVisible = true;
   merged.postImages = Array.isArray(merged.postImages) ? merged.postImages.slice(0, 4) : [];
   merged.replies = (merged.replies || []).map((reply: any) => ({
@@ -923,12 +927,16 @@ export default function XMockCreator() {
   );
 
   const phoneContent = (
-    <div className={cls(
-      "relative h-full overflow-hidden",
-      theme.phone,
-      theme.text,
-      settings.fullScreenMode && "rounded-device-safe-surface",
-    )}>
+    <div
+      className={cls(
+        "relative h-full overflow-hidden",
+        MOCK_TEXT_SCALE_CLASS,
+        theme.phone,
+        theme.text,
+        settings.fullScreenMode && "rounded-device-safe-surface",
+      )}
+      style={textScaleStyle(settings.textScale)}
+    >
       {header}
       <div className={cls(statusBarVisible ? "h-[calc(100%-78px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
         {settings.screenType === "profile" ? profileScreen : settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "post" ? (
@@ -1272,6 +1280,24 @@ export default function XMockCreator() {
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm font-semibold text-black/70">
+                        <span>文字サイズ</span>
+                        <span className="text-xs font-medium text-black/50">{clampTextScale(settings.textScale)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={MIN_TEXT_SCALE}
+                        max={MAX_TEXT_SCALE}
+                        step={5}
+                        value={clampTextScale(settings.textScale)}
+                        onChange={(e) => update("textScale", Number(e.target.value))}
+                        aria-label="文字サイズ"
+                        className="w-full cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
+                      <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
+                    </div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
+import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import {
   type LucideIcon,
   Bell,
@@ -72,6 +73,7 @@ type TikTokSettings = {
   deviceFrameMode: boolean;
   showStatusBar: boolean;
   showSettingsButton: boolean;
+  textScale: number;
 };
 
 type SavedTikTokPreset = {
@@ -170,6 +172,7 @@ const defaultSettings: TikTokSettings = {
   deviceFrameMode: false,
   showStatusBar: true,
   showSettingsButton: true,
+  textScale: DEFAULT_TEXT_SCALE,
 };
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
@@ -713,11 +716,15 @@ export default function TikTokMockCreator() {
         style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}
       >
         <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-1" : "p-0")}>
-          <div className={cn(
-            "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
-            settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
-            settings.fullScreenMode && "rounded-device-safe-surface",
-          )}>
+          <div
+            className={cn(
+              "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
+              MOCK_TEXT_SCALE_CLASS,
+              settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
+              settings.fullScreenMode && "rounded-device-safe-surface",
+            )}
+            style={textScaleStyle(settings.textScale)}
+          >
             {screen}
           </div>
         </div>
@@ -876,6 +883,24 @@ export default function TikTokMockCreator() {
                     <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(value) => update("showSettingsButton", value)} /></div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>文字サイズ</Label>
+                        <span className="text-xs font-medium text-black/50">{clampTextScale(settings.textScale)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={MIN_TEXT_SCALE}
+                        max={MAX_TEXT_SCALE}
+                        step={5}
+                        value={clampTextScale(settings.textScale)}
+                        onChange={(e) => update("textScale", Number(e.target.value))}
+                        aria-label="文字サイズ"
+                        className="w-full cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
+                      <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
+                    </div>
                     </SectionCard>
                   </>
                 )}

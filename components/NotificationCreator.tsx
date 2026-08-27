@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
+import { MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, textScaleStyle } from "./textScale";
 import {
   type LucideIcon,
   Clock3,
@@ -28,6 +29,7 @@ type OSType = "iphone" | "android";
 type SettingsTab = "appearance" | "notifications" | "saved" | "screen" | "modes";
 type NotificationDirection = "top" | "bottom";
 type SoundPreset = "classic" | "digital" | "soft" | "upload";
+type StartButtonAction = "notifications" | "incoming" | "outgoing";
 type OutgoingToneType = "iphone" | "line" | "custom";
 
 type Message = {
@@ -57,9 +59,12 @@ type NotificationSettings = {
   groupName: string;
   selectedWallpaper: string;
   wallpaperBlur: number;
+  notificationTextScale: number;
   uploadedWallpaper: string | null;
   messages: Message[];
   showSettingsButton: boolean;
+  showStartButton: boolean;
+  startButtonAction: StartButtonAction;
   notificationDirection: NotificationDirection;
   vibrateOnNotify: boolean;
   soundOnNotify: boolean;
@@ -152,11 +157,39 @@ function clampWallpaperBlur(value: unknown) {
   return Math.max(0, Math.min(MAX_WALLPAPER_BLUR, Math.round(num)));
 }
 
+const MIN_NOTIFICATION_TEXT_SCALE = MIN_TEXT_SCALE;
+const MAX_NOTIFICATION_TEXT_SCALE = MAX_TEXT_SCALE;
+
+function clampNotificationTextScale(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return defaultSettings.notificationTextScale;
+  return Math.max(MIN_NOTIFICATION_TEXT_SCALE, Math.min(MAX_NOTIFICATION_TEXT_SCALE, Math.round(num)));
+}
+
+// 100% のときの通知カード各要素の基準サイズ(px)。
+// 倍率を変えても崩れないよう、文字・アイコン・余白をすべてここから算出する。
+const notificationBaseSizes = {
+  appFont: 12,
+  groupFont: 14,
+  senderFont: 13,
+  bodyFont: 14,
+  timeFont: 11,
+  iconFont: 14,
+  iconSize: 40,
+  cardPaddingX: 16,
+  cardPaddingY: 12,
+  rowGap: 12,
+  lineGap: 2,
+  stackGap: 12,
+};
+
 const osThemes: Record<
   OSType,
   {
     notificationCard: string;
+    cardRadius: number;
     iconWrap: string;
+    iconRadius: number;
     appText: string;
     groupText: string;
     senderText: string;
@@ -172,13 +205,15 @@ const osThemes: Record<
   }
 > = {
   iphone: {
-    notificationCard: "rounded-[22px] border border-white/20 shadow-lg",
-    iconWrap: "rounded-[12px] border border-white/40 text-black/80 shadow-sm",
-    appText: "text-[12px] text-white/70 font-medium",
-    groupText: "text-[14px] font-semibold text-white",
-    senderText: "text-[13px] text-white/75",
-    bodyText: "text-[14px] text-white/95",
-    timeText: "text-[11px] text-white/55",
+    notificationCard: "border border-white/20 shadow-lg",
+    cardRadius: 22,
+    iconWrap: "border border-white/40 text-black/80 shadow-sm",
+    iconRadius: 12,
+    appText: "text-white/70 font-medium",
+    groupText: "font-semibold text-white",
+    senderText: "text-white/75",
+    bodyText: "text-white/95",
+    timeText: "text-white/55",
     topInset: "pt-0",
     largeClockTime: "font-semibold text-white tracking-[-0.03em]",
     largeClockDate: "text-white/80",
@@ -188,13 +223,15 @@ const osThemes: Record<
     showHomeBar: true,
   },
   android: {
-    notificationCard: "rounded-[18px] border border-white/10 shadow-lg",
-    iconWrap: "rounded-full border border-black/5 text-zinc-800 shadow-sm",
-    appText: "text-[12px] text-white/65 font-medium",
-    groupText: "text-[14px] font-semibold text-white",
-    senderText: "text-[13px] text-white/70",
-    bodyText: "text-[14px] text-white/90",
-    timeText: "text-[11px] text-white/50",
+    notificationCard: "border border-white/10 shadow-lg",
+    cardRadius: 18,
+    iconWrap: "border border-black/5 text-zinc-800 shadow-sm",
+    iconRadius: 9999,
+    appText: "text-white/65 font-medium",
+    groupText: "font-semibold text-white",
+    senderText: "text-white/70",
+    bodyText: "text-white/90",
+    timeText: "text-white/50",
     topInset: "pt-0",
     largeClockTime: "font-medium text-white tracking-[-0.02em]",
     largeClockDate: "text-white/75",
@@ -233,9 +270,12 @@ const defaultSettings: NotificationSettings = {
   groupName: "森田家",
   selectedWallpaper: "photoLake",
   wallpaperBlur: 0,
+  notificationTextScale: 125,
   uploadedWallpaper: null,
   messages: defaultMessages,
   showSettingsButton: true,
+  showStartButton: true,
+  startButtonAction: "notifications",
   notificationDirection: "top",
   vibrateOnNotify: false,
   soundOnNotify: false,
@@ -691,7 +731,13 @@ function readStoredSettings(): NotificationSettings {
         parsed.notificationSoundPreset === "upload"
           ? parsed.notificationSoundPreset
           : defaultSettings.notificationSoundPreset,
+      showStartButton: typeof parsed.showStartButton === "boolean" ? parsed.showStartButton : defaultSettings.showStartButton,
+      startButtonAction:
+        parsed.startButtonAction === "incoming" || parsed.startButtonAction === "outgoing" || parsed.startButtonAction === "notifications"
+          ? parsed.startButtonAction
+          : defaultSettings.startButtonAction,
       wallpaperBlur: clampWallpaperBlur(parsed.wallpaperBlur),
+      notificationTextScale: clampNotificationTextScale(parsed.notificationTextScale),
       uploadedSound: typeof parsed.uploadedSound === "string" ? parsed.uploadedSound : defaultSettings.uploadedSound,
       uploadedSoundName: typeof parsed.uploadedSoundName === "string" ? parsed.uploadedSoundName : defaultSettings.uploadedSoundName,
       showCallButton: typeof parsed.showCallButton === "boolean" ? parsed.showCallButton : defaultSettings.showCallButton,
@@ -736,9 +782,14 @@ export default function NotificationCreator() {
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
   const [wallpaperBlur, setWallpaperBlur] = useState(defaultSettings.wallpaperBlur);
+  const [notificationTextScale, setNotificationTextScale] = useState(defaultSettings.notificationTextScale);
   const [uploadedWallpaper, setUploadedWallpaper] = useState<string | null>(defaultSettings.uploadedWallpaper);
   const [messages, setMessages] = useState<Message[]>(defaultSettings.messages);
   const [showSettingsButton, setShowSettingsButton] = useState(defaultSettings.showSettingsButton);
+  const [showStartButton, setShowStartButton] = useState(defaultSettings.showStartButton);
+  const [startButtonAction, setStartButtonAction] = useState<StartButtonAction>(defaultSettings.startButtonAction);
+  // 撮影中は開始ボタンを画面から消したいので、保存はせず実行中だけ持つ状態。
+  const [startArmed, setStartArmed] = useState(true);
   const [notificationDirection, setNotificationDirection] = useState<NotificationDirection>(defaultSettings.notificationDirection);
   const [vibrateOnNotify, setVibrateOnNotify] = useState(defaultSettings.vibrateOnNotify);
   const [soundOnNotify, setSoundOnNotify] = useState(defaultSettings.soundOnNotify);
@@ -792,9 +843,12 @@ export default function NotificationCreator() {
     setGroupName(stored.groupName);
     setSelectedWallpaper(stored.selectedWallpaper);
     setWallpaperBlur(stored.wallpaperBlur);
+    setNotificationTextScale(stored.notificationTextScale);
     setUploadedWallpaper(stored.uploadedWallpaper);
     setMessages(stored.messages);
     setShowSettingsButton(stored.showSettingsButton);
+    setShowStartButton(stored.showStartButton);
+    setStartButtonAction(stored.startButtonAction);
     setNotificationDirection(stored.notificationDirection);
     setVibrateOnNotify(stored.vibrateOnNotify);
     setSoundOnNotify(stored.soundOnNotify);
@@ -836,9 +890,12 @@ export default function NotificationCreator() {
       groupName,
       selectedWallpaper,
       wallpaperBlur,
+      notificationTextScale,
       uploadedWallpaper,
       messages,
       showSettingsButton,
+      showStartButton,
+      startButtonAction,
       notificationDirection,
       vibrateOnNotify,
       soundOnNotify,
@@ -897,9 +954,12 @@ export default function NotificationCreator() {
     groupName,
     selectedWallpaper,
     wallpaperBlur,
+    notificationTextScale,
     uploadedWallpaper,
     messages,
     showSettingsButton,
+    showStartButton,
+    startButtonAction,
     notificationDirection,
     vibrateOnNotify,
     soundOnNotify,
@@ -973,6 +1033,11 @@ export default function NotificationCreator() {
     playTimeoutsRef.current.forEach((timer) => clearTimeout(timer));
     playTimeoutsRef.current = [];
   };
+
+  // 設定を開き直したら、次のテイクに備えて開始ボタンを出し直す。
+  useEffect(() => {
+    if (settingsOpen) setStartArmed(true);
+  }, [settingsOpen]);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -1144,9 +1209,10 @@ export default function NotificationCreator() {
     };
   };
 
-  const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video", startDelaySeconds = 0) => {
+  const startNotificationCall = (direction: "incoming" | "outgoing", mode: "voice" | "video", startDelaySeconds = 0, silent = false) => {
     clearCallTimer();
     setSettingsOpen(false);
+    setStartArmed(false);
 
     const bootCall = () => {
       setCallDirection(direction);
@@ -1167,7 +1233,8 @@ export default function NotificationCreator() {
 
     const delay = Math.max(0, Number(startDelaySeconds) || 0);
     if (delay > 0) {
-      showToast(`${delay}秒後に発信します`);
+      // 撮影用の開始ボタンから呼ばれたときは、画面にトーストを出さない。
+      if (!silent) showToast(`${delay}秒後に${direction === "incoming" ? "着信します" : "発信します"}`);
       callStartTimerRef.current = setTimeout(bootCall, delay * 1000);
     } else {
       bootCall();
@@ -1328,9 +1395,12 @@ export default function NotificationCreator() {
     groupName,
     selectedWallpaper,
     wallpaperBlur,
+    notificationTextScale,
     uploadedWallpaper,
     messages,
     showSettingsButton,
+    showStartButton,
+    startButtonAction,
     notificationDirection,
     vibrateOnNotify,
     soundOnNotify,
@@ -1367,9 +1437,12 @@ export default function NotificationCreator() {
     setGroupName(next.groupName);
     setSelectedWallpaper(next.selectedWallpaper);
     setWallpaperBlur(next.wallpaperBlur);
+    setNotificationTextScale(next.notificationTextScale);
     setUploadedWallpaper(next.uploadedWallpaper);
     setMessages(normalizeMessages(next.messages));
     setShowSettingsButton(next.showSettingsButton);
+    setShowStartButton(next.showStartButton);
+    setStartButtonAction(next.startButtonAction);
     setNotificationDirection(next.notificationDirection);
     setVibrateOnNotify(next.vibrateOnNotify);
     setSoundOnNotify(next.soundOnNotify);
@@ -1448,6 +1521,8 @@ export default function NotificationCreator() {
   const playNotifications = () => {
     clearTimers();
     setSettingsOpen(false);
+    // 撮影画面に開始ボタンが残らないようにする（設定側の「再生」から呼ばれた場合も同じ）。
+    setStartArmed(false);
     void ensureAudioContext();
     setMessages((prev) => prev.map((m) => ({ ...m, displayed: false, animatedAt: null })));
     const enabledMessages = [...messages]
@@ -1469,6 +1544,25 @@ export default function NotificationCreator() {
     });
   };
 
+  const startButtonDelaySeconds = Math.max(0, Number(quickCallStartDelaySeconds) || 0);
+
+  const startButtonLabel =
+    startButtonAction === "incoming" ? "着信を開始" : startButtonAction === "outgoing" ? "発信を開始" : "通知を開始";
+
+  // 画面内の開始ボタン。押した瞬間にボタンを消してから、設定した秒数後に本番の演出が走る。
+  const handleScreenStart = () => {
+    setStartArmed(false);
+    if (startButtonAction === "incoming") {
+      startNotificationCall("incoming", quickCallMode, startButtonDelaySeconds, true);
+      return;
+    }
+    if (startButtonAction === "outgoing") {
+      startNotificationCall("outgoing", quickCallMode, startButtonDelaySeconds, true);
+      return;
+    }
+    playNotifications();
+  };
+
   const saveCurrentAsDefault = () => {
     if (typeof window === "undefined") {
       showToast("保存に失敗しました");
@@ -1486,9 +1580,12 @@ export default function NotificationCreator() {
       groupName,
       selectedWallpaper,
       wallpaperBlur,
+      notificationTextScale,
       uploadedWallpaper,
       messages,
       showSettingsButton,
+      showStartButton,
+      startButtonAction,
       notificationDirection,
       vibrateOnNotify,
       soundOnNotify,
@@ -1534,9 +1631,13 @@ export default function NotificationCreator() {
     setGroupName(defaultSettings.groupName);
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
     setWallpaperBlur(defaultSettings.wallpaperBlur);
+    setNotificationTextScale(defaultSettings.notificationTextScale);
     setUploadedWallpaper(defaultSettings.uploadedWallpaper);
     setMessages(defaultSettings.messages);
     setShowSettingsButton(defaultSettings.showSettingsButton);
+    setShowStartButton(defaultSettings.showStartButton);
+    setStartButtonAction(defaultSettings.startButtonAction);
+    setStartArmed(true);
     setNotificationDirection(defaultSettings.notificationDirection);
     setVibrateOnNotify(defaultSettings.vibrateOnNotify);
     setSoundOnNotify(defaultSettings.soundOnNotify);
@@ -1577,6 +1678,55 @@ export default function NotificationCreator() {
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
+  const safeNotificationTextScale = clampNotificationTextScale(notificationTextScale);
+  const notifScale = safeNotificationTextScale / 100;
+  const notifPx = (base: number) => `${Math.round(base * notifScale * 100) / 100}px`;
+  const notificationStackStyle: React.CSSProperties = { gap: notifPx(notificationBaseSizes.stackGap) };
+  const notificationCardStyle: React.CSSProperties = {
+    backgroundColor: notifBg,
+    padding: `${notifPx(notificationBaseSizes.cardPaddingY)} ${notifPx(notificationBaseSizes.cardPaddingX)}`,
+    borderRadius: notifPx(theme.cardRadius),
+  };
+  const notificationRowStyle: React.CSSProperties = { gap: notifPx(notificationBaseSizes.rowGap) };
+  const notificationIconStyle: React.CSSProperties = {
+    backgroundColor: iconBg,
+    height: notifPx(notificationBaseSizes.iconSize),
+    width: notifPx(notificationBaseSizes.iconSize),
+    fontSize: notifPx(notificationBaseSizes.iconFont),
+    borderRadius: theme.iconRadius >= 999 ? "9999px" : notifPx(theme.iconRadius),
+  };
+  const notificationLineStyle: React.CSSProperties = { marginTop: notifPx(notificationBaseSizes.lineGap) };
+  const notificationAppStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.appFont) };
+  const notificationTimeStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.timeFont) };
+  const notificationGroupStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.groupFont) };
+  const notificationSenderStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.senderFont) };
+  const notificationBodyStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.bodyFont) };
+
+  const renderNotificationCard = (msg: Message, extraClassName: string) => (
+    <div
+      key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
+      className={cn("backdrop-blur-md", theme.notificationCard, extraClassName)}
+      style={notificationCardStyle}
+    >
+      <div className="flex items-start" style={notificationRowStyle}>
+        <div
+          className={cn("flex shrink-0 items-center justify-center overflow-hidden font-semibold", theme.iconWrap)}
+          style={notificationIconStyle}
+        >
+          {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className={cn("min-w-0 truncate", theme.appText)} style={notificationAppStyle}>{msg.appName}</div>
+            <div className={cn("shrink-0", theme.timeText)} style={notificationTimeStyle}>{msg.time}</div>
+          </div>
+          <div className={cn("truncate", theme.groupText)} style={notificationGroupStyle}>{msg.groupName}</div>
+          <div className={cn("truncate", theme.senderText)} style={notificationSenderStyle}>{msg.sender}</div>
+          <div className={cn("break-words leading-snug", theme.bodyText)} style={notificationBodyStyle}>{msg.text}</div>
+        </div>
+      </div>
+    </div>
+  );
   const topStackClass = showLargeClock ? "" : theme.notificationsTopWithoutClock;
   const safeLockscreenTimeSize = Math.max(56, Math.min(132, Number(lockscreenTimeSize) || defaultSettings.lockscreenTimeSize));
   const safeLockscreenDateSize = Math.max(12, Math.min(40, Number(lockscreenDateSize) || defaultSettings.lockscreenDateSize));
@@ -1608,6 +1758,13 @@ export default function NotificationCreator() {
   const phoneButtonClassName = deviceFrameMode
     ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4")
     : cn("fixed z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4");
+  const startButtonClassName = cn(
+    deviceFrameMode ? "absolute" : "fixed",
+    "left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/30 bg-black/55 px-6 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-md transition hover:bg-black/65 active:scale-95",
+    fullScreenMode
+      ? "bottom-[max(46px,calc(env(safe-area-inset-bottom)+34px))]"
+      : "bottom-[max(32px,calc(env(safe-area-inset-bottom)+14px))]",
+  );
   const hiddenSettingsButtonClassName = deviceFrameMode
     ? cn("absolute z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0")
     : cn("fixed z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0");
@@ -1615,11 +1772,15 @@ export default function NotificationCreator() {
   return (
     <div className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
       <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
-        <div className={cn(
-          "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
-          deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
-          fullScreenMode && "rounded-device-safe-surface",
-        )}>
+        <div
+          className={cn(
+            "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
+            MOCK_TEXT_SCALE_CLASS,
+            deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
+            fullScreenMode && "rounded-device-safe-surface",
+          )}
+          style={textScaleStyle(safeNotificationTextScale)}
+        >
           <div className="absolute inset-0" style={bgStyle} />
           <div className="absolute inset-0 bg-black/15" />
 
@@ -1651,70 +1812,14 @@ export default function NotificationCreator() {
           )}
           style={{ paddingTop: notificationTopPadding ? `${notificationTopPadding}px` : undefined }}
         >
-          <div className="space-y-3">
-            {renderedNotifications.map((msg) => (
-              <div
-                key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
-                className={cn(
-                  "px-4 py-3 backdrop-blur-md",
-                  theme.notificationCard,
-                  msg.animatedAt ? "notification-enter-top" : "",
-                )}
-                style={{ backgroundColor: notifBg }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)}
-                    style={{ backgroundColor: iconBg }}
-                  >
-                    {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className={theme.appText}>{msg.appName}</div>
-                      <div className={theme.timeText}>{msg.time}</div>
-                    </div>
-                    <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
-                    <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
-                    <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col" style={notificationStackStyle}>
+            {renderedNotifications.map((msg) => renderNotificationCard(msg, msg.animatedAt ? "notification-enter-top" : ""))}
           </div>
         </div>
       ) : (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))]">
-          <div className="flex max-h-[48dvh] flex-col-reverse gap-3 overflow-hidden">
-            {renderedNotifications.map((msg) => (
-              <div
-                key={`${msg.id}-${msg.animatedAt ?? "stable"}`}
-                className={cn(
-                  "pointer-events-auto px-4 py-3 backdrop-blur-md",
-                  theme.notificationCard,
-                  msg.animatedAt ? "notification-enter-bottom" : "",
-                )}
-                style={{ backgroundColor: notifBg }}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", theme.iconWrap)}
-                    style={{ backgroundColor: iconBg }}
-                  >
-                    {msg.iconImage ? <img src={msg.iconImage} alt="icon" className="h-full w-full object-cover" /> : <span>{msg.iconText || "森"}</span>}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className={theme.appText}>{msg.appName}</div>
-                      <div className={theme.timeText}>{msg.time}</div>
-                    </div>
-                    <div className={cn("mt-0.5 truncate", theme.groupText)}>{msg.groupName}</div>
-                    <div className={cn("mt-0.5 truncate", theme.senderText)}>{msg.sender}</div>
-                    <div className={cn("mt-0.5 break-words leading-snug", theme.bodyText)}>{msg.text}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex max-h-[48dvh] flex-col-reverse overflow-hidden" style={notificationStackStyle}>
+            {renderedNotifications.map((msg) => renderNotificationCard(msg, cn("pointer-events-auto", msg.animatedAt ? "notification-enter-bottom" : "")))}
           </div>
         </div>
       )}
@@ -1725,6 +1830,19 @@ export default function NotificationCreator() {
           style={{ backgroundColor: "rgba(255,255,255,0.75)" }}
         />
       )}
+
+          {showStartButton && startArmed && callPhase === "idle" && (
+            <button
+              type="button"
+              onClick={handleScreenStart}
+              className={startButtonClassName}
+              aria-label={startButtonLabel}
+            >
+              <Clock3 className="h-5 w-5" />
+              {startButtonLabel}
+              {startButtonAction !== "notifications" && startButtonDelaySeconds > 0 ? `（${startButtonDelaySeconds}秒後）` : ""}
+            </button>
+          )}
 
           {showSettingsButton && showCallButton && (
             <button
@@ -1829,6 +1947,27 @@ export default function NotificationCreator() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
+                      <Label>文字サイズ</Label>
+                      <span className="text-xs font-medium text-black/50">{safeNotificationTextScale}%</span>
+                    </div>
+                    <Input
+                      type="range"
+                      min={String(MIN_NOTIFICATION_TEXT_SCALE)}
+                      max={String(MAX_NOTIFICATION_TEXT_SCALE)}
+                      step="5"
+                      value={safeNotificationTextScale}
+                      onChange={(e) => setNotificationTextScale(Number(e.target.value))}
+                      aria-label="文字サイズ"
+                      className="cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[11px] text-black/40">
+                      <span>小さめ</span>
+                      <span>大きめ</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-black/45">通知カードは文字に合わせてアイコン・余白・角丸もまとめて拡大するので、レイアウトは崩れません。時計の大きさは上のスライダーで別に調整できます。</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
                       <Label>日付表示サイズ</Label>
                       <span className="text-xs font-medium text-black/50">{safeLockscreenDateSize}px</span>
                     </div>
@@ -1908,6 +2047,30 @@ export default function NotificationCreator() {
                     <div className="rounded-2xl border border-black/10 bg-black/[0.02] px-3 py-2 text-xs leading-relaxed text-black/55">
                       再生を押すと設定画面が閉じ、そのまま撮影画面に切り替わります。通知は各通知に設定した秒数で順番に表示されます。
                     </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-3">
+                      <div>
+                        <div className="text-sm font-medium">画面内に開始ボタンを出す</div>
+                        <div className="text-xs text-black/50">撮影画面の下部に置きます。押すとボタンが消え、設定した秒数後に演出が始まります</div>
+                      </div>
+                      <Switch checked={showStartButton} onCheckedChange={setShowStartButton} />
+                    </div>
+                    {showStartButton && (
+                      <div className="space-y-2">
+                        <Label>開始ボタンで起こすこと</Label>
+                        <select
+                          value={startButtonAction}
+                          onChange={(e) => setStartButtonAction(e.target.value as StartButtonAction)}
+                          className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+                        >
+                          <option value="notifications">通知を再生（各通知の秒数どおり）</option>
+                          <option value="incoming">着信（通話設定の開始秒数どおり）</option>
+                          <option value="outgoing">発信（通話設定の開始秒数どおり）</option>
+                        </select>
+                        <p className="text-xs leading-relaxed text-black/45">
+                          ボタンは押した瞬間に消えるので、そのまま撮影に入れます。設定画面を開き直すと、次のテイク用にまた表示されます。
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <Button onClick={() => setNotificationDirection("top")} variant={notificationDirection === "top" ? "default" : "outline"} className="w-full">
                         <ChevronDown className="mr-2 h-4 w-4" />上から表示
@@ -2146,7 +2309,7 @@ export default function NotificationCreator() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label>発信開始までの秒数</Label><Input type="number" min="0" step="0.1" value={quickCallStartDelaySeconds} onChange={(e) => setQuickCallStartDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">電話ボタンを押してから発信画面が出るまで</div></div>
+                    <div className="space-y-2"><Label>発信・着信までの秒数</Label><Input type="number" min="0" step="0.1" value={quickCallStartDelaySeconds} onChange={(e) => setQuickCallStartDelaySeconds(e.target.value)} /><div className="text-xs text-black/50">電話ボタンや画面内の開始ボタンを押してから、発信・着信画面が出るまで</div></div>
                     <div className="space-y-2"><Label>通話中になるまでの秒数</Label><Input type="number" min="0" step="0.1" value={quickCallConnectSeconds} onChange={(e) => setQuickCallConnectSeconds(e.target.value)} /><div className="text-xs text-black/50">発信中から通話中に切り替わるまで</div></div>
                   </div>
                   <div className="space-y-2"><Label>発信画面 背景色</Label><ColorSwatch value={outgoingCallBgColor} onChange={(e) => setOutgoingCallBgColor(e.target.value)} /></div>

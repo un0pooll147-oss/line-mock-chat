@@ -83,3 +83,34 @@ select {
     filter: blur(0);
   }
 }
+
+/* 各モックの画面内だけ文字サイズを一括で変えるための仕組み。
+   設定パネル側には効かないよう、プレビュー画面のルートにだけ .mock-text-scale を付ける。
+   --mock-ts に倍率(1 = 100%)を入れると、フォントサイズと固定行高が同じ比率で伸縮する。 */
+.mock-text-scale {
+  --mock-ts: 1;
+}
+
+.mock-text-scale .text-xs { font-size: calc(0.75rem * var(--mock-ts)); line-height: calc(1rem * var(--mock-ts)); }
+.mock-text-scale .text-sm { font-size: calc(0.875rem * var(--mock-ts)); line-height: calc(1.25rem * var(--mock-ts)); }
+.mock-text-scale .text-base { font-size: calc(1rem * var(--mock-ts)); line-height: calc(1.5rem * var(--mock-ts)); }
+.mock-text-scale .text-lg { font-size: calc(1.125rem * var(--mock-ts)); line-height: calc(1.75rem * var(--mock-ts)); }
+.mock-text-scale .text-xl { font-size: calc(1.25rem * var(--mock-ts)); line-height: calc(1.75rem * var(--mock-ts)); }
+.mock-text-scale .text-2xl { font-size: calc(1.5rem * var(--mock-ts)); line-height: calc(2rem * var(--mock-ts)); }
+.mock-text-scale .text-3xl { font-size: calc(1.875rem * var(--mock-ts)); line-height: calc(2.25rem * var(--mock-ts)); }
+
+.mock-text-scale .text-\[10px\] { font-size: calc(10px * var(--mock-ts)); }
+.mock-text-scale .text-\[11px\] { font-size: calc(11px * var(--mock-ts)); }
+.mock-text-scale .text-\[12px\] { font-size: calc(12px * var(--mock-ts)); }
+.mock-text-scale .text-\[13px\] { font-size: calc(13px * var(--mock-ts)); }
+.mock-text-scale .text-\[14px\] { font-size: calc(14px * var(--mock-ts)); }
+.mock-text-scale .text-\[15px\] { font-size: calc(15px * var(--mock-ts)); }
+.mock-text-scale .text-\[16px\] { font-size: calc(16px * var(--mock-ts)); }
+.mock-text-scale .text-\[17px\] { font-size: calc(17px * var(--mock-ts)); }
+.mock-text-scale .text-\[22px\] { font-size: calc(22px * var(--mock-ts)); }
+
+/* 行高だけを指定しているクラスは、文字が大きくなると行が詰まるので同じ比率で広げる。
+   leading-none / tight / relaxed は無単位なので自動で追従する。 */
+.mock-text-scale .leading-4 { line-height: calc(1rem * var(--mock-ts)); }
+.mock-text-scale .leading-5 { line-height: calc(1.25rem * var(--mock-ts)); }
+.mock-text-scale .leading-6 { line-height: calc(1.5rem * var(--mock-ts)); }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useNativeFullscreen } from "./useNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
+import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import {
   type LucideIcon,
   PlusCircle,
@@ -204,6 +205,10 @@ const defaultSettings = {
   incomingCallBgOpacity: 1,
   outgoingCallBgColor: "#000000",
   outgoingCallBgOpacity: 1,
+  textScale: DEFAULT_TEXT_SCALE,
+  showStartButton: true,
+  startButtonAction: "incomingCall" as "incomingCall" | "timedMessages",
+  startButtonCallMode: "voice" as "voice" | "video",
 };
 
 const initialTimedMessages = [{ id: 1, sender: defaultSettings.incomingSender, text: "", delay: 3, countdown: 0, pending: false }];
@@ -715,6 +720,12 @@ export default function LineMockChatCreator() {
   const [callAutoSeconds, setCallAutoSeconds] = useState(initialUiSettings.callAutoSeconds);
   const [incomingCallAutoSeconds, setIncomingCallAutoSeconds] = useState(initialUiSettings.incomingCallAutoSeconds || 1.5);
   const [incomingDelaySeconds, setIncomingDelaySeconds] = useState(initialUiSettings.incomingDelaySeconds || 0);
+  const [textScale, setTextScale] = useState(clampTextScale(initialUiSettings.textScale));
+  const [showStartButton, setShowStartButton] = useState(initialUiSettings.showStartButton ?? true);
+  const [startButtonAction, setStartButtonAction] = useState<"incomingCall" | "timedMessages">(initialUiSettings.startButtonAction || "incomingCall");
+  const [startButtonCallMode, setStartButtonCallMode] = useState<"voice" | "video">(initialUiSettings.startButtonCallMode || "voice");
+  // 撮影中はボタンを消したいので、保存はせず実行中だけ持つ状態。
+  const [startArmed, setStartArmed] = useState(true);
   const [incomingCallBgColor, setIncomingCallBgColor] = useState(initialUiSettings.incomingCallBgColor || "#000000");
   const [incomingCallBgOpacity, setIncomingCallBgOpacity] = useState(initialUiSettings.incomingCallBgOpacity ?? 0.9);
   const [outgoingCallBgColor, setOutgoingCallBgColor] = useState(initialUiSettings.outgoingCallBgColor || "#000000");
@@ -1034,6 +1045,7 @@ export default function LineMockChatCreator() {
   const startTimedMsg = (id: number) => {
     const msg = timedMsgs.find(m => m.id === id);
     if (!msg || !msg.text.trim() || msg.pending) return;
+    setStartArmed(false);
     setTimedMsgs(prev => prev.map(m => m.id === id ? { ...m, pending: true, countdown: m.delay } : m));
     const interval = window.setInterval(() => {
       setTimedMsgs(prev => prev.map(m => {
@@ -1187,7 +1199,8 @@ export default function LineMockChatCreator() {
     customOutgoingToneName, customOutgoingToneUrl, callAutoSeconds: Number(callAutoSeconds) || 0,
     incomingCallAutoSeconds: Number(incomingCallAutoSeconds) || 1.5,
     incomingDelaySeconds: Number(incomingDelaySeconds) || 0, incomingCallBgColor, incomingCallBgOpacity,
-    outgoingCallBgColor, outgoingCallBgOpacity,
+    outgoingCallBgColor, outgoingCallBgOpacity, textScale: clampTextScale(textScale),
+    showStartButton, startButtonAction, startButtonCallMode,
   });
 
   const buildCurrentDefaultSnapshot = () => ({
@@ -1240,6 +1253,11 @@ export default function LineMockChatCreator() {
     setCallAutoSeconds(settings.callAutoSeconds || 0); setIncomingCallAutoSeconds(settings.incomingCallAutoSeconds || 1.5); setIncomingDelaySeconds(settings.incomingDelaySeconds || 0);
     setIncomingCallBgColor(settings.incomingCallBgColor || "#000000"); setIncomingCallBgOpacity(settings.incomingCallBgOpacity ?? 0.9);
     setOutgoingCallBgColor(settings.outgoingCallBgColor || "#000000"); setOutgoingCallBgOpacity(settings.outgoingCallBgOpacity ?? 0.9);
+    setTextScale(clampTextScale(settings.textScale));
+    setShowStartButton(settings.showStartButton ?? true);
+    setStartButtonAction(settings.startButtonAction === "timedMessages" ? "timedMessages" : "incomingCall");
+    setStartButtonCallMode(settings.startButtonCallMode === "video" ? "video" : "voice");
+    setStartArmed(true);
     setMessages(normalizeStoredMessages(settings.messages));
     setTimedMsgs(normalizeStoredTimedMessages(settings.timedMsgs, settings.incomingSender || defaultSettings.incomingSender));
   };
@@ -1354,6 +1372,8 @@ export default function LineMockChatCreator() {
 
   const scheduleIncomingCall = (type: string) => {
     clearCallTimer();
+    // 撮影画面に開始ボタンが残らないようにする（設定側から呼ばれた場合も同じ）。
+    setStartArmed(false);
     callTimeoutRef.current = window.setTimeout(() => startIncomingCall(type), Math.max(0, Number(incomingDelaySeconds) || 0) * 1000);
   };
 
@@ -1459,6 +1479,37 @@ export default function LineMockChatCreator() {
       </div>
   ) : null;
 
+  // 設定を開き直したら、次のテイクに備えて開始ボタンを出し直す。
+  useEffect(() => {
+    if (settingsOpen) setStartArmed(true);
+  }, [settingsOpen]);
+
+  const startButtonLabel = startButtonAction === "timedMessages" ? "メッセージを開始" : "着信を開始";
+  const startButtonDelaySeconds = Math.max(0, Number(incomingDelaySeconds) || 0);
+  const callInProgress = callPhase !== "idle";
+
+  // 画面内の開始ボタン。押した瞬間にボタンを消し、設定した秒数後に演出が始まる。
+  const handleScreenStart = () => {
+    setStartArmed(false);
+    if (startButtonAction === "timedMessages") {
+      timedMsgs.filter((msg) => msg.text.trim() && !msg.pending).forEach((msg) => startTimedMsg(msg.id));
+      return;
+    }
+    scheduleIncomingCall(startButtonCallMode);
+  };
+
+  const startButtonNode = showStartButton && startArmed && !callInProgress ? (
+    <button
+      type="button"
+      onClick={handleScreenStart}
+      className="absolute bottom-[max(72px,calc(env(safe-area-inset-bottom)+64px))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/25 bg-black/60 px-6 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-md transition hover:bg-black/70 active:scale-95"
+      aria-label={startButtonLabel}
+    >
+      {startButtonLabel}
+      {startButtonDelaySeconds > 0 && startButtonAction === "incomingCall" ? `（${startButtonDelaySeconds}秒後）` : ""}
+    </button>
+  ) : null;
+
   const controlsPanel = controlsContent ? (
     <div
       className="w-full shrink-0 border-t border-black/10 px-3 pt-0.5 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
@@ -1494,7 +1545,7 @@ export default function LineMockChatCreator() {
                 className="absolute inset-[4px] flex min-h-0 h-[calc(100%-8px)] flex-col overflow-hidden rounded-[34px]"
                 style={unifyChatBackground && wallpaper ? unifiedStageStyle : { backgroundColor: theme.outerBg }}
               >
-                <div className="min-h-0 flex-1 overflow-hidden">
+                <div className={cn("min-h-0 flex-1 overflow-hidden", MOCK_TEXT_SCALE_CLASS)} style={textScaleStyle(textScale)}>
                   <PhoneMockup
                     ref={previewRef}
                     onStartCall={startCall}
@@ -1517,6 +1568,7 @@ export default function LineMockChatCreator() {
                   />
                 </div>
                 {controlsPanel}
+                {startButtonNode}
               </div>
             </div>
           </div>
@@ -1535,7 +1587,7 @@ export default function LineMockChatCreator() {
               className="relative flex h-full min-h-0 flex-col overflow-hidden"
               style={unifyChatBackground && wallpaper ? { backgroundColor: "transparent" } : unifiedStageStyle}
             >
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className={cn("min-h-0 flex-1 overflow-hidden", MOCK_TEXT_SCALE_CLASS)} style={textScaleStyle(textScale)}>
                 <PhoneMockup
                   ref={previewRef}
                   onStartCall={startCall}
@@ -1558,12 +1610,15 @@ export default function LineMockChatCreator() {
                 />
               </div>
               {controlsPanel}
+              {startButtonNode}
             </div>
           </div>
         </>
       )}
 
+      <div className={MOCK_TEXT_SCALE_CLASS} style={textScaleStyle(textScale)}>
       <CallOverlay visible={callOverlayVisible} mode={callMode} phase={callPhase} title={overlayTitle} avatarImage={overlayAvatarImage} avatarLabel={overlayAvatarLabel} onAccept={acceptIncomingCall} onDecline={declineIncomingCall} onEnd={endCall} bgColor={overlayBgColor} bgOpacity={overlayBgOpacity} />
+      </div>
 
       {settingsOpen && (
         <div className="fixed inset-x-0 top-0 z-50 bg-black/35" style={{ height: viewportHeight ? `${viewportHeight}px` : "100dvh" }}>
@@ -1892,12 +1947,58 @@ export default function LineMockChatCreator() {
                   <SectionCard icon={Settings2} title="操作表示">
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">上部の時刻や電波表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>文字サイズ</Label>
+                        <span className="text-xs font-medium text-black/50">{clampTextScale(textScale)}%</span>
+                      </div>
+                      <Input
+                        type="range"
+                        min={String(MIN_TEXT_SCALE)}
+                        max={String(MAX_TEXT_SCALE)}
+                        step="5"
+                        value={clampTextScale(textScale)}
+                        onChange={(e) => setTextScale(Number(e.target.value))}
+                        aria-label="文字サイズ"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
+                      <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
+                    </div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); void changeNativeFullscreen(value).then((success) => { if (!success) setFullScreenMode(false); }); }} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
 
 
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
+                      <div>
+                        <div className="text-sm font-medium">画面内に開始ボタンを出す</div>
+                        <div className="text-xs text-black/50">押すとボタンが消え、設定した秒数後に着信やメッセージが届きます</div>
+                      </div>
+                      <Switch checked={showStartButton} onCheckedChange={setShowStartButton} />
+                    </div>
+                    {showStartButton && (
+                      <div className="space-y-2 rounded-2xl border border-black/10 p-3">
+                        <Label>開始ボタンで起こすこと</Label>
+                        <select
+                          value={startButtonAction}
+                          onChange={(e) => setStartButtonAction(e.target.value === "timedMessages" ? "timedMessages" : "incomingCall")}
+                          className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none"
+                        >
+                          <option value="incomingCall">着信（「着信までの秒数」どおり）</option>
+                          <option value="timedMessages">タイマーメッセージを一斉スタート</option>
+                        </select>
+                        {startButtonAction === "incomingCall" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant={startButtonCallMode === "voice" ? "default" : "outline"} onClick={() => setStartButtonCallMode("voice")}>音声着信</Button>
+                            <Button variant={startButtonCallMode === "video" ? "default" : "outline"} onClick={() => setStartButtonCallMode("video")}>ビデオ着信</Button>
+                          </div>
+                        )}
+                        <p className="text-xs leading-relaxed text-black/50">
+                          ボタンは押した瞬間に消えるので、そのまま撮影に入れます。設定画面を開き直すと、次のテイク用にまた表示されます。
+                        </p>
+                      </div>
+                    )}
 
                   </SectionCard>
 
