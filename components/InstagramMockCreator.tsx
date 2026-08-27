@@ -289,6 +289,10 @@ const defaultSettings: InstagramSettings = {
 export const bundledPostImages: Array<{ url: string; label: string }> = [
   { url: "/scene2-instagram/post-01-beach-sunset.webp", label: "夕焼けのビーチ" },
   { url: "/scene2-instagram/post-02-mountain-peak.webp", label: "山頂の展望" },
+  { url: "/scene2-instagram/post-06-night-market.webp", label: "夜市の食べ歩き" },
+  { url: "/scene2-instagram/post-07-europe-cafe.webp", label: "ヨーロッパのカフェ" },
+  { url: "/scene2-instagram/post-08-summit-selfie.webp", label: "山頂の自撮り" },
+  { url: "/scene2-instagram/post-09-coast-selfie.webp", label: "海辺の岬" },
   { url: "/scene2-instagram/post-01-lake.png", label: "朝の湖" },
   { url: "/scene2-instagram/post-02-seafood.png", label: "海鮮の朝ごはん" },
   { url: "/scene2-instagram/post-03-resort.png", label: "リゾートのプール" },

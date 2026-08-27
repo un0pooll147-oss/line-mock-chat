@@ -60,6 +60,7 @@ type NotificationSettings = {
   selectedWallpaper: string;
   wallpaperBlur: number;
   notificationTextScale: number;
+  notificationTextColor: string;
   uploadedWallpaper: string | null;
   messages: Message[];
   showSettingsButton: boolean;
@@ -204,6 +205,7 @@ const osThemes: Record<
     senderText: string;
     bodyText: string;
     timeText: string;
+    textAlpha: { app: number; group: number; sender: number; body: number; time: number };
     topInset: string;
     largeClockTime: string;
     largeClockDate: string;
@@ -218,11 +220,12 @@ const osThemes: Record<
     cardRadius: 22,
     iconWrap: "border border-white/40 text-black/80 shadow-sm",
     iconRadius: 12,
-    appText: "text-white/70 font-medium",
-    groupText: "font-semibold text-white",
-    senderText: "text-white/75",
-    bodyText: "text-white/95",
-    timeText: "text-white/55",
+    appText: "font-medium",
+    groupText: "font-semibold",
+    senderText: "",
+    bodyText: "",
+    timeText: "",
+    textAlpha: { app: 0.7, group: 1, sender: 0.75, body: 0.95, time: 0.55 },
     topInset: "pt-0",
     largeClockTime: "font-semibold text-white tracking-[-0.03em]",
     largeClockDate: "text-white/80",
@@ -236,11 +239,12 @@ const osThemes: Record<
     cardRadius: 18,
     iconWrap: "border border-black/5 text-zinc-800 shadow-sm",
     iconRadius: 9999,
-    appText: "text-white/65 font-medium",
-    groupText: "font-semibold text-white",
-    senderText: "text-white/70",
-    bodyText: "text-white/90",
-    timeText: "text-white/50",
+    appText: "font-medium",
+    groupText: "font-semibold",
+    senderText: "",
+    bodyText: "",
+    timeText: "",
+    textAlpha: { app: 0.65, group: 1, sender: 0.7, body: 0.9, time: 0.5 },
     topInset: "pt-0",
     largeClockTime: "font-medium text-white tracking-[-0.02em]",
     largeClockDate: "text-white/75",
@@ -280,6 +284,7 @@ const defaultSettings: NotificationSettings = {
   selectedWallpaper: "photoLake",
   wallpaperBlur: 0,
   notificationTextScale: 125,
+  notificationTextColor: "#ffffff",
   uploadedWallpaper: null,
   messages: defaultMessages,
   showSettingsButton: true,
@@ -756,6 +761,7 @@ function readStoredSettings(): NotificationSettings {
           : defaultSettings.startButtonAction,
       wallpaperBlur: clampWallpaperBlur(parsed.wallpaperBlur),
       notificationTextScale: clampNotificationTextScale(parsed.notificationTextScale),
+      notificationTextColor: typeof parsed.notificationTextColor === "string" ? parsed.notificationTextColor : defaultSettings.notificationTextColor,
       uploadedSound: typeof parsed.uploadedSound === "string" ? parsed.uploadedSound : defaultSettings.uploadedSound,
       uploadedSoundName: typeof parsed.uploadedSoundName === "string" ? parsed.uploadedSoundName : defaultSettings.uploadedSoundName,
       showCallButton: typeof parsed.showCallButton === "boolean" ? parsed.showCallButton : defaultSettings.showCallButton,
@@ -810,6 +816,7 @@ export default function NotificationCreator() {
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
   const [wallpaperBlur, setWallpaperBlur] = useState(defaultSettings.wallpaperBlur);
   const [notificationTextScale, setNotificationTextScale] = useState(defaultSettings.notificationTextScale);
+  const [notificationTextColor, setNotificationTextColor] = useState(defaultSettings.notificationTextColor);
   const [uploadedWallpaper, setUploadedWallpaper] = useState<string | null>(defaultSettings.uploadedWallpaper);
   const [messages, setMessages] = useState<Message[]>(defaultSettings.messages);
   const [showSettingsButton, setShowSettingsButton] = useState(defaultSettings.showSettingsButton);
@@ -880,6 +887,7 @@ export default function NotificationCreator() {
     setSelectedWallpaper(stored.selectedWallpaper);
     setWallpaperBlur(stored.wallpaperBlur);
     setNotificationTextScale(stored.notificationTextScale);
+    setNotificationTextColor(stored.notificationTextColor);
     setUploadedWallpaper(stored.uploadedWallpaper);
     setMessages(stored.messages);
     setShowSettingsButton(stored.showSettingsButton);
@@ -936,6 +944,7 @@ export default function NotificationCreator() {
       selectedWallpaper,
       wallpaperBlur,
       notificationTextScale,
+      notificationTextColor,
       uploadedWallpaper,
       messages,
       showSettingsButton,
@@ -1011,6 +1020,7 @@ export default function NotificationCreator() {
     selectedWallpaper,
     wallpaperBlur,
     notificationTextScale,
+    notificationTextColor,
     uploadedWallpaper,
     messages,
     showSettingsButton,
@@ -1511,6 +1521,7 @@ export default function NotificationCreator() {
     selectedWallpaper,
     wallpaperBlur,
     notificationTextScale,
+    notificationTextColor,
     uploadedWallpaper,
     messages,
     showSettingsButton,
@@ -1562,6 +1573,7 @@ export default function NotificationCreator() {
     setSelectedWallpaper(next.selectedWallpaper);
     setWallpaperBlur(next.wallpaperBlur);
     setNotificationTextScale(next.notificationTextScale);
+    setNotificationTextColor(next.notificationTextColor);
     setUploadedWallpaper(next.uploadedWallpaper);
     setMessages(normalizeMessages(next.messages));
     setShowSettingsButton(next.showSettingsButton);
@@ -1717,6 +1729,7 @@ export default function NotificationCreator() {
       selectedWallpaper,
       wallpaperBlur,
       notificationTextScale,
+      notificationTextColor,
       uploadedWallpaper,
       messages,
       showSettingsButton,
@@ -1777,6 +1790,7 @@ export default function NotificationCreator() {
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
     setWallpaperBlur(defaultSettings.wallpaperBlur);
     setNotificationTextScale(defaultSettings.notificationTextScale);
+    setNotificationTextColor(defaultSettings.notificationTextColor);
     setUploadedWallpaper(defaultSettings.uploadedWallpaper);
     setMessages(defaultSettings.messages);
     setShowSettingsButton(defaultSettings.showSettingsButton);
@@ -1850,11 +1864,13 @@ export default function NotificationCreator() {
     borderRadius: theme.iconRadius >= 999 ? "9999px" : notifPx(theme.iconRadius),
   };
   const notificationLineStyle: React.CSSProperties = { marginTop: notifPx(notificationBaseSizes.lineGap) };
-  const notificationAppStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.appFont) };
-  const notificationTimeStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.timeFont) };
-  const notificationGroupStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.groupFont) };
-  const notificationSenderStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.senderFont) };
-  const notificationBodyStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.bodyFont) };
+  // 文字色は1色だけ選んでもらい、要素ごとの濃淡はテーマの不透明度で作る。
+  const notifColor = (alpha: number) => toRgba(notificationTextColor, alpha);
+  const notificationAppStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.appFont), color: notifColor(theme.textAlpha.app) };
+  const notificationTimeStyle: React.CSSProperties = { fontSize: notifPx(notificationBaseSizes.timeFont), color: notifColor(theme.textAlpha.time) };
+  const notificationGroupStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.groupFont), color: notifColor(theme.textAlpha.group) };
+  const notificationSenderStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.senderFont), color: notifColor(theme.textAlpha.sender) };
+  const notificationBodyStyle: React.CSSProperties = { ...notificationLineStyle, fontSize: notifPx(notificationBaseSizes.bodyFont), color: notifColor(theme.textAlpha.body) };
 
   const renderNotificationCard = (msg: Message, extraClassName: string) => (
     <div
@@ -2120,6 +2136,31 @@ export default function NotificationCreator() {
                       <span>大きめ</span>
                     </div>
                     <p className="text-xs leading-relaxed text-black/45">通知カードは文字に合わせてアイコン・余白・角丸もまとめて拡大するので、レイアウトは崩れません。時計の大きさは上のスライダーで別に調整できます。</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>通知の文字色</Label>
+                    <ColorSwatch value={notificationTextColor} onChange={(e) => setNotificationTextColor(e.target.value)} />
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { label: "白", value: "#ffffff" },
+                        { label: "黒", value: "#111111" },
+                        { label: "グレー", value: "#8e8e93" },
+                        { label: "青", value: "#0a84ff" },
+                      ].map((preset) => (
+                        <button
+                          key={preset.value}
+                          type="button"
+                          onClick={() => setNotificationTextColor(preset.value)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs transition",
+                            notificationTextColor.toLowerCase() === preset.value ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/70",
+                          )}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs leading-relaxed text-black/45">アプリ名や時刻は、選んだ色を薄くして表示します。</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">

@@ -29,8 +29,50 @@ export type MockNotificationConfig = {
   soundEnabled: boolean;
   vibrateEnabled: boolean;
   autoHideSeconds: number;
+  textScale: number;
+  textColor: string;
   items: MockNotificationItem[];
 };
+
+export const MIN_NOTIFICATION_TEXT_SCALE = 80;
+export const MAX_NOTIFICATION_TEXT_SCALE = 180;
+
+// 100% のときのバナー各要素の基準サイズ(px)。
+// 倍率を変えても崩れないよう、文字・アイコン・余白をすべてここから算出する。
+const baseSizes = {
+  appFont: 12,
+  groupFont: 14,
+  senderFont: 13,
+  bodyFont: 14,
+  timeFont: 11,
+  iconFont: 14,
+  iconSize: 40,
+  cardPaddingX: 16,
+  cardPaddingY: 12,
+  rowGap: 12,
+  lineGap: 2,
+  stackGap: 12,
+};
+
+function clampTextScale(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return 100;
+  return Math.max(MIN_NOTIFICATION_TEXT_SCALE, Math.min(MAX_NOTIFICATION_TEXT_SCALE, Math.round(num)));
+}
+
+// 文字色は1色だけ選んでもらい、要素ごとの濃淡は不透明度で作る。
+function toRgba(color: string, alpha: number) {
+  const hex = (color || "#ffffff").trim();
+  const safeAlpha = Math.max(0, Math.min(1, alpha));
+  if (/^#([0-9a-fA-F]{6})$/.test(hex)) {
+    const value = hex.slice(1);
+    const r = parseInt(value.slice(0, 2), 16);
+    const g = parseInt(value.slice(2, 4), 16);
+    const b = parseInt(value.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${safeAlpha})`;
+  }
+  return hex;
+}
 
 const createItem = (): MockNotificationItem => ({
   id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -52,6 +94,8 @@ export const defaultMockNotificationConfig: MockNotificationConfig = {
   soundEnabled: true,
   vibrateEnabled: false,
   autoHideSeconds: 0,
+  textScale: 100,
+  textColor: "#ffffff",
   items: [
     {
       id: "notif-default-1",
@@ -95,6 +139,8 @@ function readStoredConfig(): MockNotificationConfig {
       direction: parsed.direction === "bottom" ? "bottom" : "top",
       topOffset: Number.isFinite(Number(parsed.topOffset)) ? Number(parsed.topOffset) : defaultMockNotificationConfig.topOffset,
       autoHideSeconds: Number.isFinite(Number(parsed.autoHideSeconds)) ? Number(parsed.autoHideSeconds) : 0,
+      textScale: clampTextScale(parsed.textScale),
+      textColor: typeof parsed.textColor === "string" ? parsed.textColor : defaultMockNotificationConfig.textColor,
       items: items.length > 0 ? items : defaultMockNotificationConfig.items,
     };
   } catch {
@@ -308,37 +354,53 @@ export function useMockNotifications({ settingsOpen }: { settingsOpen: boolean }
 
 function MockNotificationStack({ config, items }: { config: MockNotificationConfig; items: MockNotificationItem[] }) {
   const isIphone = config.osType === "iphone";
-  const cardClass = isIphone
-    ? "rounded-[22px] border border-white/20 shadow-lg"
-    : "rounded-[18px] border border-white/10 shadow-lg";
+  const cardClass = isIphone ? "border border-white/20 shadow-lg" : "border border-white/10 shadow-lg";
   const iconClass = isIphone
-    ? "rounded-[12px] border border-white/40 text-black/80 shadow-sm"
-    : "rounded-full border border-black/5 text-zinc-800 shadow-sm";
+    ? "border border-white/40 text-black/80 shadow-sm"
+    : "border border-black/5 text-zinc-800 shadow-sm";
   const cardBg = isIphone ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = isIphone ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
+
+  // 文字だけ大きくすると余白が詰まるので、アイコンと余白も同じ倍率で動かす。
+  const scale = clampTextScale(config.textScale) / 100;
+  const px = (base: number) => `${Math.round(base * scale * 100) / 100}px`;
+  const color = (alpha: number) => toRgba(config.textColor, alpha);
 
   return (
     <div
       className={cls(
-        "pointer-events-none absolute inset-x-0 z-[70] flex flex-col gap-3 px-4",
+        "pointer-events-none absolute inset-x-0 z-[70] flex flex-col px-4",
         config.direction === "bottom" ? "bottom-0 flex-col-reverse pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))]" : "top-0",
       )}
-      style={config.direction === "top" ? { paddingTop: `${Math.max(0, Number(config.topOffset) || 0)}px` } : undefined}
+      style={{
+        gap: px(baseSizes.stackGap),
+        ...(config.direction === "top" ? { paddingTop: `${Math.max(0, Number(config.topOffset) || 0)}px` } : null),
+      }}
     >
       {items.map((item) => (
         <div
           key={item.id}
           className={cls(
-            "px-4 py-3 text-white backdrop-blur-md",
+            "backdrop-blur-md",
             cardClass,
             config.direction === "bottom" ? "notification-enter-bottom" : "notification-enter-top",
           )}
-          style={{ backgroundColor: cardBg }}
+          style={{
+            backgroundColor: cardBg,
+            padding: `${px(baseSizes.cardPaddingY)} ${px(baseSizes.cardPaddingX)}`,
+            borderRadius: px(isIphone ? 22 : 18),
+          }}
         >
-          <div className="flex items-start gap-3">
+          <div className="flex items-start" style={{ gap: px(baseSizes.rowGap) }}>
             <div
-              className={cls("flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden text-sm font-semibold", iconClass)}
-              style={{ backgroundColor: iconBg }}
+              className={cls("flex shrink-0 items-center justify-center overflow-hidden font-semibold", iconClass)}
+              style={{
+                backgroundColor: iconBg,
+                height: px(baseSizes.iconSize),
+                width: px(baseSizes.iconSize),
+                fontSize: px(baseSizes.iconFont),
+                borderRadius: isIphone ? px(12) : "9999px",
+              }}
             >
               {item.iconImage ? (
                 <img src={item.iconImage} alt="icon" className="h-full w-full object-cover" />
@@ -348,12 +410,16 @@ function MockNotificationStack({ config, items }: { config: MockNotificationConf
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 truncate text-[12px] font-medium text-white/70">{item.appName}</div>
-                <div className="shrink-0 text-[11px] text-white/55">{item.time}</div>
+                <div className="min-w-0 truncate font-medium" style={{ fontSize: px(baseSizes.appFont), color: color(0.7) }}>{item.appName}</div>
+                <div className="shrink-0" style={{ fontSize: px(baseSizes.timeFont), color: color(0.55) }}>{item.time}</div>
               </div>
-              {item.groupName ? <div className="mt-0.5 truncate text-[14px] font-semibold">{item.groupName}</div> : null}
-              {item.sender ? <div className="mt-0.5 truncate text-[13px] text-white/75">{item.sender}</div> : null}
-              <div className="mt-0.5 break-words text-[14px] leading-snug text-white/95">{item.text}</div>
+              {item.groupName ? (
+                <div className="truncate font-semibold" style={{ marginTop: px(baseSizes.lineGap), fontSize: px(baseSizes.groupFont), color: color(1) }}>{item.groupName}</div>
+              ) : null}
+              {item.sender ? (
+                <div className="truncate" style={{ marginTop: px(baseSizes.lineGap), fontSize: px(baseSizes.senderFont), color: color(0.75) }}>{item.sender}</div>
+              ) : null}
+              <div className="break-words leading-snug" style={{ marginTop: px(baseSizes.lineGap), fontSize: px(baseSizes.bodyFont), color: color(0.95) }}>{item.text}</div>
             </div>
           </div>
         </div>
@@ -460,6 +526,49 @@ function MockNotificationSettings({
           <span className={noteClass}>ステータスバーやヘッダーに重ならない高さに合わせてください</span>
         </label>
       )}
+
+      <label className="grid min-w-0 gap-1.5">
+        <span className={labelClass}>文字サイズ {clampTextScale(config.textScale)}%</span>
+        <input
+          type="range"
+          min={MIN_NOTIFICATION_TEXT_SCALE}
+          max={MAX_NOTIFICATION_TEXT_SCALE}
+          step={5}
+          value={clampTextScale(config.textScale)}
+          onChange={(e) => setConfig("textScale", Number(e.target.value))}
+          className="w-full cursor-pointer"
+        />
+        <span className={noteClass}>文字に合わせてアイコン・余白・角丸もまとめて拡大するので、レイアウトは崩れません</span>
+      </label>
+
+      <div className="space-y-1.5">
+        <div className={labelClass}>文字色</div>
+        <div className="flex items-center gap-2">
+          <input type="color" value={config.textColor} onChange={(e) => setConfig("textColor", e.target.value)} className="h-10 w-12 shrink-0 cursor-pointer rounded-xl border border-black/10 bg-transparent p-0" />
+          <input value={config.textColor} onChange={(e) => setConfig("textColor", e.target.value)} className={fieldClass} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: "白", value: "#ffffff" },
+            { label: "黒", value: "#111111" },
+            { label: "グレー", value: "#8e8e93" },
+            { label: "青", value: "#0a84ff" },
+          ].map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => setConfig("textColor", preset.value)}
+              className={cls(
+                "rounded-full border px-3 py-1.5 text-xs transition",
+                config.textColor.toLowerCase() === preset.value ? "border-black bg-black text-white" : "border-black/10 bg-white text-black/70",
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <div className={noteClass}>アプリ名や時刻は、選んだ色を薄くして表示します</div>
+      </div>
 
       <label className="grid min-w-0 gap-1.5">
         <span className={labelClass}>自動で消えるまでの秒数</span>
