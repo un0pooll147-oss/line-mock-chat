@@ -162,8 +162,8 @@ const defaultSettings: InstagramSettings = {
       displayName: "そら",
       avatarLabel: "そ",
       avatarImage: "/scene2-instagram/profile-v2-01-sora.png",
-      postImage: "/scene2-instagram/post-01-lake.png",
-      caption: "朝いちばんの湖、空気まできらきらしてた。\n少し早起きしただけでこの景色。旅行って最高！",
+      postImage: "/scene2-instagram/post-01-beach-sunset.webp",
+      caption: "海に沈むまで、ずっと笑ってた夕方。\nこの三人だから撮れた一枚。旅行って最高！",
       likeCount: "348",
       commentCount: "22",
       repostCount: "8",
@@ -178,8 +178,8 @@ const defaultSettings: InstagramSettings = {
       displayName: "美衣",
       avatarLabel: "美",
       avatarImage: "/scene2-instagram/profile-v2-02-mii.png",
-      postImage: "/scene2-instagram/post-02-seafood.png",
-      caption: "旅先の海鮮朝ごはん。\nどれから食べるか迷う時間まで幸せ。おいしい旅、最高！",
+      postImage: "/scene2-instagram/post-02-mountain-peak.webp",
+      caption: "登りきったら、風が気持ちよすぎた。\n息切れも忘れるこの景色。がんばってよかった！",
       likeCount: "512",
       commentCount: "31",
       repostCount: "12",
@@ -283,6 +283,18 @@ const defaultSettings: InstagramSettings = {
   bgColor: "#ffffff",
   textScale: DEFAULT_TEXT_SCALE,
 };
+
+// アプリに同梱している投稿用の画像。差し替えても元の画像を選び直せるよう、
+// 使わなくなったものもここに残しておく。
+export const bundledPostImages: Array<{ url: string; label: string }> = [
+  { url: "/scene2-instagram/post-01-beach-sunset.webp", label: "夕焼けのビーチ" },
+  { url: "/scene2-instagram/post-02-mountain-peak.webp", label: "山頂の展望" },
+  { url: "/scene2-instagram/post-01-lake.png", label: "朝の湖" },
+  { url: "/scene2-instagram/post-02-seafood.png", label: "海鮮の朝ごはん" },
+  { url: "/scene2-instagram/post-03-resort.png", label: "リゾートのプール" },
+  { url: "/scene2-instagram/post-04-bamboo.png", label: "竹林の小径" },
+  { url: "/scene2-instagram/post-05-onsen.png", label: "夜の露天風呂" },
+];
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
 
@@ -420,6 +432,30 @@ function Textarea({ className = "", ...props }: React.TextareaHTMLAttributes<HTM
 
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="text-sm font-medium text-black/80">{children}</label>;
+}
+
+function BundledImagePicker({ value, onSelect }: { value: string | null; onSelect: (url: string) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label>アプリ内の画像から選ぶ</Label>
+      <div className="grid grid-cols-4 gap-2">
+        {bundledPostImages.map((item) => (
+          <button
+            key={item.url}
+            type="button"
+            onClick={() => onSelect(item.url)}
+            title={item.label}
+            className={cn(
+              "overflow-hidden rounded-xl border-2 transition",
+              value === item.url ? "border-black" : "border-transparent hover:border-black/20",
+            )}
+          >
+            <img src={item.url} alt={item.label} className="aspect-square w-full object-cover" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Switch({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (next: boolean) => void }) {
@@ -1468,6 +1504,7 @@ export default function InstagramMockCreator() {
                             <FileButton accept="image/*,video/*" onFile={(e) => handleFeedPostImageUpload(e, post.id, "postImage")}>投稿メディア</FileButton>
                             <Button variant="outline" onClick={() => updateFeedPost(post.id, "postImage", null)}>解除</Button>
                           </div>
+                          <BundledImagePicker value={post.postImage} onSelect={(url) => updateFeedPost(post.id, "postImage", url)} />
                           {post.postImage && (
                             isVideoUrl(post.postImage)
                               ? <video src={post.postImage} className="aspect-video w-full rounded-2xl object-cover" muted playsInline />
@@ -1486,7 +1523,7 @@ export default function InstagramMockCreator() {
                     </div>
                   ) : settings.screenType === "post" ? (
                     <SectionCard icon={ImageIcon} title="投稿内容">
-                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿メディア</FileButton><MultiFileButton accept="image/*,video/*" onFiles={handlePostImagesUpload}>複数メディア</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">画像・動画を複数選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
+                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿メディア</FileButton><MultiFileButton accept="image/*,video/*" onFiles={handlePostImagesUpload}>複数メディア</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">画像・動画を複数選ぶと、投稿画面で左右ボタンとドットが表示されます。</div><BundledImagePicker value={settings.postImage} onSelect={(url) => setSettings((prev) => ({ ...prev, postImage: url, postImages: [url] }))} />
                       <div className="space-y-2"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
                       <div className="grid grid-cols-3 gap-3"><div className="space-y-2"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div><div className="space-y-2"><Label>表示するコメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div><div className="space-y-2"><Label>リポスト数</Label><Input value={settings.repostCount} onChange={(e) => update("repostCount", e.target.value)} /></div></div>
                       <div className="text-xs text-black/50">この数字は投稿画面専用です。コメント一覧の登録数とは連動しません。</div>
