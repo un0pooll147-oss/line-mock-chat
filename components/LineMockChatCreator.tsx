@@ -272,6 +272,15 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
 
 const STORAGE_KEY = "line-mock-chat-default-settings-kanpai-v73";
 const SAVED_CHATS_STORAGE_KEY = "line-mock-chat-saved-chats-v1";
+const MIN_TYPING_MESSAGE_SCALE = 80;
+const MAX_TYPING_MESSAGE_SCALE = 200;
+const DEFAULT_TYPING_MESSAGE_SCALE = 100;
+
+function clampTypingMessageScale(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return DEFAULT_TYPING_MESSAGE_SCALE;
+  return Math.max(MIN_TYPING_MESSAGE_SCALE, Math.min(MAX_TYPING_MESSAGE_SCALE, Math.round(num)));
+}
 
 interface SavedChatPreset {
   id: number;
@@ -419,6 +428,7 @@ const defaultSettings = {
   outgoingCallBgColor: "#000000",
   outgoingCallBgOpacity: 1,
   textScale: DEFAULT_TEXT_SCALE,
+  typingMessageScale: DEFAULT_TYPING_MESSAGE_SCALE,
   showStartButton: true,
   startButtonAction: "incomingCall" as "incomingCall" | "timedMessages",
   startButtonCallMode: "voice" as "voice" | "video",
@@ -601,9 +611,11 @@ function Input({ className = "", ...props }: React.InputHTMLAttributes<HTMLInput
   return <input {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
 }
 
-function Textarea({ className = "", ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
-}
+const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  function Textarea({ className = "", ...props }, ref) {
+    return <textarea ref={ref} {...props} className={cn("w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/5", className)} />;
+  },
+);
 
 function Label({ children, className = "", ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return <label {...props} className={cn("text-sm font-medium text-black/80", className)}>{children}</label>;
@@ -690,6 +702,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   messages: Message[];
   typingText: string;
   isTyping: boolean;
+  typingMessageScale: number;
   theme: Theme;
   avatarImage: string;
   avatarLabel: string;
@@ -700,7 +713,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   wallpaper: string;
   unifyWallpaper?: boolean;
   bottomPadding?: number;
-}>(function PhoneMockup({ onStartCall, onOpenSettings, onCancelMessage, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
+}>(function PhoneMockup({ onStartCall, onOpenSettings, onCancelMessage, title, messages, typingText, isTyping, typingMessageScale, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
@@ -831,7 +844,15 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
             {isTyping && (
               <div className="flex justify-end">
                 <div className="max-w-[78%]">
-                  <div className="rounded-[18px] rounded-br-[6px] px-4 py-2 text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]" style={{ backgroundColor: theme.selfBubble, color: theme.selfTextColor }}>
+                  <div
+                    className="rounded-[18px] rounded-br-[6px] px-4 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                    style={{
+                      backgroundColor: theme.selfBubble,
+                      color: theme.selfTextColor,
+                      fontSize: `${15 * clampTypingMessageScale(typingMessageScale) / 100}px`,
+                      lineHeight: 1.6,
+                    }}
+                  >
                     <span className="whitespace-pre-wrap break-words">{typingText}</span>
                     <span className="animate-pulse">|</span>
                   </div>
@@ -934,6 +955,7 @@ export default function LineMockChatCreator() {
   const [incomingCallAutoSeconds, setIncomingCallAutoSeconds] = useState(initialUiSettings.incomingCallAutoSeconds || 1.5);
   const [incomingDelaySeconds, setIncomingDelaySeconds] = useState(initialUiSettings.incomingDelaySeconds || 0);
   const [textScale, setTextScale] = useState(clampTextScale(initialUiSettings.textScale));
+  const [typingMessageScale, setTypingMessageScale] = useState(clampTypingMessageScale(initialUiSettings.typingMessageScale));
   const [showStartButton, setShowStartButton] = useState(initialUiSettings.showStartButton ?? true);
   const [startButtonAction, setStartButtonAction] = useState<"incomingCall" | "timedMessages">(initialUiSettings.startButtonAction || "incomingCall");
   const [startButtonCallMode, setStartButtonCallMode] = useState<"voice" | "video">(initialUiSettings.startButtonCallMode || "voice");
@@ -956,8 +978,17 @@ export default function LineMockChatCreator() {
   const [composerFocused, setComposerFocused] = useState(false);
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   const outgoingImageInputRef = useRef<HTMLInputElement>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("appearance");
+
+  useEffect(() => {
+    const textarea = composerTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const minimumHeight = 24 * clampTypingMessageScale(typingMessageScale) / 100;
+    textarea.style.height = `${Math.min(112, Math.max(minimumHeight, textarea.scrollHeight))}px`;
+  }, [inputText, typingMessageScale, showControls]);
   const [timedMsgs, setTimedMsgs] = useState<TimedMsg[]>(initialUiSettings.timedMsgs || initialTimedMessages);
   const [savedChats, setSavedChats] = useState<SavedChatPreset[]>([]);
   const [chatSaveName, setChatSaveName] = useState("");
@@ -1413,6 +1444,7 @@ export default function LineMockChatCreator() {
     incomingCallAutoSeconds: Number(incomingCallAutoSeconds) || 1.5,
     incomingDelaySeconds: Number(incomingDelaySeconds) || 0, incomingCallBgColor, incomingCallBgOpacity,
     outgoingCallBgColor, outgoingCallBgOpacity, textScale: clampTextScale(textScale),
+    typingMessageScale: clampTypingMessageScale(typingMessageScale),
     showStartButton, startButtonAction, startButtonCallMode,
   });
 
@@ -1467,6 +1499,7 @@ export default function LineMockChatCreator() {
     setIncomingCallBgColor(settings.incomingCallBgColor || "#000000"); setIncomingCallBgOpacity(settings.incomingCallBgOpacity ?? 0.9);
     setOutgoingCallBgColor(settings.outgoingCallBgColor || "#000000"); setOutgoingCallBgOpacity(settings.outgoingCallBgOpacity ?? 0.9);
     setTextScale(clampTextScale(settings.textScale));
+    setTypingMessageScale(clampTypingMessageScale(settings.typingMessageScale));
     setShowStartButton(settings.showStartButton ?? true);
     setStartButtonAction(settings.startButtonAction === "timedMessages" ? "timedMessages" : "incomingCall");
     setStartButtonCallMode(settings.startButtonCallMode === "video" ? "video" : "voice");
@@ -1670,13 +1703,18 @@ export default function LineMockChatCreator() {
         <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
           <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
           <Textarea
+            ref={composerTextareaRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onFocus={() => setComposerFocused(true)}
             onBlur={() => window.setTimeout(() => { if (document.activeElement?.tagName !== "TEXTAREA" && document.activeElement?.tagName !== "INPUT") setComposerFocused(false); }, 180)}
             placeholder={inputPlaceholder}
             rows={1}
-            className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 text-[15px] leading-6 shadow-none focus:ring-0"
+            className="max-h-28 min-h-0 resize-none border-0 bg-transparent p-0 shadow-none focus:ring-0"
+            style={{
+              fontSize: `${15 * clampTypingMessageScale(typingMessageScale) / 100}px`,
+              lineHeight: `${24 * clampTypingMessageScale(typingMessageScale) / 100}px`,
+            }}
           />
           <div className="ml-2 flex items-center gap-1 pb-0.5 text-black/45">
             <button type="button" onClick={() => outgoingImageInputRef.current?.click()} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-black/5" aria-label="画像を追加"><ImageIcon className="h-4 w-4" /></button>
@@ -1764,6 +1802,7 @@ export default function LineMockChatCreator() {
                     messages={messages}
                     typingText={typingText}
                     isTyping={isTyping}
+                    typingMessageScale={typingMessageScale}
                     theme={theme}
                     avatarImage={avatarImage}
                     avatarLabel={avatarLabel}
@@ -1808,6 +1847,7 @@ export default function LineMockChatCreator() {
                   messages={messages}
                   typingText={typingText}
                   isTyping={isTyping}
+                  typingMessageScale={typingMessageScale}
                   theme={theme}
                   avatarImage={avatarImage}
                   avatarLabel={avatarLabel}
@@ -2180,6 +2220,23 @@ export default function LineMockChatCreator() {
                       />
                       <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
                       <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>入力中メッセージの文字サイズ</Label>
+                        <span className="text-xs font-medium text-black/50">{clampTypingMessageScale(typingMessageScale)}%</span>
+                      </div>
+                      <Input
+                        type="range"
+                        min={String(MIN_TYPING_MESSAGE_SCALE)}
+                        max={String(MAX_TYPING_MESSAGE_SCALE)}
+                        step="5"
+                        value={clampTypingMessageScale(typingMessageScale)}
+                        onChange={(e) => setTypingMessageScale(Number(e.target.value))}
+                        aria-label="入力中メッセージの文字サイズ"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
+                      <div className="text-xs text-black/50">下部の入力欄と、送信演出中に表示される吹き出しの文字サイズを変更します。</div>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); }} /></div>
