@@ -3,7 +3,7 @@
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
-import { useNativeFullscreen } from "./useNativeFullscreen";
+import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useIncomingCall } from "./IncomingCall";
@@ -1118,7 +1118,7 @@ export default function InstagramMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<InstagramSettings>(defaultSettings);
-  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
+  usePseudoFullscreen(settings.fullScreenMode, () => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
   const [savedPresets, setSavedPresets] = useState<SavedInstagramPreset[]>([]);
@@ -1342,9 +1342,6 @@ export default function InstagramMockCreator() {
 
   const enterFullscreenIfNeeded = (enabled: boolean) => {
     update("fullScreenMode", enabled);
-    void changeNativeFullscreen(enabled).then((success) => {
-      if (!success) update("fullScreenMode", false);
-    });
   };
 
   const incomingCall = useIncomingCall({ settingsOpen });
@@ -1377,7 +1374,7 @@ export default function InstagramMockCreator() {
     <div className={cn(
       "mx-auto flex h-[100dvh] min-h-0 flex-col bg-black",
       settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
-    )} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+    )} style={{ height: "100%", maxHeight: "100%" }}>
       <div className="relative h-full min-h-0 flex-1 overflow-hidden p-1">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {screen}
@@ -1390,14 +1387,14 @@ export default function InstagramMockCreator() {
         "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
         settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
       )}
-      style={{ backgroundColor: settings.bgColor, height: visualViewportHeight, maxHeight: visualViewportHeight }}
+      style={{ backgroundColor: settings.bgColor, height: "100%", maxHeight: "100%" }}
     >
       {screen}
     </div>
   );
 
   return (
-    <div className={cn("relative min-h-[100dvh] bg-[#f2f2f2]", settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} style={settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : undefined}>
+    <div className={cn("relative min-h-[100dvh] bg-[#f2f2f2]", settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} data-mock-stage data-fullscreen={settings.fullScreenMode} style={mockStageStyle(settings.fullScreenMode, visualViewportHeight)}>
       {stage}
 
       {settings.showSettingsButton && (
@@ -1660,7 +1657,7 @@ export default function InstagramMockCreator() {
                     {incomingCall.settingsSection}
                   </SectionCard>
                   <SectionCard icon={Settings2} title="撮影表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ画面として表示</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(v) => update("showStatusBar", v)} /></div>

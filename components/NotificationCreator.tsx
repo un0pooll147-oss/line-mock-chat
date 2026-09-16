@@ -4,7 +4,7 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
-import { useNativeFullscreen } from "./useNativeFullscreen";
+import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, textScaleStyle } from "./textScale";
 import {
@@ -831,7 +831,7 @@ export default function NotificationCreator() {
   const [uploadedSound, setUploadedSound] = useState<string | null>(defaultSettings.uploadedSound);
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
   const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
-  const changeNativeFullscreen = useNativeFullscreen(() => setFullScreenMode(false));
+  usePseudoFullscreen(fullScreenMode, () => setFullScreenMode(false));
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
   const [showCallButton, setShowCallButton] = useState(defaultSettings.showCallButton);
   const [quickCallMode, setQuickCallMode] = useState<"voice" | "video">(defaultSettings.quickCallMode);
@@ -1832,17 +1832,7 @@ export default function NotificationCreator() {
     showToast("初期設定に戻しました");
   };
 
-  const handleFullScreenModeChange = async (enabled: boolean) => {
-    if (enabled) {
-      setFullScreenMode(true);
-      const success = await changeNativeFullscreen(true);
-      if (!success) setFullScreenMode(false);
-      return;
-    }
-
-    const success = await changeNativeFullscreen(false);
-    if (success) setFullScreenMode(false);
-  };
+  const handleFullScreenModeChange = (enabled: boolean) => setFullScreenMode(enabled);
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
@@ -1910,27 +1900,19 @@ export default function NotificationCreator() {
   const callOverlayBgColor = callDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
 
-  const stageContainerStyle: React.CSSProperties = {
-    height: visualViewportHeight,
-    minHeight: visualViewportHeight,
-    maxHeight: visualViewportHeight,
-    width: "100%",
-    maxWidth: "100vw",
-    overflow: fullScreenMode ? "hidden" : undefined,
-    position: "relative",
-  };
+  const stageContainerStyle = mockStageStyle(fullScreenMode, visualViewportHeight);
   const previewShellClassName = cn(
     deviceFrameMode ? "p-1" : "p-0",
     fullScreenMode && "rounded-device-safe-shell",
   );
   const settingsButtonClassName = deviceFrameMode
     ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4")
-    : cn("fixed z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4");
+    : cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4");
   const phoneButtonClassName = deviceFrameMode
     ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4")
-    : cn("fixed z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4");
+    : cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-white/[0.08] text-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-white/[0.12] active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] left-[max(32px,calc(env(safe-area-inset-left)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] left-4");
   const startButtonClassName = cn(
-    deviceFrameMode ? "absolute" : "fixed",
+    deviceFrameMode ? "absolute" : "absolute",
     "left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/30 bg-black/55 px-6 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur-md transition hover:bg-black/65 active:scale-95",
     fullScreenMode
       ? "bottom-[max(46px,calc(env(safe-area-inset-bottom)+34px))]"
@@ -1938,10 +1920,10 @@ export default function NotificationCreator() {
   );
   const hiddenSettingsButtonClassName = deviceFrameMode
     ? cn("absolute z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0")
-    : cn("fixed z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0");
+    : cn("absolute z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0");
 
   return (
-    <div className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
+    <div data-mock-stage data-fullscreen={fullScreenMode} className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
       <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
         <div
           className={cn(
@@ -2465,7 +2447,7 @@ export default function NotificationCreator() {
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">フルスクリーンモード</div>
-                      <div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div>
+                      <div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div>
                     </div>
                     <Switch checked={fullScreenMode} onCheckedChange={(value) => { void handleFullScreenModeChange(value); }} />
                   </div>

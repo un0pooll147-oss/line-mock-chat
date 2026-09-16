@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useNativeFullscreen } from "./useNativeFullscreen";
+import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useMockNotifications } from "./MockNotifications";
@@ -28,25 +28,236 @@ import {
 } from "lucide-react";
 
 const initialMessages = [
-  { id: 1, side: "left", type: "text", sender: "美咲", text: "ちゃんと帰れた？", date: "2026/04/22", time: "21:08", visible: true },
-  { id: 2, side: "right", type: "text", sender: "あなた", text: "うん、今着いた。ちょっと疲れたけど大丈夫", date: "2026/04/22", time: "21:10", visible: true },
-  { id: 3, side: "left", type: "text", sender: "美咲", text: "よかった。今日はほんとに無理してる感じしたから心配だった", date: "2026/04/22", time: "21:12", visible: true },
-  { id: 4, side: "right", type: "text", sender: "あなた", text: "ごめんね、ちょっと考えすぎてたかも", date: "2026/04/22", time: "21:15", visible: true },
-  { id: 5, side: "left", type: "text", sender: "美咲", text: "全然いいよ。そういう時くらい頼って", date: "2026/04/22", time: "21:16", visible: true },
-  { id: 6, side: "right", type: "text", sender: "あなた", text: "ありがとう。そう言ってもらえると安心する", date: "2026/04/22", time: "21:18", visible: true },
-  { id: 7, side: "left", type: "text", sender: "美咲", text: "ならよかった。帰ってから何か食べた？", date: "2026/04/22", time: "21:20", visible: true },
-  { id: 8, side: "right", type: "text", sender: "あなた", text: "まだ。お風呂入ってから軽く食べようかなって", date: "2026/04/22", time: "21:22", visible: true },
-  { id: 9, side: "left", type: "text", sender: "美咲", text: "そっか。あったかいもの飲んで、ちゃんと休みなね", date: "2026/04/22", time: "21:23", visible: true },
-  { id: 10, side: "right", type: "text", sender: "あなた", text: "うん。なんか今日、少しだけ救われた気がする", date: "2026/04/22", time: "21:25", visible: true },
-  { id: 11, side: "left", type: "text", sender: "美咲", text: "大げさじゃない？", date: "2026/04/22", time: "21:26", visible: true },
-  { id: 12, side: "right", type: "text", sender: "あなた", text: "でもほんと。いてくれてよかったって思った", date: "2026/04/22", time: "21:28", visible: true },
-  { id: 13, side: "left", type: "text", sender: "美咲", text: "…それ言われると嬉しい", date: "2026/04/22", time: "21:29", visible: true },
-  { id: 14, side: "right", type: "text", sender: "あなた", text: "ほんとだよ", date: "2026/04/22", time: "21:31", visible: true },
-  { id: 15, side: "left", type: "text", sender: "美咲", text: "明日も早いし、ゆっくり休んで", date: "2026/04/22", time: "21:34", visible: true },
-  { id: 16, side: "right", type: "text", sender: "あなた", text: "ありがと。おやすみなさい。また明日ね", date: "2026/04/22", time: "21:35", visible: true },
-  { id: 17, side: "left", type: "text", sender: "美咲", text: "おやすみ。いい夢見てね。", date: "2026/04/22", time: "21:36", visible: true },
-  { id: 18, side: "left", type: "text", sender: "美咲", text: "今日もありがとね", date: "2026/04/23", time: "22:15", visible: true },
-  { id: 19, side: "left", type: "text", sender: "美咲", text: "あとさ、誠が何か変なこと聞いたみたいだけど、気にしないでね", date: "2026/04/23", time: "22:16", visible: true },
+  {
+    "id": 1,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "今日、何時くらいに帰る？",
+    "date": "2026/09/15",
+    "time": "17:42",
+    "visible": true
+  },
+  {
+    "id": 2,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "あと少しで終わる。帰りに何か買う？",
+    "date": "2026/09/15",
+    "time": "17:44",
+    "visible": true
+  },
+  {
+    "id": 3,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "じゃあ牛乳お願い。ご飯は家で食べるよね？",
+    "date": "2026/09/15",
+    "time": "17:45",
+    "visible": true
+  },
+  {
+    "id": 4,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "うん、食べる。牛乳了解",
+    "date": "2026/09/15",
+    "time": "17:46",
+    "visible": true
+  },
+  {
+    "id": 5,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "後輩くん、誘えた？",
+    "date": "2026/09/16",
+    "time": "17:30",
+    "visible": true
+  },
+  {
+    "id": 6,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "まだ。忙しそうで、声かけるタイミングがない",
+    "date": "2026/09/16",
+    "time": "17:32",
+    "visible": true
+  },
+  {
+    "id": 7,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "また考えすぎてるんでしょ笑",
+    "date": "2026/09/16",
+    "time": "17:33",
+    "visible": true
+  },
+  {
+    "id": 8,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "断りづらくさせたら悪いかなって",
+    "date": "2026/09/16",
+    "time": "17:34",
+    "visible": true
+  },
+  {
+    "id": 9,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "都合悪かったらまた今度、でいいじゃん。まず聞いてみなよ",
+    "date": "2026/09/16",
+    "time": "17:35",
+    "visible": true
+  },
+  {
+    "id": 10,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "そうだな。聞いてみる",
+    "date": "2026/09/16",
+    "time": "17:37",
+    "visible": true
+  },
+  {
+    "id": 11,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "企画書の準備でもう少しかかる。先に食べてて",
+    "date": "2026/09/17",
+    "time": "19:02",
+    "visible": true
+  },
+  {
+    "id": 12,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "了解。ご飯は取っておくね",
+    "date": "2026/09/17",
+    "time": "19:04",
+    "visible": true
+  },
+  {
+    "id": 13,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "明日こそ、後輩に声かけてみる",
+    "date": "2026/09/17",
+    "time": "19:05",
+    "visible": true
+  },
+  {
+    "id": 14,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "うん。考えすぎずに普通に誘えば大丈夫",
+    "date": "2026/09/17",
+    "time": "19:06",
+    "visible": true
+  },
+  {
+    "id": 15,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "わかった。やってみる",
+    "date": "2026/09/17",
+    "time": "19:08",
+    "visible": true
+  },
+  {
+    "id": 16,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "今日、声かけるんでしょ？",
+    "date": "2026/09/18",
+    "time": "12:16",
+    "visible": true
+  },
+  {
+    "id": 17,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "うん。タイミング見て誘ってみる",
+    "date": "2026/09/18",
+    "time": "12:20",
+    "visible": true
+  },
+  {
+    "id": 18,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "今日はご飯いらない",
+    "date": "2026/09/18",
+    "time": "19:08",
+    "visible": true
+  },
+  {
+    "id": 19,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "お、後輩くんと？",
+    "date": "2026/09/18",
+    "time": "19:09",
+    "visible": true
+  },
+  {
+    "id": 20,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "うん。ちゃんと誘えた。今二人で飲んでる",
+    "date": "2026/09/18",
+    "time": "19:10",
+    "visible": true
+  },
+  {
+    "id": 21,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "よかったじゃん。ゆっくり話しておいで",
+    "date": "2026/09/18",
+    "time": "19:11",
+    "visible": true
+  },
+  {
+    "id": 22,
+    "side": "right",
+    "type": "text",
+    "sender": "龍馬",
+    "text": "コンペのことも話してみる。帰る時また連絡する",
+    "date": "2026/09/18",
+    "time": "19:12",
+    "visible": true
+  },
+  {
+    "id": 23,
+    "side": "left",
+    "type": "text",
+    "sender": "佳菜子",
+    "text": "はーい。飲みすぎないでね笑",
+    "date": "2026/09/18",
+    "time": "19:13",
+    "visible": true
+  }
 ];
 
 const themePresets: Record<string, { name: string; appBg: string; headerBg: string; selfBubble: string; otherBubble: string; toolbarBg: string }> = {
@@ -59,7 +270,7 @@ const themePresets: Record<string, { name: string; appBg: string; headerBg: stri
   purple: { name: "パープル", appBg: "#f3e5f5", headerBg: "#8e24aa", selfBubble: "#ce93d8", otherBubble: "#ffffff", toolbarBg: "#faf5ff" },
 };
 
-const STORAGE_KEY = "line-mock-chat-default-settings-v5";
+const STORAGE_KEY = "line-mock-chat-default-settings-kanpai-v73";
 const SAVED_CHATS_STORAGE_KEY = "line-mock-chat-saved-chats-v1";
 
 interface SavedChatPreset {
@@ -155,7 +366,7 @@ function ChatStatusBar({ time, className = "" }: { time: string; className?: str
 }
 
 const defaultSettings = {
-  todayDate: "2026/04/23",
+  todayDate: "2026/09/18",
   customBgColor: "",
   customHeaderColor: "",
   customHeaderIconColor: "",
@@ -166,20 +377,20 @@ const defaultSettings = {
   customOtherBubbleColor: "",
   customOtherTextColor: "",
   unifyChatBackground: true,
-  chatTitle: "美咲",
+  chatTitle: "佳菜子",
   incomingCallTitle: "母",
   incomingCallAvatarLabel: "母",
   incomingCallAvatarImage: "",
-  avatarLabel: "美",
+  avatarLabel: "佳",
   avatarImage: "",
-  deviceTime: "22:18",
-  messageTime: "22:18",
-  incomingSender: "美咲",
+  deviceTime: "19:15",
+  messageTime: "19:15",
+  incomingSender: "佳菜子",
   incomingText: "",
-  outgoingMessageTime: "22:18",
-  incomingMessageTime: "22:18",
-  outgoingMessageDate: "2026/04/23",
-  incomingMessageDate: "2026/04/23",
+  outgoingMessageTime: "19:15",
+  incomingMessageTime: "19:15",
+  outgoingMessageDate: "2026/09/18",
+  incomingMessageDate: "2026/09/18",
   themeKey: "line",
   showStatusBar: true,
   fullScreenMode: false,
@@ -683,9 +894,9 @@ export default function LineMockChatCreator() {
   const [messageTime, setMessageTime] = useState(initialUiSettings.messageTime);
   const [outgoingMessageTime, setOutgoingMessageTime] = useState(initialUiSettings.outgoingMessageTime || initialUiSettings.messageTime || "22:14");
   const [incomingMessageTime, setIncomingMessageTime] = useState(initialUiSettings.incomingMessageTime || initialUiSettings.messageTime || "22:14");
-  const [outgoingMessageDate, setOutgoingMessageDate] = useState(initialUiSettings.outgoingMessageDate || "2026/04/04");
-  const [incomingMessageDate, setIncomingMessageDate] = useState(initialUiSettings.incomingMessageDate || "2026/04/04");
-  const [todayDate, setTodayDate] = useState(initialUiSettings.todayDate || "2026/04/04");
+  const [outgoingMessageDate, setOutgoingMessageDate] = useState(initialUiSettings.outgoingMessageDate || "2026/09/18");
+  const [incomingMessageDate, setIncomingMessageDate] = useState(initialUiSettings.incomingMessageDate || "2026/09/18");
+  const [todayDate, setTodayDate] = useState(initialUiSettings.todayDate || "2026/09/18");
   const [incomingSender, setIncomingSender] = useState(initialUiSettings.incomingSender);
   const [incomingText, setIncomingText] = useState(initialUiSettings.incomingText);
   const [themeKey, setThemeKey] = useState(initialUiSettings.themeKey);
@@ -701,7 +912,7 @@ export default function LineMockChatCreator() {
   const [unifyChatBackground, setUnifyChatBackground] = useState(initialUiSettings.unifyChatBackground ?? true);
   const [showStatusBar, setShowStatusBar] = useState(initialUiSettings.showStatusBar);
   const [fullScreenMode, setFullScreenMode] = useState(initialUiSettings.fullScreenMode);
-  const changeNativeFullscreen = useNativeFullscreen(() => setFullScreenMode(false));
+  usePseudoFullscreen(fullScreenMode, () => setFullScreenMode(false));
   const [deviceFrameMode, setDeviceFrameMode] = useState(initialUiSettings.deviceFrameMode);
   const [showMessageTime, setShowMessageTime] = useState(initialUiSettings.showMessageTime);
   const [inputPlaceholder, setInputPlaceholder] = useState(initialUiSettings.inputPlaceholder);
@@ -1239,9 +1450,9 @@ export default function LineMockChatCreator() {
     setAvatarImage(settings.avatarImage); setDeviceTime(settings.deviceTime); setMessageTime(settings.messageTime);
     setOutgoingMessageTime(settings.outgoingMessageTime || settings.messageTime || "22:14");
     setIncomingMessageTime(settings.incomingMessageTime || settings.messageTime || "22:14");
-    setOutgoingMessageDate(settings.outgoingMessageDate || "2026/04/04");
-    setIncomingMessageDate(settings.incomingMessageDate || "2026/04/04");
-    setTodayDate(settings.todayDate || "2026/04/04"); setIncomingSender(settings.incomingSender);
+    setOutgoingMessageDate(settings.outgoingMessageDate || "2026/09/18");
+    setIncomingMessageDate(settings.incomingMessageDate || "2026/09/18");
+    setTodayDate(settings.todayDate || "2026/09/18"); setIncomingSender(settings.incomingSender);
     setIncomingText(settings.incomingText); setThemeKey(settings.themeKey || "line");
     setShowStatusBar(settings.showStatusBar); setFullScreenMode(settings.fullScreenMode);
     setDeviceFrameMode(settings.deviceFrameMode); setShowMessageTime(settings.showMessageTime);
@@ -1448,13 +1659,8 @@ export default function LineMockChatCreator() {
   const sortedHistoryMessages = useMemo(() => [...messages].sort(compareMessagesAsc), [messages]);
 
   const stageContainerStyle: React.CSSProperties = {
-    height: "100dvh",
-    minHeight: "100dvh",
-    width: "100%",
-    maxWidth: "100vw",
-    overflow: "hidden",
-    position: "relative",
     ...(unifiedStageStyle || {}),
+    ...mockStageStyle(fullScreenMode, viewportHeight ?? "100dvh"),
   };
   const messageListBottomPadding = showControls ? 32 : 24;
 
@@ -1527,7 +1733,7 @@ export default function LineMockChatCreator() {
   ) : null;
 
   return (
-    <div
+    <div data-mock-stage data-fullscreen={fullScreenMode}
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
         fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none bg-black" : "mx-auto max-w-md",
@@ -1535,8 +1741,7 @@ export default function LineMockChatCreator() {
       )}
       style={{
         ...stageContainerStyle,
-        height: viewportHeight ? `${viewportHeight}px` : "100dvh",
-        minHeight: viewportHeight ? `${viewportHeight}px` : "100dvh",
+
       }}
     >
       {deviceFrameMode ? (
@@ -1735,10 +1940,10 @@ export default function LineMockChatCreator() {
               {activeTab === "chat" && (
                 <div className="space-y-4">
                   <SectionCard icon={Clock3} title="時刻と表示">
-                    <div className="space-y-2"><Label>今日の日付</Label><Input value={todayDate} onChange={(e) => setTodayDate(e.target.value)} placeholder="2026/04/04" /></div>
+                    <div className="space-y-2"><Label>今日の日付</Label><Input value={todayDate} onChange={(e) => setTodayDate(e.target.value)} placeholder="2026/09/18" /></div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2"><Label>自分の送信日</Label><Input value={outgoingMessageDate} onChange={(e) => setOutgoingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
-                      <div className="space-y-2"><Label>相手の送信日</Label><Input value={incomingMessageDate} onChange={(e) => setIncomingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
+                      <div className="space-y-2"><Label>自分の送信日</Label><Input value={outgoingMessageDate} onChange={(e) => setOutgoingMessageDate(e.target.value)} placeholder="2026/09/18" /></div>
+                      <div className="space-y-2"><Label>相手の送信日</Label><Input value={incomingMessageDate} onChange={(e) => setIncomingMessageDate(e.target.value)} placeholder="2026/09/18" /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>自分の送信時刻</Label><Input value={outgoingMessageTime} onChange={(e) => setOutgoingMessageTime(e.target.value)} placeholder="22:14" /></div>
@@ -1766,7 +1971,7 @@ export default function LineMockChatCreator() {
                             <div className="text-xs font-medium text-black/50">メッセージ {idx + 1}</div>
                             {timedMsgs.length > 1 && <button type="button" onClick={() => removeTimedMsgSlot(msg.id)} className="text-xs text-red-400 hover:text-red-600">削除</button>}
                           </div>
-                          <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateTimedMsg(msg.id, "sender", e.target.value)} disabled={msg.pending} placeholder="美咲" /></div>
+                          <div className="space-y-1"><Label>送信者名</Label><Input value={msg.sender} onChange={(e) => updateTimedMsg(msg.id, "sender", e.target.value)} disabled={msg.pending} placeholder="佳菜子" /></div>
                           <div className="space-y-1"><Label>メッセージ内容</Label><Textarea value={msg.text} onChange={(e) => updateTimedMsg(msg.id, "text", e.target.value)} className="min-h-16" placeholder="○秒後に届くメッセージ" disabled={msg.pending} /></div>
                           <div className="space-y-1"><Label>何秒後に届く？</Label><Input type="number" min="1" step="1" value={msg.delay} onChange={(e) => updateTimedMsg(msg.id, "delay", Number(e.target.value))} disabled={msg.pending} /></div>
                           {msg.pending ? (
@@ -1858,7 +2063,7 @@ export default function LineMockChatCreator() {
                           <div className="space-y-1"><Label>本文</Label><Textarea value={msg.text} onChange={(e) => updateMessageField(msg.id, "text", e.target.value)} className="min-h-20" /></div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1"><Label>日付</Label><Input value={msg.date || ""} onChange={(e) => updateMessageField(msg.id, "date", e.target.value)} placeholder="2026/04/04" /></div>
+                          <div className="space-y-1"><Label>日付</Label><Input value={msg.date || ""} onChange={(e) => updateMessageField(msg.id, "date", e.target.value)} placeholder="2026/09/18" /></div>
                           <div className="space-y-1"><Label>時刻</Label><Input value={msg.time} onChange={(e) => updateMessageField(msg.id, "time", e.target.value)} /></div>
                         </div>
                       </div>
@@ -1977,7 +2182,7 @@ export default function LineMockChatCreator() {
                       <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
                     </div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); void changeNativeFullscreen(value).then((success) => { if (!success) setFullScreenMode(false); }); }} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); }} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ風にする</div></div><Switch checked={deviceFrameMode} onCheckedChange={setDeviceFrameMode} /></div>
 
 

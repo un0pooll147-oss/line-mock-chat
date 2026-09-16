@@ -3,7 +3,7 @@
 import React, { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
-import { useNativeFullscreen } from "./useNativeFullscreen";
+import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useIncomingCall } from "./IncomingCall";
@@ -489,7 +489,7 @@ export default function XMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<XSettings>(initialSettings);
-  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
+  usePseudoFullscreen(settings.fullScreenMode, () => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyPanelOpen, setReplyPanelOpen] = useState(false);
@@ -697,9 +697,6 @@ export default function XMockCreator() {
 
   const setFullscreenMode = (enabled: boolean) => {
     update("fullScreenMode", enabled);
-    void changeNativeFullscreen(enabled).then((success) => {
-      if (!success) update("fullScreenMode", false);
-    });
   };
 
   const header = (
@@ -974,7 +971,7 @@ export default function XMockCreator() {
     <div className={cls(
       "mx-auto flex h-[100dvh] min-h-0 flex-col bg-black",
       settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
-    )} style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}>
+    )} style={{ height: "100%", maxHeight: "100%" }}>
       <div className="relative h-full min-h-0 flex-1 overflow-hidden p-1">
         <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {phoneContent}
@@ -987,14 +984,14 @@ export default function XMockCreator() {
         "mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white",
         settings.fullScreenMode ? "max-w-none rounded-device-safe-shell" : "max-w-md",
       )}
-      style={{ backgroundColor: settings.bgColor || undefined, height: visualViewportHeight, maxHeight: visualViewportHeight }}
+      style={{ backgroundColor: settings.bgColor || undefined, height: "100%", maxHeight: "100%" }}
     >
       {phoneContent}
     </div>
   );
 
   return (
-    <main className={cls("relative min-h-[100dvh]", theme.page, settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} style={{ backgroundColor: settings.bgColor || undefined, ...(settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : {}) }}>
+    <main className={cls("relative min-h-[100dvh]", theme.page, settings.fullScreenMode && "fixed inset-0 z-40 h-[100dvh] w-screen overflow-hidden")} data-mock-stage data-fullscreen={settings.fullScreenMode} style={{ backgroundColor: settings.bgColor || undefined, ...mockStageStyle(settings.fullScreenMode, visualViewportHeight) }}>
       {phone}
 
         {settingsOpen && (
@@ -1314,7 +1311,7 @@ export default function XMockCreator() {
                       <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
                       <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>
               )}

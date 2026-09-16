@@ -3,7 +3,7 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
-import { useNativeFullscreen } from "./useNativeFullscreen";
+import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { DEFAULT_TEXT_SCALE, MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, clampTextScale, textScaleStyle } from "./textScale";
 import { useIncomingCall } from "./IncomingCall";
@@ -575,7 +575,7 @@ export default function TikTokMockCreator() {
   const visualViewportHeight = useVisualViewportHeight();
   const router = useRouter();
   const [settings, setSettings] = useState<TikTokSettings>(defaultSettings);
-  const changeNativeFullscreen = useNativeFullscreen(() => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
+  usePseudoFullscreen(settings.fullScreenMode, () => setSettings((prev) => ({ ...prev, fullScreenMode: false })));
   const [isHydrated, setIsHydrated] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
@@ -638,9 +638,6 @@ export default function TikTokMockCreator() {
 
   const setFullScreenMode = (value: boolean) => {
     update("fullScreenMode", value);
-    void changeNativeFullscreen(value).then((success) => {
-      if (!success) update("fullScreenMode", false);
-    });
   };
 
   const readFile = (file: File, callback: (url: string) => void) => {
@@ -712,14 +709,14 @@ export default function TikTokMockCreator() {
   );
 
   return (
-    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50 h-[100dvh] w-screen" : "")} style={settings.fullScreenMode ? { height: visualViewportHeight, minHeight: visualViewportHeight, maxHeight: visualViewportHeight } : undefined}>
+    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50 h-[100dvh] w-screen" : "")} data-mock-stage data-fullscreen={settings.fullScreenMode} style={mockStageStyle(settings.fullScreenMode, visualViewportHeight)}>
       <div
         className={cn(
           "relative flex h-[100dvh] w-full flex-col bg-black",
           settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md",
           settings.fullScreenMode && "rounded-device-safe-shell",
         )}
-        style={{ height: visualViewportHeight, maxHeight: visualViewportHeight }}
+        style={{ height: "100%", maxHeight: "100%" }}
       >
         <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-1" : "p-0")}>
           <div
@@ -894,7 +891,7 @@ export default function TikTokMockCreator() {
                       {incomingCall.settingsSection}
                     </SectionCard>
                     <SectionCard icon={Settings2} title="画面表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ブラウザUIも隠して完全全画面にします。Chromeの案内は数秒後に自動で消えます</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
                     <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>
