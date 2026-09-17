@@ -56,6 +56,8 @@ type NotificationSettings = {
   lockscreenTimeSize: number;
   lockscreenDate: string;
   lockscreenDateSize: number;
+  lockscreenClockPositionX: number;
+  lockscreenClockPositionY: number;
   showLargeClock: boolean;
   groupName: string;
   selectedWallpaper: string;
@@ -161,6 +163,22 @@ const presetWallpapers: Record<string, string> = {
 };
 
 const MAX_WALLPAPER_BLUR = 24;
+const MIN_CLOCK_POSITION_X = 0;
+const MAX_CLOCK_POSITION_X = 100;
+const MIN_CLOCK_POSITION_Y = 0;
+const MAX_CLOCK_POSITION_Y = 100;
+
+function clampClockPositionX(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 50;
+  return Math.max(MIN_CLOCK_POSITION_X, Math.min(MAX_CLOCK_POSITION_X, Math.round(num)));
+}
+
+function clampClockPositionY(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 15;
+  return Math.max(MIN_CLOCK_POSITION_Y, Math.min(MAX_CLOCK_POSITION_Y, Math.round(num)));
+}
 
 function clampWallpaperBlur(value: unknown) {
   const num = Number(value);
@@ -280,6 +298,8 @@ const defaultSettings: NotificationSettings = {
   lockscreenTimeSize: 88,
   lockscreenDate: "4月23日 木曜日",
   lockscreenDateSize: 16,
+  lockscreenClockPositionX: 50,
+  lockscreenClockPositionY: 15,
   showLargeClock: true,
   groupName: "森田家",
   selectedWallpaper: "photoLake",
@@ -744,6 +764,8 @@ function readStoredSettings(): NotificationSettings {
       lockscreenDateSize: Number.isFinite(Number(parsed.lockscreenDateSize))
         ? Math.max(12, Math.min(40, Number(parsed.lockscreenDateSize)))
         : defaultSettings.lockscreenDateSize,
+      lockscreenClockPositionX: clampClockPositionX(parsed.lockscreenClockPositionX),
+      lockscreenClockPositionY: clampClockPositionY(parsed.lockscreenClockPositionY),
       notificationDirection:
         parsed.notificationDirection === "bottom" || parsed.notificationDirection === "top"
           ? parsed.notificationDirection
@@ -812,6 +834,8 @@ export default function NotificationCreator() {
   const [lockscreenTimeSize, setLockscreenTimeSize] = useState(defaultSettings.lockscreenTimeSize);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
   const [lockscreenDateSize, setLockscreenDateSize] = useState(defaultSettings.lockscreenDateSize);
+  const [lockscreenClockPositionX, setLockscreenClockPositionX] = useState(defaultSettings.lockscreenClockPositionX);
+  const [lockscreenClockPositionY, setLockscreenClockPositionY] = useState(defaultSettings.lockscreenClockPositionY);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
   const [groupName, setGroupName] = useState(defaultSettings.groupName);
   const [selectedWallpaper, setSelectedWallpaper] = useState(defaultSettings.selectedWallpaper);
@@ -883,6 +907,8 @@ export default function NotificationCreator() {
     setLockscreenTimeSize(stored.lockscreenTimeSize);
     setLockscreenDate(stored.lockscreenDate);
     setLockscreenDateSize(stored.lockscreenDateSize);
+    setLockscreenClockPositionX(stored.lockscreenClockPositionX);
+    setLockscreenClockPositionY(stored.lockscreenClockPositionY);
     setShowLargeClock(stored.showLargeClock);
     setGroupName(stored.groupName);
     setSelectedWallpaper(stored.selectedWallpaper);
@@ -941,6 +967,8 @@ export default function NotificationCreator() {
       lockscreenTimeSize,
       lockscreenDate,
       lockscreenDateSize,
+      lockscreenClockPositionX,
+      lockscreenClockPositionY,
       showLargeClock,
       groupName,
       selectedWallpaper,
@@ -1017,6 +1045,8 @@ export default function NotificationCreator() {
     lockscreenTimeSize,
     lockscreenDate,
     lockscreenDateSize,
+    lockscreenClockPositionX,
+    lockscreenClockPositionY,
     showLargeClock,
     groupName,
     selectedWallpaper,
@@ -1518,6 +1548,8 @@ export default function NotificationCreator() {
     lockscreenTimeSize,
     lockscreenDate,
     lockscreenDateSize,
+    lockscreenClockPositionX,
+    lockscreenClockPositionY,
     showLargeClock,
     groupName,
     selectedWallpaper,
@@ -1570,6 +1602,8 @@ export default function NotificationCreator() {
     setLockscreenTimeSize(next.lockscreenTimeSize);
     setLockscreenDate(next.lockscreenDate);
     setLockscreenDateSize(next.lockscreenDateSize);
+    setLockscreenClockPositionX(clampClockPositionX(next.lockscreenClockPositionX));
+    setLockscreenClockPositionY(clampClockPositionY(next.lockscreenClockPositionY));
     setShowLargeClock(next.showLargeClock);
     setGroupName(next.groupName);
     setSelectedWallpaper(next.selectedWallpaper);
@@ -1727,6 +1761,8 @@ export default function NotificationCreator() {
       lockscreenTimeSize,
       lockscreenDate,
       lockscreenDateSize,
+      lockscreenClockPositionX,
+      lockscreenClockPositionY,
       showLargeClock,
       groupName,
       selectedWallpaper,
@@ -1788,6 +1824,8 @@ export default function NotificationCreator() {
     setLockscreenTimeSize(defaultSettings.lockscreenTimeSize);
     setLockscreenDate(defaultSettings.lockscreenDate);
     setLockscreenDateSize(defaultSettings.lockscreenDateSize);
+    setLockscreenClockPositionX(defaultSettings.lockscreenClockPositionX);
+    setLockscreenClockPositionY(defaultSettings.lockscreenClockPositionY);
     setShowLargeClock(defaultSettings.showLargeClock);
     setGroupName(defaultSettings.groupName);
     setSelectedWallpaper(defaultSettings.selectedWallpaper);
@@ -1898,10 +1936,15 @@ export default function NotificationCreator() {
   const topStackClass = showLargeClock ? "" : theme.notificationsTopWithoutClock;
   const safeLockscreenTimeSize = Math.max(56, Math.min(132, Number(lockscreenTimeSize) || defaultSettings.lockscreenTimeSize));
   const safeLockscreenDateSize = Math.max(12, Math.min(40, Number(lockscreenDateSize) || defaultSettings.lockscreenDateSize));
-  const lockscreenClockTop = 110;
+  const safeLockscreenClockPositionX = clampClockPositionX(lockscreenClockPositionX);
+  const safeLockscreenClockPositionY = clampClockPositionY(lockscreenClockPositionY);
   const clockDateGap = 8;
+  const clockBlockHeight = safeLockscreenTimeSize + clockDateGap + safeLockscreenDateSize * 1.25;
+  const clockBottomOffset = clockBlockHeight * (1 - safeLockscreenClockPositionY / 100) + 28;
   const notificationTopPadding = showLargeClock
-    ? Math.min(360, lockscreenClockTop + safeLockscreenTimeSize + clockDateGap + safeLockscreenDateSize * 1.25 + 28)
+    ? safeLockscreenClockPositionY <= 50
+      ? `min(78%, calc(${safeLockscreenClockPositionY}% + ${clockBottomOffset}px))`
+      : osType === "iphone" ? "108px" : "88px"
     : undefined;
 
   const activeCallProfile = getCallProfile(callDirection === "incoming" ? "incoming" : "outgoing");
@@ -1961,8 +2004,13 @@ export default function NotificationCreator() {
 
       {showLargeClock && (
         <div
-          className="absolute inset-x-0 top-0 z-10 flex flex-col items-center text-center"
-          style={{ paddingTop: `${lockscreenClockTop}px`, gap: `${clockDateGap}px` }}
+          className="absolute z-10 flex w-max max-w-[calc(100%-32px)] flex-col items-center text-center"
+          style={{
+            left: `${safeLockscreenClockPositionX}%`,
+            top: `${safeLockscreenClockPositionY}%`,
+            transform: `translate(-${safeLockscreenClockPositionX}%, -${safeLockscreenClockPositionY}%)`,
+            gap: `${clockDateGap}px`,
+          }}
         >
           <div className={theme.largeClockTime} style={{ fontSize: `${safeLockscreenTimeSize}px`, lineHeight: 1 }}>{lockscreenTime}</div>
           <div className={theme.largeClockDate} style={{ fontSize: `${safeLockscreenDateSize}px`, lineHeight: 1.25 }}>{lockscreenDate}</div>
@@ -1975,7 +2023,7 @@ export default function NotificationCreator() {
             "absolute inset-x-0 top-0 z-10 h-full overflow-hidden px-4 pb-[max(18px,env(safe-area-inset-bottom))]",
             topStackClass,
           )}
-          style={{ paddingTop: notificationTopPadding ? `${notificationTopPadding}px` : undefined }}
+          style={{ paddingTop: notificationTopPadding }}
         >
           <div className="flex flex-col" style={notificationStackStyle}>
             {renderedNotifications.map((msg) => renderNotificationCard(msg, msg.animatedAt ? "notification-enter-top" : ""))}
@@ -2109,6 +2157,60 @@ export default function NotificationCreator() {
                       <span>大きめ</span>
                     </div>
                     <p className="text-xs leading-relaxed text-black/45">時計の大きさに合わせて、通知が重ならない位置へ自動で移動します。</p>
+                  </div>
+                  <div className="space-y-3 rounded-2xl border border-black/10 bg-[#fafafa] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium">時計の表示位置</div>
+                        <div className="text-xs text-black/50">時間と日付を一緒に移動します</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0 px-3 py-1.5 text-xs"
+                        onClick={() => {
+                          setLockscreenClockPositionX(defaultSettings.lockscreenClockPositionX);
+                          setLockscreenClockPositionY(defaultSettings.lockscreenClockPositionY);
+                        }}
+                      >
+                        上中央に戻す
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>横位置</Label>
+                        <span className="text-xs font-medium text-black/50">{safeLockscreenClockPositionX}%</span>
+                      </div>
+                      <Input
+                        type="range"
+                        min={String(MIN_CLOCK_POSITION_X)}
+                        max={String(MAX_CLOCK_POSITION_X)}
+                        step="1"
+                        value={safeLockscreenClockPositionX}
+                        onChange={(e) => setLockscreenClockPositionX(Number(e.target.value))}
+                        aria-label="時計の横位置"
+                        className="cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>左</span><span>中央</span><span>右</span></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>縦位置</Label>
+                        <span className="text-xs font-medium text-black/50">{safeLockscreenClockPositionY}%</span>
+                      </div>
+                      <Input
+                        type="range"
+                        min={String(MIN_CLOCK_POSITION_Y)}
+                        max={String(MAX_CLOCK_POSITION_Y)}
+                        step="1"
+                        value={safeLockscreenClockPositionY}
+                        onChange={(e) => setLockscreenClockPositionY(Number(e.target.value))}
+                        aria-label="時計の縦位置"
+                        className="cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[11px] text-black/40"><span>上</span><span>中央</span><span>下</span></div>
+                    </div>
+                    <p className="text-xs leading-relaxed text-black/45">通知と重なる場合は、時計を上下へ動かすか「通知」タブで下から表示を選べます。</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
