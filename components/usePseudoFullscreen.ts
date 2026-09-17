@@ -2,20 +2,32 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 
+// Pixel 10 Pro: 1280 x 2856, 20:9-class display.
+export const PIXEL_10_PRO_ASPECT_RATIO = "1280 / 2856";
+
 // One layout contract for every mode, including restored settings.
 export function mockStageStyle(enabled: boolean, viewportHeight: string | number): CSSProperties {
   const viewport = typeof viewportHeight === "number" ? `${viewportHeight}px` : viewportHeight;
-  const height = enabled ? viewport : `min(860px, calc(${viewport} - 32px))`;
   return {
     position: enabled ? "fixed" : "relative",
     inset: enabled ? 0 : undefined,
-    width: enabled ? "100%" : "calc(100% - 32px)",
+    width: "100%",
     maxWidth: enabled ? "none" : 448,
-    height, minHeight: height, maxHeight: height,
-    margin: enabled ? 0 : "16px auto",
-    borderRadius: enabled ? 0 : 20,
+    height: viewport,
+    minHeight: viewport,
+    maxHeight: viewport,
+    margin: "0 auto",
+    borderRadius: 0,
     overflow: "hidden",
-    boxShadow: enabled ? "none" : "0 6px 28px rgba(0,0,0,0.18)",
+    boxShadow: "none",
+    backgroundColor: enabled ? "#000" : undefined,
+    // Android browsers can report zero for env(safe-area-inset-*).
+    // Fixed Pixel-sized fallbacks keep controls clear of the centered camera
+    // cutout, rounded corners, and bottom gesture navigation area.
+    paddingTop: enabled ? "max(env(safe-area-inset-top), 32px)" : 0,
+    paddingRight: enabled ? "max(env(safe-area-inset-right), 8px)" : 0,
+    paddingBottom: enabled ? "max(env(safe-area-inset-bottom), 24px)" : 0,
+    paddingLeft: enabled ? "max(env(safe-area-inset-left), 8px)" : 0,
   };
 }
 

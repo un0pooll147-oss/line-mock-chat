@@ -891,7 +891,7 @@ export default function TikTokMockCreator() {
                       {incomingCall.settingsSection}
                     </SectionCard>
                     <SectionCard icon={Settings2} title="画面表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">ONはPixel 10 Proのカメラ穴・角・下部操作領域を避けて表示。OFFも左右いっぱいに表示します</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
                     <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>

@@ -1311,7 +1311,7 @@ export default function XMockCreator() {
                       <div className="flex justify-between text-[11px] text-black/40"><span>小さめ</span><span>大きめ</span></div>
                       <div className="text-xs text-black/50">画面内の文字と行間だけをまとめて拡大縮小します。設定画面の文字は変わりません。</div>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ONで画面いっぱい、OFFで余白のある通常表示にします（ブラウザのバーは残ります）</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">ONはPixel 10 Proのカメラ穴・角・下部操作領域を避けて表示。OFFも左右いっぱいに表示します</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>
               )}
