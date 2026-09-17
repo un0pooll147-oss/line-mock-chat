@@ -4,7 +4,8 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useVisualViewportHeight } from "./useVisualViewportHeight";
-import { mockStageStyle, usePseudoFullscreen } from "./usePseudoFullscreen";
+import { mockStageStyle } from "./usePseudoFullscreen";
+import { useNotificationNativeFullscreen } from "./useNotificationNativeFullscreen";
 import { useKeyboardSafeInputs } from "./useKeyboardSafeInputs";
 import { MAX_TEXT_SCALE, MIN_TEXT_SCALE, MOCK_TEXT_SCALE_CLASS, textScaleStyle } from "./textScale";
 import {
@@ -830,8 +831,8 @@ export default function NotificationCreator() {
   const [notificationSoundPreset, setNotificationSoundPreset] = useState<SoundPreset>(defaultSettings.notificationSoundPreset);
   const [uploadedSound, setUploadedSound] = useState<string | null>(defaultSettings.uploadedSound);
   const [uploadedSoundName, setUploadedSoundName] = useState(defaultSettings.uploadedSoundName);
-  const [fullScreenMode, setFullScreenMode] = useState(defaultSettings.fullScreenMode);
-  usePseudoFullscreen(fullScreenMode, () => setFullScreenMode(false));
+  const [fullScreenMode, setFullScreenMode] = useState(false);
+  const setNativeFullscreen = useNotificationNativeFullscreen(() => setFullScreenMode(false));
   const [deviceFrameMode, setDeviceFrameMode] = useState(defaultSettings.deviceFrameMode);
   const [showCallButton, setShowCallButton] = useState(defaultSettings.showCallButton);
   const [quickCallMode, setQuickCallMode] = useState<"voice" | "video">(defaultSettings.quickCallMode);
@@ -899,7 +900,8 @@ export default function NotificationCreator() {
     setNotificationSoundPreset(stored.notificationSoundPreset);
     setUploadedSound(stored.uploadedSound);
     setUploadedSoundName(stored.uploadedSoundName);
-    setFullScreenMode(stored.fullScreenMode);
+    void setNativeFullscreen(false);
+    setFullScreenMode(false);
     setDeviceFrameMode(stored.deviceFrameMode);
     setShowCallButton(stored.showCallButton);
     setQuickCallMode(stored.quickCallMode);
@@ -1585,7 +1587,8 @@ export default function NotificationCreator() {
     setNotificationSoundPreset(next.notificationSoundPreset);
     setUploadedSound(next.uploadedSound);
     setUploadedSoundName(next.uploadedSoundName);
-    setFullScreenMode(next.fullScreenMode);
+    void setNativeFullscreen(false);
+    setFullScreenMode(false);
     setDeviceFrameMode(next.deviceFrameMode);
     setShowCallButton(next.showCallButton);
     setQuickCallMode(next.quickCallMode);
@@ -1803,7 +1806,8 @@ export default function NotificationCreator() {
     setNotificationSoundPreset(defaultSettings.notificationSoundPreset);
     setUploadedSound(defaultSettings.uploadedSound);
     setUploadedSoundName(defaultSettings.uploadedSoundName);
-    setFullScreenMode(defaultSettings.fullScreenMode);
+    void setNativeFullscreen(false);
+    setFullScreenMode(false);
     setDeviceFrameMode(defaultSettings.deviceFrameMode);
     setShowCallButton(defaultSettings.showCallButton);
     setQuickCallMode(defaultSettings.quickCallMode);
@@ -1832,7 +1836,11 @@ export default function NotificationCreator() {
     showToast("初期設定に戻しました");
   };
 
-  const handleFullScreenModeChange = (enabled: boolean) => setFullScreenMode(enabled);
+  const handleFullScreenModeChange = async (enabled: boolean) => {
+    const changed = await setNativeFullscreen(enabled);
+    setFullScreenMode(enabled && changed);
+    if (enabled && !changed) showToast("このブラウザでは全画面表示を開始できませんでした");
+  };
 
   const notifBg = osType === "iphone" ? "rgba(255,255,255,0.18)" : "rgba(30,30,30,0.52)";
   const iconBg = osType === "iphone" ? "rgba(255,255,255,0.78)" : "rgba(240,240,240,0.92)";
@@ -1900,11 +1908,16 @@ export default function NotificationCreator() {
   const callOverlayBgColor = callDirection === "incoming" ? incomingCallBgColor : outgoingCallBgColor;
   const callOverlayBgOpacity = callDirection === "incoming" ? incomingCallBgOpacity : outgoingCallBgOpacity;
 
-  const stageContainerStyle = mockStageStyle(fullScreenMode, visualViewportHeight);
-  const previewShellClassName = cn(
-    deviceFrameMode ? "p-1" : "p-0",
-    fullScreenMode && "rounded-device-safe-shell",
-  );
+  // OFF keeps the former safe-area layout. ON removes that inset after the
+  // browser enters native fullscreen, so the wallpaper reaches every edge.
+  const stageContainerStyle: React.CSSProperties = {
+    ...mockStageStyle(true, visualViewportHeight),
+    paddingTop: fullScreenMode ? 0 : "max(env(safe-area-inset-top), 32px)",
+    paddingRight: fullScreenMode ? 0 : "max(env(safe-area-inset-right), 8px)",
+    paddingBottom: fullScreenMode ? 0 : "max(env(safe-area-inset-bottom), 24px)",
+    paddingLeft: fullScreenMode ? 0 : "max(env(safe-area-inset-left), 8px)",
+  };
+  const previewShellClassName = deviceFrameMode ? "p-1" : "p-0";
   const settingsButtonClassName = deviceFrameMode
     ? cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4")
     : cn("absolute z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white shadow-2xl backdrop-blur-md transition hover:bg-black/55 active:scale-95", fullScreenMode ? "bottom-[max(32px,calc(env(safe-area-inset-bottom)+20px))] right-[max(32px,calc(env(safe-area-inset-right)+20px))]" : "bottom-[max(18px,env(safe-area-inset-bottom))] right-4");
@@ -1923,14 +1936,13 @@ export default function NotificationCreator() {
     : cn("absolute z-10 h-20 w-20 opacity-0", fullScreenMode ? "bottom-[max(16px,env(safe-area-inset-bottom))] right-[max(16px,env(safe-area-inset-right))]" : "bottom-0 right-0");
 
   return (
-    <div data-mock-stage data-fullscreen={fullScreenMode} className={cn("flex flex-col bg-black", fullScreenMode ? "fixed inset-0 z-40 h-[100dvh] w-screen max-w-none" : "mx-auto max-w-md")} style={stageContainerStyle}>
+    <div data-mock-stage data-fullscreen={fullScreenMode} className="fixed inset-0 z-40 flex h-[100dvh] w-screen max-w-none flex-col bg-black" style={stageContainerStyle}>
       <div className={cn("relative flex-1 overflow-hidden", previewShellClassName)}>
         <div
           className={cn(
             "relative h-full min-h-0 w-full overflow-hidden bg-black text-white",
             MOCK_TEXT_SCALE_CLASS,
             deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl",
-            fullScreenMode && "rounded-device-safe-surface",
           )}
           style={textScaleStyle(safeNotificationTextScale)}
         >
@@ -2447,7 +2459,7 @@ export default function NotificationCreator() {
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">フルスクリーンモード</div>
-                      <div className="text-xs text-black/50">ONはPixel 10 Proのカメラ穴・角・下部操作領域を避けて表示。OFFも左右いっぱいに表示します</div>
+                      <div className="text-xs text-black/50">OFFはPixel 10 Proの安全領域を確保。ONはAndroidのステータスバーとブラウザUIを隠し、画面端まで表示します</div>
                     </div>
                     <Switch checked={fullScreenMode} onCheckedChange={(value) => { void handleFullScreenModeChange(value); }} />
                   </div>
